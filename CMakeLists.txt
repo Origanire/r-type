@@ -21,9 +21,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 # Dependencies (vcpkg.json). Check the exact target names printed by vcpkg.
 # ---------------------------------------------------------------------------
 
-# find_package(asio CONFIG REQUIRED)
-# find_package(nlohmann_json CONFIG REQUIRED)
-# find_package(SFML 3 COMPONENTS Graphics Window System Audio CONFIG REQUIRED)
+find_package(Threads REQUIRED)
+find_package(asio CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+# Add Audio to the components once engine_audio is written
+find_package(SFML 3 COMPONENTS Graphics Window System CONFIG REQUIRED)
 
 # ---------------------------------------------------------------------------
 # Engine: knows nothing about R-Type. One module = one library [p.16].
@@ -125,6 +127,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 #     PRIVATE nlohmann_json::nlohmann_json)
 
 # --- r-type_server [p.1][p.9]: authoritative server
+# For now: main.cpp only, linked directly to Asio. Once rtype_shared exists,
+# link it instead and uncomment the files below as they are written.
+add_executable(r-type_server
+    game/server/src/main.cpp
+)
+target_link_libraries(r-type_server PRIVATE asio::asio Threads::Threads)
+target_compile_definitions(r-type_server PRIVATE ASIO_STANDALONE)
+if(WIN32)
+    target_compile_definitions(r-type_server PRIVATE _WIN32_WINNT=0x0A00)
+endif()
+
 # add_executable(r-type_server
 #     game/server/src/main.cpp
 #     game/server/src/Server.cpp
@@ -145,6 +158,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 # target_link_libraries(r-type_server PRIVATE rtype_shared)
 
 # --- r-type_client [p.1][p.10]: display, input, sound
+# For now: main.cpp only, linked directly to SFML. Once the engine modules
+# exist, link them instead and uncomment the files below as they are written.
+add_executable(r-type_client
+    game/client/src/main.cpp
+)
+target_link_libraries(r-type_client PRIVATE SFML::Graphics)
+
 # add_executable(r-type_client
 #     game/client/src/main.cpp
 #     game/client/src/Client.cpp

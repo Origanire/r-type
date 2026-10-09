@@ -33,6 +33,7 @@ nav:
       - Threading: architecture/threading.md
       - Rendering: architecture/rendering.md
   - Protocol (RFC): protocol/rfc-rtype.md
+  - Coding conventions: conventions.md
   - Guides:
       - Add a component: guides/add-a-component.md
       - Add a system: guides/add-a-system.md

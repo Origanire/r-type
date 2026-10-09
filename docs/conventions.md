@@ -35,11 +35,12 @@ These rules keep the code consistent, whoever wrote it. Follow them in every pul
 ## Files
 
 - One main class per file, the file has the name of the class: `SparseArray.hpp`.
-- A header that contains real code has a `.cpp` with the same name. Templates, plain data structs,
-  interfaces and enums stay in the header only. The ECS is header-only.
+- Headers (`.hpp`) only contain declarations: no function body. The code goes in a `.cpp` with the same name.
+- Templates are the exception: their code must be visible wherever they are used, so it stays in the `.hpp`.
 - Headers go in `include/`, sources in `src/`, following the existing folders.
 - Every header starts with `#pragma once`.
-- Includes use the path from the `include/` folder: `#include "engine/ecs/Registry.hpp"`.
+- Includes use the file name only: `#include "Registry.hpp"`. File names MUST be unique in the whole
+  project: use precise names (`ClientConfig.hpp`, `ServerConfig.hpp`, not two `Config.hpp`).
 - When a folder receives its first real file, delete its `.gitkeep`.
 - Every new `.cpp` is added to the root `CMakeLists.txt` in the same pull request.
 

@@ -41,10 +41,13 @@ find_package(SFML 3 COMPONENTS Graphics Window System CONFIG REQUIRED)
 # target_include_directories(engine_core PUBLIC engine/core/include)
 # target_link_libraries(engine_core PRIVATE nlohmann_json::nlohmann_json)
 
-# --- engine_ecs: header-only ECS (no .cpp files)
-# add_library(engine_ecs INTERFACE)
-# target_include_directories(engine_ecs INTERFACE engine/ecs/include)
-# target_link_libraries(engine_ecs INTERFACE engine_core)
+# --- engine_ecs: entities, components, systems
+add_library(engine_ecs
+    engine/ecs/src/Entity.cpp
+)
+target_include_directories(engine_ecs PUBLIC engine/ecs/include)
+# Uncomment once engine_core exists
+# target_link_libraries(engine_ecs PUBLIC engine_core)
 
 # --- engine_physics: transform, velocity, hitboxes, movement, collisions
 # add_library(engine_physics

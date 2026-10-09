@@ -75,11 +75,23 @@ public:
             getComponents<Component>().erase(from);
     }
 
+    template <typename... Components, typename Function>
+    void addSystem(Function &&function)
+    {
+        m_systems.emplace_back([function = std::forward<Function>(function)](Registry &registry) mutable {
+            function(registry, registry.getComponents<Components>()...);
+        });
+    }
+
+    void runSystems();
+
 private:
     void checkAlive(const Entity &entity) const;
 
     std::unordered_map<std::type_index, std::any> m_components;
-    std::vector<std::function<void(Registry &, const Entity &)>> m_eraseFunctions;    std::vector<Entity::Generation> m_generations;
+    std::vector<std::function<void(Registry &, const Entity &)>> m_eraseFunctions;
+    std::vector<std::function<void(Registry &)>> m_systems;
+    std::vector<Entity::Generation> m_generations;
     std::vector<bool> m_alive;
     std::vector<std::size_t> m_freeIndexes;
 };

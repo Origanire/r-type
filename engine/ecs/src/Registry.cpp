@@ -39,6 +39,12 @@ bool Registry::isAlive(const Entity &entity) const
     return idx < m_alive.size() && m_alive[idx] && m_generations[idx] == entity.generation();
 }
 
+void Registry::runSystems()
+{
+    for (auto &system : m_systems)
+        system(*this);
+}
+
 void Registry::checkAlive(const Entity &entity) const
 {
     if (!isAlive(entity))

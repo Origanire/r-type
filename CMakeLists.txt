@@ -35,6 +35,8 @@ find_package(SFML 3 COMPONENTS Graphics Window System CONFIG REQUIRED)
 # Planned: Logger.cpp, Random.cpp, Config.cpp, Paths.cpp
 add_library(engine_core
     engine/core/src/EngineError.cpp
+    engine/core/src/Clock.cpp
+    engine/core/src/FixedTimestep.cpp
 )
 target_include_directories(engine_core PUBLIC engine/core/include)
 # Uncomment once Config.cpp exists
@@ -77,15 +79,14 @@ target_link_libraries(engine_ecs PUBLIC engine_core)
 # target_compile_definitions(engine_net PRIVATE ASIO_STANDALONE)
 
 # --- engine_render: window, SFML renderer, textures, fonts, palettes (client only)
-# add_library(engine_render
-#     engine/render/src/SfmlRenderer.cpp
-#     engine/render/src/Window.cpp
-#     engine/render/src/TextureManager.cpp
-#     engine/render/src/FontManager.cpp
-#     engine/render/src/Palette.cpp
-# )
-# target_include_directories(engine_render PUBLIC engine/render/include)
-# target_link_libraries(engine_render PUBLIC engine_core SFML::Graphics)
+# Planned: FontManager.cpp, Palette.cpp
+add_library(engine_render
+    engine/render/src/SfmlRenderer.cpp
+    engine/render/src/Window.cpp
+    engine/render/src/TextureManager.cpp
+)
+target_include_directories(engine_render PUBLIC engine/render/include)
+target_link_libraries(engine_render PUBLIC engine_core SFML::Graphics)
 
 # --- engine_audio: sounds and music (client only)
 # add_library(engine_audio
@@ -97,12 +98,12 @@ target_link_libraries(engine_ecs PUBLIC engine_core)
 # target_link_libraries(engine_audio PUBLIC engine_core PRIVATE SFML::Audio)
 
 # --- engine_input: actions, remappable key bindings (client only)
-# add_library(engine_input
-#     engine/input/src/KeyBindings.cpp
-#     engine/input/src/InputManager.cpp
-# )
-# target_include_directories(engine_input PUBLIC engine/input/include)
-# target_link_libraries(engine_input PUBLIC engine_core PRIVATE SFML::Window)
+add_library(engine_input
+    engine/input/src/KeyBindings.cpp
+    engine/input/src/InputManager.cpp
+)
+target_include_directories(engine_input PUBLIC engine/input/include)
+target_link_libraries(engine_input PUBLIC engine_core SFML::Window)
 
 # --- engine_ui: widgets for menus and settings (client only)
 # add_library(engine_ui
@@ -119,6 +120,12 @@ target_link_libraries(engine_ecs PUBLIC engine_core)
 # ---------------------------------------------------------------------------
 
 # --- rtype_shared: components, protocol, game data (client + server)
+# Header-only for now: becomes a real library once its first .cpp is written.
+add_library(rtype_shared INTERFACE)
+target_include_directories(rtype_shared INTERFACE game/shared/include game/shared/include/components)
+target_link_libraries(rtype_shared INTERFACE engine_core engine_ecs)
+
+# Planned:
 # add_library(rtype_shared
 #     game/shared/src/protocol/Codec.cpp
 #     game/shared/src/data/EnemyDefs.cpp
@@ -162,34 +169,21 @@ endif()
 # target_link_libraries(r-type_server PRIVATE rtype_shared)
 
 # --- r-type_client [p.1][p.10]: display, input, sound
-# For now: main.cpp only, linked directly to SFML. Once the engine modules
-# exist, link them instead and uncomment the files below as they are written.
+# Planned: NetworkClient, SceneManager, Settings, scenes/*, NetworkSync, Interpolation,
+# Animation, Audio and Hud systems, accessibility/VisualSoundCues
 add_executable(r-type_client
     game/client/src/main.cpp
+    game/client/src/Client.cpp
+    game/client/src/systems/MovementSystem.cpp
+    game/client/src/systems/PlayerControlSystem.cpp
+    game/client/src/systems/ScreenClampSystem.cpp
+    game/client/src/systems/StarfieldSystem.cpp
+    game/client/src/systems/RenderSystem.cpp
 )
-target_link_libraries(r-type_client PRIVATE SFML::Graphics)
-
-# add_executable(r-type_client
-#     game/client/src/main.cpp
-#     game/client/src/Client.cpp
-#     game/client/src/NetworkClient.cpp
-#     game/client/src/SceneManager.cpp
-#     game/client/src/Settings.cpp
-#     game/client/src/scenes/MenuScene.cpp
-#     game/client/src/scenes/ConnectScene.cpp
-#     game/client/src/scenes/LobbyScene.cpp
-#     game/client/src/scenes/GameScene.cpp
-#     game/client/src/scenes/SettingsScene.cpp
-#     game/client/src/scenes/GameOverScene.cpp
-#     game/client/src/systems/NetworkSyncSystem.cpp
-#     game/client/src/systems/InterpolationSystem.cpp
-#     game/client/src/systems/AnimationSystem.cpp
-#     game/client/src/systems/StarfieldSystem.cpp
-#     game/client/src/systems/RenderSystem.cpp
-#     game/client/src/systems/AudioSystem.cpp
-#     game/client/src/systems/HudSystem.cpp
-#     game/client/src/accessibility/VisualSoundCues.cpp
-# )
-# target_include_directories(r-type_client PRIVATE game/client/include)
-# target_link_libraries(r-type_client PRIVATE
-#     rtype_shared engine_render engine_audio engine_input engine_ui)
+target_include_directories(r-type_client PRIVATE
+    game/client/include
+    game/client/include/components
+    game/client/include/systems)
+target_link_libraries(r-type_client PRIVATE rtype_shared engine_render engine_input)
+add_custom_command(TARGET r-type_client POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:r-type_client>/assets)

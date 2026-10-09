@@ -1,21 +1,33 @@
-#include <SFML/Graphics.hpp>
+#include <exception>
+#include <filesystem>
+#include <iostream>
 
-int main()
+#include "Client.hpp"
+#include "EngineError.hpp"
+
+namespace {
+
+std::filesystem::path findAssets(const char *programPath)
 {
-    sf::RenderWindow window(sf::VideoMode({800, 600}), "R-Type");
-    window.setFramerateLimit(60);
+    std::filesystem::path besideProgram = std::filesystem::absolute(programPath).parent_path() / "assets";
+    if (std::filesystem::exists(besideProgram))
+        return besideProgram;
+    return std::filesystem::current_path() / "assets";
+}
 
-    while (window.isOpen()) {
-        while (const std::optional event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) {
-                window.close();
-            } else if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-                if (key->code == sf::Keyboard::Key::Escape)
-                    window.close();
-            }
-        }
-        window.clear();
-        window.display();
+} // namespace
+
+int main(int, char **argv)
+{
+    try {
+        rtype::client::Client client(findAssets(argv[0]));
+        client.run();
+    } catch (const engine::EngineError &error) {
+        std::cerr << "r-type_client: " << error.what() << std::endl;
+        return 84;
+    } catch (const std::exception &error) {
+        std::cerr << "r-type_client: unexpected error: " << error.what() << std::endl;
+        return 84;
     }
     return 0;
 }

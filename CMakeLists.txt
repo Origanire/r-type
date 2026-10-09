@@ -31,23 +31,22 @@ find_package(SFML 3 COMPONENTS Graphics Window System CONFIG REQUIRED)
 # Engine: knows nothing about R-Type. One module = one library [p.16].
 # ---------------------------------------------------------------------------
 
-# --- engine_core: clock, logger, event bus, thread-safe queue, config, paths
-# add_library(engine_core
-#     engine/core/src/Logger.cpp
-#     engine/core/src/Random.cpp
-#     engine/core/src/Config.cpp
-#     engine/core/src/Paths.cpp
-# )
-# target_include_directories(engine_core PUBLIC engine/core/include)
+# --- engine_core: errors, clock, logger, event bus, thread-safe queue, config, paths
+# Planned: Logger.cpp, Random.cpp, Config.cpp, Paths.cpp
+add_library(engine_core
+    engine/core/src/EngineError.cpp
+)
+target_include_directories(engine_core PUBLIC engine/core/include)
+# Uncomment once Config.cpp exists
 # target_link_libraries(engine_core PRIVATE nlohmann_json::nlohmann_json)
 
 # --- engine_ecs: entities, components, systems
 add_library(engine_ecs
     engine/ecs/src/Entity.cpp
+    engine/ecs/src/Registry.cpp
 )
 target_include_directories(engine_ecs PUBLIC engine/ecs/include)
-# Uncomment once engine_core exists
-# target_link_libraries(engine_ecs PUBLIC engine_core)
+target_link_libraries(engine_ecs PUBLIC engine_core)
 
 # --- engine_physics: transform, velocity, hitboxes, movement, collisions
 # add_library(engine_physics

@@ -44,6 +44,8 @@ target_include_directories(engine_core PUBLIC engine/core/include)
 add_library(engine_ecs
     engine/ecs/src/Entity.cpp
     engine/ecs/src/Registry.cpp
+    engine/ecs/src/CommandBuffer.cpp
+    engine/ecs/src/Scheduler.cpp
 )
 target_include_directories(engine_ecs PUBLIC engine/ecs/include)
 target_link_libraries(engine_ecs PUBLIC engine_core)

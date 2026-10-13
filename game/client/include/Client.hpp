@@ -1,8 +1,10 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <unordered_map>
 
+#include "Entity.hpp"
 #include "FixedTimestep.hpp"
 #include "InputManager.hpp"
 #include "NetworkClient.hpp"
@@ -26,6 +28,7 @@ private:
     void registerSystems();
     void createStarfield();
     void applySnapshot(const protocol::WorldSnapshot &snapshot);
+    engine::ecs::Entity createShip();
 
     engine::render::Window m_window;
     engine::render::TextureManager m_textures;

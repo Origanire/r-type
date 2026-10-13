@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <optional>
 
 #include "RtypeProtocol.hpp"
@@ -12,13 +13,21 @@ class NetworkClient
 {
 public:
     explicit NetworkClient(engine::net::Endpoint server);
+
     void update(std::uint8_t buttons);
     void disconnect();
     std::optional<protocol::WorldSnapshot> takeSnapshot();
-    bool connected() const;
+
 private:
     using Time = std::chrono::steady_clock::time_point;
+
+    bool connected() const;
+    bool handlePacket(const protocol::Packet &packet);
+    bool handleConnectionReply(const protocol::Packet &packet);
+    void retryConnect(Time now);
+    void sendPeriodic(std::uint8_t buttons, Time now);
     void send(protocol::Packet packet);
+
     engine::net::UdpTransport m_transport;
     engine::net::Endpoint m_server;
     std::uint32_t m_sequence = 0;

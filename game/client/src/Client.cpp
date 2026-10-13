@@ -1,18 +1,16 @@
 #include "Client.hpp"
 
 #include <random>
-#include <chrono>
-#include <thread>
 #include <unordered_set>
 #include <utility>
 
 #include "Clock.hpp"
+#include "GameConstants.hpp"
 #include "Position.hpp"
 #include "RenderSystem.hpp"
 #include "Sprite.hpp"
 #include "Star.hpp"
 #include "StarfieldSystem.hpp"
-#include "WorldSize.hpp"
 
 namespace rtype::client {
 
@@ -20,7 +18,11 @@ using engine::ecs::Phase;
 
 namespace {
 
-constexpr float TICK_SECONDS = 1.f / 60.f;
+constexpr unsigned int WINDOW_WIDTH = 1280;
+constexpr unsigned int WINDOW_HEIGHT = 720;
+constexpr const char *PLAYER_TEXTURE = "player";
+constexpr engine::render::IntRect PLAYER_FRAME{66, 0, 33, 17};
+constexpr float PLAYER_SCALE = PLAYER_WIDTH / static_cast<float>(PLAYER_FRAME.width);
 
 struct StarLayer
 {
@@ -39,10 +41,10 @@ constexpr StarLayer STAR_LAYERS[] = {
 } // namespace
 
 Client::Client(const std::filesystem::path &assetsDir, engine::net::Endpoint server)
-    : m_window(1280, 720, "R-Type", {WORLD_WIDTH, WORLD_HEIGHT}), m_renderer(m_window, m_textures),
-      m_timestep(TICK_SECONDS), m_network(std::move(server))
+    : m_window(WINDOW_WIDTH, WINDOW_HEIGHT, "R-Type", {WORLD_WIDTH, WORLD_HEIGHT}), m_renderer(m_window, m_textures),
+      m_timestep(1.f / static_cast<float>(protocol::TICK_RATE)), m_network(std::move(server))
 {
-    m_textures.load("player", (assetsDir / "sprites" / "players" / "r-typesheet42.gif").string());
+    m_textures.load(PLAYER_TEXTURE, (assetsDir / "sprites" / "players" / "r-typesheet42.gif").string());
     registerComponents();
     registerSystems();
     createStarfield();
@@ -64,7 +66,6 @@ void Client::run()
         m_render.run(m_registry, 0.f);
     }
     m_network.disconnect();
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
 void Client::registerComponents()
@@ -76,8 +77,8 @@ void Client::registerComponents()
 
 void Client::registerSystems()
 {
-    m_logic.addSystem<Position, Star>(Phase::Update, starfieldSystem);
-    m_render.addSystem<Position, Star, Sprite>(Phase::Render, RenderSystem(m_renderer));
+    m_logic.addSystem(Phase::Update, starfieldSystem);
+    m_render.addSystem(Phase::Render, RenderSystem(m_renderer));
 }
 
 void Client::createStarfield()
@@ -98,27 +99,32 @@ void Client::createStarfield()
 void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
 {
     std::unordered_set<std::uint16_t> visible;
+    auto &positions = m_registry.getComponents<Position>();
     for (const auto &remote : snapshot.entities) {
-        if (remote.kind != 1)
+        if (remote.kind != protocol::KIND_PLAYER_SHIP)
             continue;
         visible.insert(remote.id);
         auto found = m_networkEntities.find(remote.id);
-        if (found == m_networkEntities.end()) {
-            const auto ship = m_registry.spawnEntity();
-            m_registry.addComponent(ship, Position{});
-            m_registry.addComponent(ship, Sprite{"player", {66, 0, 33, 17}, 3.f});
-            found = m_networkEntities.emplace(remote.id, ship).first;
-        }
-        auto &position = *m_registry.getComponents<Position>()[found->second];
-        position = {static_cast<float>(remote.x), static_cast<float>(remote.y)};
+        if (found == m_networkEntities.end())
+            found = m_networkEntities.emplace(remote.id, createShip()).first;
+        positions[found->second] = Position{static_cast<float>(remote.x), static_cast<float>(remote.y)};
     }
     for (auto it = m_networkEntities.begin(); it != m_networkEntities.end();) {
-        if (!visible.contains(it->first)) {
-            m_registry.killEntity(it->second);
-            it = m_networkEntities.erase(it);
-        } else
+        if (visible.contains(it->first)) {
             ++it;
+            continue;
+        }
+        m_registry.killEntity(it->second);
+        it = m_networkEntities.erase(it);
     }
+}
+
+engine::ecs::Entity Client::createShip()
+{
+    engine::ecs::Entity ship = m_registry.spawnEntity();
+    m_registry.addComponent(ship, Position{});
+    m_registry.addComponent(ship, Sprite{PLAYER_TEXTURE, PLAYER_FRAME, PLAYER_SCALE});
+    return ship;
 }
 
 } // namespace rtype::client

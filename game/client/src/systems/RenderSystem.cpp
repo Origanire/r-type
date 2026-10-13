@@ -1,21 +1,38 @@
 #include "RenderSystem.hpp"
 
-#include "Zipper.hpp"
+#include "Position.hpp"
+#include "Registry.hpp"
+#include "Sprite.hpp"
+#include "Star.hpp"
 
 namespace rtype::client {
+
+namespace {
+
+constexpr engine::render::Color BACKGROUND{5, 5, 20, 255};
+
+} // namespace
 
 RenderSystem::RenderSystem(engine::render::IRenderer &renderer) : m_renderer(renderer)
 {
 }
 
-void RenderSystem::operator()(engine::ecs::SystemContext &, engine::ecs::SparseArray<Position> &positions,
-    engine::ecs::SparseArray<Star> &stars, engine::ecs::SparseArray<Sprite> &sprites) const
+void RenderSystem::operator()(engine::ecs::SystemContext &context) const
 {
-    m_renderer.clear({5, 5, 20, 255});
-    for (auto [position, star] : engine::ecs::Zipper(positions, stars))
-        m_renderer.drawRect({position.x, position.y}, {star.size, star.size}, star.color);
-    for (auto [position, sprite] : engine::ecs::Zipper(positions, sprites))
-        m_renderer.drawTexture(sprite.texture, sprite.source, {position.x, position.y}, {sprite.scale, sprite.scale});
+    auto &positions = context.registry.getComponents<Position>();
+    auto &stars = context.registry.getComponents<Star>();
+    auto &sprites = context.registry.getComponents<Sprite>();
+    m_renderer.clear(BACKGROUND);
+    for (std::size_t i = 0; i < positions.size() && i < stars.size(); ++i) {
+        if (positions[i] && stars[i])
+            m_renderer.drawRect({positions[i]->x, positions[i]->y}, {stars[i]->size, stars[i]->size}, stars[i]->color);
+    }
+    for (std::size_t i = 0; i < positions.size() && i < sprites.size(); ++i) {
+        if (positions[i] && sprites[i]) {
+            const float scale = sprites[i]->scale;
+            m_renderer.drawTexture(sprites[i]->texture, sprites[i]->source, {positions[i]->x, positions[i]->y}, {scale, scale});
+        }
+    }
     m_renderer.display();
 }
 

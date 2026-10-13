@@ -63,7 +63,7 @@ void Server::run()
 - No `new` / `delete`: use RAII, `std::unique_ptr` and containers.
 - `nullptr`, `enum class`, `const` references for objects passed as parameters.
 - Fixed-size integers (`std::uint16_t`, `std::uint32_t`…) for anything sent on the network.
-- Network data is written and read field by field, never by copying a struct (see the [protocol](protocol/rfc-rtype.md)).
+- Network data is written and read field by field, never by copying a struct (see the [protocol](RESEAU.md)).
 - Times are computed from a delta time (`position += velocity * dt`), never from the frame rate.
 - Every thread function catches its exceptions: an uncaught exception in a thread kills the program.
 

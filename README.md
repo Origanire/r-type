@@ -2,18 +2,21 @@
 
 A networked multiplayer horizontal shoot'em up, written in C++20 on top of our own game engine.
 
-> Work in progress: the client displays a local prototype; the server is currently a stub.
+> Work in progress: up to four clients share server-controlled movement. Combat is not implemented yet.
 
 ## Features
 
-<!-- TODO -->
+- Reusable ECS engine and SFML rendering/input
+- Binary UDP protocol, four-player sessions and authoritative movement
+- Full snapshots, heartbeats, disconnects and inactivity timeouts
+- Local scrolling starfield
 
 ## Supported platforms
 
 | OS | Status |
 |---|---|
 | Linux (Ubuntu) | Supported |
-| Windows | Supported (crossplay with Linux) |
+| Windows | Intended; build and crossplay validation pending |
 
 ## Dependencies
 
@@ -86,15 +89,26 @@ rm -rf build/CMakeCache.txt build/CMakeFiles
 ## Usage
 
 ```sh
-./build/bin/r-type_server
-./build/bin/r-type_client
+./build/bin/r-type_server -p 4242
+# In another terminal; repeat for a second client:
+./build/bin/r-type_client -h 127.0.0.1 -p 4242
 ```
 
-Connection arguments are not implemented yet.
+Use arrow keys to move and Escape to quit. The client accepts numeric IPv4 addresses.
+Space is reserved for shooting, which is not implemented yet. All players currently use the same ship sprite.
+
+## Tests
+
+```sh
+ctest --test-dir build --output-on-failure
+```
+
+The codec test checks wire bytes and malformed packets. With Python 3 available, the UDP
+integration test starts a real server and checks multiple clients, movement, timeouts and departures.
 
 ## Documentation
 
-<!-- TODO: link to the online documentation -->
+See [doc/](doc/) for the project documentation, including [RESEAU.md](doc/RESEAU.md).
 
 ## License
 
@@ -103,3 +117,4 @@ Connection arguments are not implemented yet.
 ## Authors
 
 <!-- TODO: team members -->
+thread byte shiftin numero paquet

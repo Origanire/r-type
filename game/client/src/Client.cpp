@@ -1,12 +1,16 @@
 #include "Client.hpp"
 
 #include <random>
+#include <chrono>
+#include <thread>
+#include <unordered_set>
+#include <utility>
 
 #include "Clock.hpp"
-#include "MovementSystem.hpp"
-#include "PlayerControlSystem.hpp"
+#include "Position.hpp"
 #include "RenderSystem.hpp"
-#include "ScreenClampSystem.hpp"
+#include "Sprite.hpp"
+#include "Star.hpp"
 #include "StarfieldSystem.hpp"
 #include "WorldSize.hpp"
 
@@ -34,15 +38,14 @@ constexpr StarLayer STAR_LAYERS[] = {
 
 } // namespace
 
-Client::Client(const std::filesystem::path &assetsDir)
+Client::Client(const std::filesystem::path &assetsDir, engine::net::Endpoint server)
     : m_window(1280, 720, "R-Type", {WORLD_WIDTH, WORLD_HEIGHT}), m_renderer(m_window, m_textures),
-      m_timestep(TICK_SECONDS)
+      m_timestep(TICK_SECONDS), m_network(std::move(server))
 {
     m_textures.load("player", (assetsDir / "sprites" / "players" / "r-typesheet42.gif").string());
     registerComponents();
     registerSystems();
     createStarfield();
-    createPlayer();
 }
 
 void Client::run()
@@ -52,28 +55,28 @@ void Client::run()
     while (m_window.isOpen()) {
         m_window.processEvents();
         m_input.update(m_window.hasFocus());
+        m_network.update(m_input.toBits());
+        if (auto snapshot = m_network.takeSnapshot())
+            applySnapshot(*snapshot);
         m_timestep.addTime(clock.restart());
         while (m_timestep.step())
             m_logic.run(m_registry, m_timestep.stepSeconds());
         m_render.run(m_registry, 0.f);
     }
+    m_network.disconnect();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
 void Client::registerComponents()
 {
     m_registry.registerComponent<Position>();
-    m_registry.registerComponent<Velocity>();
     m_registry.registerComponent<Sprite>();
     m_registry.registerComponent<Star>();
-    m_registry.registerComponent<PlayerControl>();
 }
 
 void Client::registerSystems()
 {
-    m_logic.addSystem<PlayerControl, Velocity>(Phase::Input, PlayerControlSystem(m_input));
     m_logic.addSystem<Position, Star>(Phase::Update, starfieldSystem);
-    m_logic.addSystem<Position, Velocity>(Phase::Physics, movementSystem);
-    m_logic.addSystem<Position, Sprite, PlayerControl>(Phase::Physics, screenClampSystem);
     m_render.addSystem<Position, Star, Sprite>(Phase::Render, RenderSystem(m_renderer));
 }
 
@@ -92,13 +95,30 @@ void Client::createStarfield()
     }
 }
 
-void Client::createPlayer()
+void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
 {
-    engine::ecs::Entity player = m_registry.spawnEntity();
-    m_registry.addComponent(player, Position{200.f, WORLD_HEIGHT / 2.f});
-    m_registry.addComponent(player, Velocity{});
-    m_registry.addComponent(player, Sprite{"player", {66, 0, 33, 17}, 3.f});
-    m_registry.addComponent(player, PlayerControl{});
+    std::unordered_set<std::uint16_t> visible;
+    for (const auto &remote : snapshot.entities) {
+        if (remote.kind != 1)
+            continue;
+        visible.insert(remote.id);
+        auto found = m_networkEntities.find(remote.id);
+        if (found == m_networkEntities.end()) {
+            const auto ship = m_registry.spawnEntity();
+            m_registry.addComponent(ship, Position{});
+            m_registry.addComponent(ship, Sprite{"player", {66, 0, 33, 17}, 3.f});
+            found = m_networkEntities.emplace(remote.id, ship).first;
+        }
+        auto &position = *m_registry.getComponents<Position>()[found->second];
+        position = {static_cast<float>(remote.x), static_cast<float>(remote.y)};
+    }
+    for (auto it = m_networkEntities.begin(); it != m_networkEntities.end();) {
+        if (!visible.contains(it->first)) {
+            m_registry.killEntity(it->second);
+            it = m_networkEntities.erase(it);
+        } else
+            ++it;
+    }
 }
 
 } // namespace rtype::client

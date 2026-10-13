@@ -81,22 +81,13 @@ target_link_libraries(engine_ecs PUBLIC engine_core)
 # target_link_libraries(engine_physics PUBLIC engine_core engine_ecs)
 
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
-# add_library(engine_net
-#     engine/net/src/Writer.cpp
-#     engine/net/src/Reader.cpp
-#     engine/net/src/PacketHeader.cpp
-#     engine/net/src/Endpoint.cpp
-#     engine/net/src/UdpServer.cpp
-#     engine/net/src/UdpClient.cpp
-#     engine/net/src/SessionManager.cpp
-#     engine/net/src/RateLimiter.cpp
-#     engine/net/src/ReliableChannel.cpp
-#     engine/net/src/NetStats.cpp
-# )
-# target_include_directories(engine_net PUBLIC engine/net/include)
-# target_link_libraries(engine_net PUBLIC engine_core PRIVATE asio::asio)
-# target_compile_definitions(engine_net PRIVATE ASIO_STANDALONE)
-
+add_library(engine_net engine/net/src/UdpTransport.cpp)
+target_include_directories(engine_net PUBLIC engine/net/include)
+target_link_libraries(engine_net PRIVATE asio::asio Threads::Threads)
+target_compile_definitions(engine_net PRIVATE ASIO_STANDALONE)
+if(WIN32)
+    target_compile_definitions(engine_net PRIVATE _WIN32_WINNT=0x0A00)
+endif()
 # --- engine_render: window, SFML renderer, textures, fonts, palettes (client only)
 # Planned: FontManager.cpp, Palette.cpp
 add_library(engine_render
@@ -139,10 +130,9 @@ target_link_libraries(engine_input PUBLIC engine_core SFML::Window)
 # ---------------------------------------------------------------------------
 
 # --- rtype_shared: components, protocol, game data (client + server)
-# Header-only for now: becomes a real library once its first .cpp is written.
-add_library(rtype_shared INTERFACE)
-target_include_directories(rtype_shared INTERFACE game/shared/include game/shared/include/components)
-target_link_libraries(rtype_shared INTERFACE engine_core engine_ecs)
+add_library(rtype_shared game/shared/src/protocol/Codec.cpp game/shared/src/PortOption.cpp)
+target_include_directories(rtype_shared PUBLIC game/shared/include game/shared/include/components)
+target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
 
 # Planned:
 # add_library(rtype_shared
@@ -157,16 +147,13 @@ target_link_libraries(rtype_shared INTERFACE engine_core engine_ecs)
 #     PRIVATE nlohmann_json::nlohmann_json)
 
 # --- r-type_server [p.1][p.9]: authoritative server
-# For now: main.cpp only, linked directly to Asio. Once rtype_shared exists,
-# link it instead and uncomment the files below as they are written.
+# Authoritative movement simulation; rendering/input remain client-only.
 add_executable(r-type_server
     game/server/src/main.cpp
+    game/server/src/Server.cpp
 )
-target_link_libraries(r-type_server PRIVATE asio::asio Threads::Threads)
-target_compile_definitions(r-type_server PRIVATE ASIO_STANDALONE)
-if(WIN32)
-    target_compile_definitions(r-type_server PRIVATE _WIN32_WINNT=0x0A00)
-endif()
+target_include_directories(r-type_server PRIVATE game/server/include)
+target_link_libraries(r-type_server PRIVATE rtype_shared)
 
 # add_executable(r-type_server
 #     game/server/src/main.cpp
@@ -193,6 +180,7 @@ endif()
 add_executable(r-type_client
     game/client/src/main.cpp
     game/client/src/Client.cpp
+    game/client/src/NetworkClient.cpp
     game/client/src/systems/MovementSystem.cpp
     game/client/src/systems/PlayerControlSystem.cpp
     game/client/src/systems/ScreenClampSystem.cpp
@@ -206,3 +194,21 @@ target_include_directories(r-type_client PRIVATE
 target_link_libraries(r-type_client PRIVATE rtype_shared engine_render engine_input)
 add_custom_command(TARGET r-type_client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:r-type_client>/assets)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(protocol_tests tests/ProtocolTests.cpp)
+    target_link_libraries(protocol_tests PRIVATE rtype_shared)
+    add_test(NAME protocol COMMAND protocol_tests)
+
+    add_executable(network_client_tests tests/NetworkClientTests.cpp game/client/src/NetworkClient.cpp)
+    target_include_directories(network_client_tests PRIVATE game/client/include)
+    target_link_libraries(network_client_tests PRIVATE rtype_shared)
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME udp_integration COMMAND ${Python3_EXECUTABLE}
+            ${PROJECT_SOURCE_DIR}/tests/network_integration.py
+            $<TARGET_FILE:r-type_server> $<TARGET_FILE:network_client_tests>)
+        set_tests_properties(udp_integration PROPERTIES TIMEOUT 25)
+    endif()
+endif()

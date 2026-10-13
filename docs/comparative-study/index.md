@@ -1,3 +1,0 @@
-# Comparative study
-
-> TODO

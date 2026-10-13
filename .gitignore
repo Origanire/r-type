@@ -3,8 +3,6 @@ build/
 out/
 vcpkg_installed/
 .vcpkg/
-.venv/
-__pycache__/
 CMakeUserPresets.json
 compile_commands.json
 

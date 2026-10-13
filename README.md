@@ -2,7 +2,7 @@
 
 A networked multiplayer horizontal shoot'em up, written in C++20 on top of our own game engine.
 
-> Work in progress: nothing is implemented yet.
+> Work in progress: the client displays a local prototype; the server is currently a stub.
 
 ## Features
 
@@ -21,7 +21,7 @@ All libraries are fetched by [vcpkg](https://vcpkg.io) in manifest mode (`vcpkg.
 
 - a C++20 compiler (GCC, Clang or MSVC)
 - CMake 3.21 or newer
-- vcpkg, with the `VCPKG_ROOT` environment variable pointing to it
+- vcpkg installed in `.vcpkg/`, or an external installation selected with `CMAKE_TOOLCHAIN_FILE`
 - on Linux, the system development packages SFML needs (X11, OpenGL, udev)
 
 | Library | Used for |
@@ -32,19 +32,65 @@ All libraries are fetched by [vcpkg](https://vcpkg.io) in manifest mode (`vcpkg.
 
 ## Build
 
+### First-time setup on Linux (Ubuntu / Debian)
+
+Install the build tools and system development packages required by SFML:
+
 ```sh
-cmake -B build -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
-cmake --build build
+sudo apt update
+sudo apt install build-essential cmake ninja-build git curl zip unzip tar pkg-config \
+    libx11-dev libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev
 ```
 
+From the project root, install vcpkg locally (the `.vcpkg/` directory is ignored by Git):
+
+```sh
+git clone https://github.com/microsoft/vcpkg.git .vcpkg
+./.vcpkg/bootstrap-vcpkg.sh -disableMetrics
+```
+
+If vcpkg is already installed elsewhere, use its absolute path for `VCPKG_ROOT` instead.
+See the [official vcpkg setup guide](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash).
+
+### Configure and compile
+
+Run from the project root. CMake automatically uses the local `.vcpkg/` installation:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release &&
+cmake --build build --parallel 2
+```
+
+For vcpkg installed elsewhere, explicitly select its toolchain:
+
+```sh
+export VCPKG_ROOT="/absolute/path/to/vcpkg"
+cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release &&
+cmake --build build --parallel 2
+```
+
+The first configuration automatically downloads and builds the libraries in `vcpkg.json`.
 Binaries are written to `build/bin/`.
+
+The old command with an empty `VCPKG_ROOT` produces the path
+`/scripts/buildsystems/vcpkg.cmake`. CMake now replaces that path with the local
+`.vcpkg/` toolchain automatically, including when it is already in the cache.
+
+If you change to another vcpkg installation, clear the generated CMake cache
+before configuring again:
+
+```sh
+rm -rf build/CMakeCache.txt build/CMakeFiles
+```
 
 ## Usage
 
 ```sh
-./r-type_server -p <port>
-./r-type_client -h <server ip> -p <port>
+./build/bin/r-type_server
+./build/bin/r-type_client
 ```
+
+Connection arguments are not implemented yet.
 
 ## Documentation
 

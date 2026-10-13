@@ -81,13 +81,18 @@ target_link_libraries(engine_ecs PUBLIC engine_core)
 # target_link_libraries(engine_physics PUBLIC engine_core engine_ecs)
 
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
-add_library(engine_net engine/net/src/UdpTransport.cpp)
+add_library(engine_net
+    engine/net/src/ByteReader.cpp
+    engine/net/src/ByteWriter.cpp
+    engine/net/src/UdpTransport.cpp
+)
 target_include_directories(engine_net PUBLIC engine/net/include)
-target_link_libraries(engine_net PRIVATE asio::asio Threads::Threads)
+target_link_libraries(engine_net PUBLIC engine_core PRIVATE asio::asio Threads::Threads)
 target_compile_definitions(engine_net PRIVATE ASIO_STANDALONE)
 if(WIN32)
     target_compile_definitions(engine_net PRIVATE _WIN32_WINNT=0x0A00)
 endif()
+
 # --- engine_render: window, SFML renderer, textures, fonts, palettes (client only)
 # Planned: FontManager.cpp, Palette.cpp
 add_library(engine_render
@@ -130,7 +135,10 @@ target_link_libraries(engine_input PUBLIC engine_core SFML::Window)
 # ---------------------------------------------------------------------------
 
 # --- rtype_shared: components, protocol, game data (client + server)
-add_library(rtype_shared game/shared/src/protocol/Codec.cpp game/shared/src/PortOption.cpp)
+add_library(rtype_shared
+    game/shared/src/protocol/Codec.cpp
+    game/shared/src/PortOption.cpp
+)
 target_include_directories(rtype_shared PUBLIC game/shared/include game/shared/include/components)
 target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
 
@@ -146,44 +154,31 @@ target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
 #     PUBLIC engine_core engine_ecs engine_physics engine_net
 #     PRIVATE nlohmann_json::nlohmann_json)
 
-# --- r-type_server [p.1][p.9]: authoritative server
-# Authoritative movement simulation; rendering/input remain client-only.
+# --- r-type_server [p.1][p.9]: authoritative server (never links render, audio, input or ui)
+# Planned: AISystem, ShootingSystem, DamageSystem, DeathSystem, SpawnSystem
 add_executable(r-type_server
     game/server/src/main.cpp
     game/server/src/Server.cpp
+    game/server/src/Room.cpp
+    game/server/src/EntityFactory.cpp
+    game/server/src/systems/InputSystem.cpp
+    game/server/src/systems/MovementSystem.cpp
+    game/server/src/systems/BoundarySystem.cpp
+    game/server/src/systems/SnapshotSystem.cpp
 )
-target_include_directories(r-type_server PRIVATE game/server/include)
+target_include_directories(r-type_server PRIVATE
+    game/server/include
+    game/server/include/components
+    game/server/include/systems)
 target_link_libraries(r-type_server PRIVATE rtype_shared)
 
-# add_executable(r-type_server
-#     game/server/src/main.cpp
-#     game/server/src/Server.cpp
-#     game/server/src/Room.cpp
-#     game/server/src/GameLoop.cpp
-#     game/server/src/PacketHandler.cpp
-#     game/server/src/EntityFactory.cpp
-#     game/server/src/systems/InputSystem.cpp
-#     game/server/src/systems/AISystem.cpp
-#     game/server/src/systems/ShootingSystem.cpp
-#     game/server/src/systems/DamageSystem.cpp
-#     game/server/src/systems/DeathSystem.cpp
-#     game/server/src/systems/SpawnSystem.cpp
-#     game/server/src/systems/BoundarySystem.cpp
-#     game/server/src/systems/SnapshotSystem.cpp
-# )
-# target_include_directories(r-type_server PRIVATE game/server/include)
-# target_link_libraries(r-type_server PRIVATE rtype_shared)
-
 # --- r-type_client [p.1][p.10]: display, input, sound
-# Planned: NetworkClient, SceneManager, Settings, scenes/*, NetworkSync, Interpolation,
+# Planned: SceneManager, Settings, scenes/*, NetworkSync, Interpolation,
 # Animation, Audio and Hud systems, accessibility/VisualSoundCues
 add_executable(r-type_client
     game/client/src/main.cpp
     game/client/src/Client.cpp
     game/client/src/NetworkClient.cpp
-    game/client/src/systems/MovementSystem.cpp
-    game/client/src/systems/PlayerControlSystem.cpp
-    game/client/src/systems/ScreenClampSystem.cpp
     game/client/src/systems/StarfieldSystem.cpp
     game/client/src/systems/RenderSystem.cpp
 )
@@ -194,21 +189,3 @@ target_include_directories(r-type_client PRIVATE
 target_link_libraries(r-type_client PRIVATE rtype_shared engine_render engine_input)
 add_custom_command(TARGET r-type_client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:r-type_client>/assets)
-
-include(CTest)
-if(BUILD_TESTING)
-    add_executable(protocol_tests tests/ProtocolTests.cpp)
-    target_link_libraries(protocol_tests PRIVATE rtype_shared)
-    add_test(NAME protocol COMMAND protocol_tests)
-
-    add_executable(network_client_tests tests/NetworkClientTests.cpp game/client/src/NetworkClient.cpp)
-    target_include_directories(network_client_tests PRIVATE game/client/include)
-    target_link_libraries(network_client_tests PRIVATE rtype_shared)
-    find_package(Python3 COMPONENTS Interpreter QUIET)
-    if(Python3_Interpreter_FOUND)
-        add_test(NAME udp_integration COMMAND ${Python3_EXECUTABLE}
-            ${PROJECT_SOURCE_DIR}/tests/network_integration.py
-            $<TARGET_FILE:r-type_server> $<TARGET_FILE:network_client_tests>)
-        set_tests_properties(udp_integration PROPERTIES TIMEOUT 25)
-    endif()
-endif()

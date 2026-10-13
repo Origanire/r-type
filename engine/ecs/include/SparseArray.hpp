@@ -5,60 +5,51 @@
 #include <utility>
 #include <vector>
 
+#include "IComponentArray.hpp"
+
 namespace engine::ecs {
 
 template <typename Component>
-class SparseArray
+class SparseArray : public IComponentArray
 {
 public:
-    using value_type = std::optional<Component>;
-    using reference_type = value_type &;
-    using const_reference_type = const value_type &;
-    using container_t = std::vector<value_type>;
-    using size_type = typename container_t::size_type;
-
-    reference_type operator[](size_type idx)
+    std::optional<Component> &operator[](std::size_t index)
     {
-        growTo(idx);
-        return m_data[idx];
+        growTo(index);
+        return m_data[index];
     }
 
-    const_reference_type operator[](size_type idx) const
+    const std::optional<Component> &operator[](std::size_t index) const
     {
-        static const value_type empty;
-        return idx < m_data.size() ? m_data[idx] : empty;
+        static const std::optional<Component> empty;
+        return index < m_data.size() ? m_data[index] : empty;
     }
 
-    size_type size() const { return m_data.size(); }
-
-    reference_type insertAt(size_type pos, const Component &component)
+    std::size_t size() const
     {
-        growTo(pos);
-        m_data[pos] = component;
-        return m_data[pos];
+        return m_data.size();
     }
 
-    reference_type insertAt(size_type pos, Component &&component)
+    void insertAt(std::size_t index, Component component)
     {
-        growTo(pos);
-        m_data[pos] = std::move(component);
-        return m_data[pos];
+        growTo(index);
+        m_data[index] = std::move(component);
     }
 
-    void erase(size_type pos)
+    void erase(std::size_t index) override
     {
-        if (pos < m_data.size())
-            m_data[pos].reset();
+        if (index < m_data.size())
+            m_data[index].reset();
     }
 
 private:
-    void growTo(size_type idx)
+    void growTo(std::size_t index)
     {
-        if (idx >= m_data.size())
-            m_data.resize(idx + 1);
+        if (index >= m_data.size())
+            m_data.resize(index + 1);
     }
 
-    container_t m_data;
+    std::vector<std::optional<Component>> m_data;
 };
 
 } // namespace engine::ecs

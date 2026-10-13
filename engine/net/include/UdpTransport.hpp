@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -10,7 +11,8 @@ namespace engine::net {
 struct Endpoint
 {
     std::string address;
-    std::uint16_t port;
+    std::uint16_t port = 0;
+
     bool operator==(const Endpoint &) const = default;
 };
 
@@ -20,10 +22,11 @@ struct Datagram
     std::vector<std::uint8_t> bytes;
 };
 
-// One I/O thread, bounded receive/send queues. Asio stays inside the engine.
 class UdpTransport
 {
 public:
+    static constexpr std::size_t MAX_DATAGRAM_SIZE = 1200;
+
     explicit UdpTransport(std::uint16_t port = 0);
     ~UdpTransport();
     UdpTransport(const UdpTransport &) = delete;

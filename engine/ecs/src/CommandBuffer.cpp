@@ -28,9 +28,4 @@ void CommandBuffer::apply(Registry &registry)
         command(registry);
 }
 
-std::size_t CommandBuffer::size() const
-{
-    return m_commands.size();
-}
-
 } // namespace engine::ecs

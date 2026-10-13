@@ -1,8 +1,17 @@
 #include "Scheduler.hpp"
 
+#include <utility>
+
 #include "EcsError.hpp"
 
 namespace engine::ecs {
+
+void Scheduler::addSystem(Phase phase, System system)
+{
+    if (!system)
+        throw EcsError("Scheduler: empty system");
+    m_systems[static_cast<std::size_t>(phase)].push_back(std::move(system));
+}
 
 void Scheduler::run(Registry &registry, float dt)
 {
@@ -14,11 +23,6 @@ void Scheduler::run(Registry &registry, float dt)
             system(context);
     }
     m_commands.apply(registry);
-}
-
-CommandBuffer &Scheduler::commands()
-{
-    return m_commands;
 }
 
 } // namespace engine::ecs

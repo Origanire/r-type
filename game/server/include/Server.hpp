@@ -2,10 +2,12 @@
 
 #include <array>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <random>
 
-#include "Registry.hpp"
+#include "Room.hpp"
 #include "RtypeProtocol.hpp"
 #include "UdpTransport.hpp"
 
@@ -15,35 +17,44 @@ class Server
 {
 public:
     explicit Server(std::uint16_t port);
-    void step(std::chrono::steady_clock::time_point now);
+
+    void poll();
+    void tick(float dt);
     void shutdown();
+
 private:
     using Time = std::chrono::steady_clock::time_point;
+
     struct Session
     {
         engine::net::Endpoint peer;
-        std::uint32_t token;
-        std::optional<engine::ecs::Entity> ship;
+        std::uint32_t token = 0;
         Time lastSeen;
         Time lastInput;
         Time lastAccept;
         std::optional<std::uint32_t> inputSequence;
         std::optional<std::uint32_t> heartbeatSequence;
-        std::uint8_t buttons = 0;
         bool confirmed = false;
     };
+
     void receive(const engine::net::Datagram &datagram, Time now);
-    void send(const engine::net::Endpoint &peer, protocol::Packet packet);
+    void handleConnect(const engine::net::Datagram &datagram, const protocol::Packet &packet, Time now);
+    void handleSessionPacket(std::size_t slot, const protocol::Packet &packet, Time now);
+    void confirm(std::size_t slot);
     void remove(std::size_t slot, std::uint8_t reason);
-    void snapshots();
+    void sendSnapshots();
+    void send(const engine::net::Endpoint &peer, protocol::Packet packet);
+    void broadcast(const protocol::Packet &packet);
+    void reject(const engine::net::Endpoint &peer, std::uint8_t reason);
+    std::optional<std::size_t> findSession(const engine::net::Endpoint &peer) const;
+    std::optional<std::size_t> findFreeSlot() const;
+    std::uint32_t newToken();
+
     engine::net::UdpTransport m_transport;
-    engine::ecs::Registry m_registry;
-    std::array<std::optional<Session>, 4> m_sessions;
+    Room m_room;
+    std::array<std::optional<Session>, protocol::MAX_PLAYERS> m_sessions;
     std::mt19937 m_random;
     std::uint32_t m_sequence = 0;
-    std::uint32_t m_tick = 0;
-    std::uint16_t m_nextId = 1;
-    std::array<std::uint16_t, 4> m_ids{};
     Time m_rateWindow{};
     unsigned m_connectRequests = 0;
 };

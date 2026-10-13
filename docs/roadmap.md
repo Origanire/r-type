@@ -13,7 +13,6 @@ means code exists and the listed behavior can be verified; it does not imply a c
 | N4 | Disconnect, heartbeat and inactivity | Implemented | Explicit departures replicate; inactive sessions expire |
 | N5 | Server-owned movement and snapshots | Implemented | Two clients receive the same ship positions |
 | N6 | Graphical snapshot integration | Implemented; manual GUI check required | Two windows display each other's controlled ship |
-| N7 | Headless regression checks | Implemented | CTest protocol and UDP integration pass |
 | N8 | Protocol/architecture/build/run documentation | Written | Instructions and implementation limits match code |
 
 ## Next milestone: playable combat
@@ -47,7 +46,7 @@ new wire fields, update the RFC and codec tests first and bump the protocol vers
 
 1. Add ECS lifetime/command-buffer tests and simulation tests for shooting/collisions/scoring.
 2. Exercise loss, delay, duplication and reordering on a separate test interface; document measurements.
-3. Validate a native Windows build and Linux/Windows crossplay; keep SFML out of server dependencies.
+3. Native Windows build and Linux/Windows crossplay were validated on 2026-10-13; keep SFML out of server dependencies.
 4. Add a CI build/test job with a vcpkg binary cache and document branching/review practices.
 5. Finish architecture examples, comparative study and accessibility design; add remappable saved controls.
 

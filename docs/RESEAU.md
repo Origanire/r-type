@@ -91,8 +91,11 @@ flowchart LR
 | Endpoint/datagram/transport API | `engine/net/include/UdpTransport.hpp` |
 | Asio socket and I/O worker | `engine/net/src/UdpTransport.cpp` |
 | Wire data model and constants | `game/shared/include/RtypeProtocol.hpp` |
-| Binary reader/writer and validation | `game/shared/src/protocol/Codec.cpp` |
-| Session state and simulation | `game/server/include/Server.hpp`, `game/server/src/Server.cpp` |
+| Big-endian byte writer/reader | `engine/net/include/ByteWriter.hpp`, `engine/net/include/ByteReader.hpp` |
+| Message encoding, decoding and validation | `game/shared/src/protocol/Codec.cpp` |
+| Sessions, tokens, timeouts and events | `game/server/include/Server.hpp`, `game/server/src/Server.cpp` |
+| Game world (ECS registry and 60 Hz scheduler) | `game/server/include/Room.hpp`, `game/server/src/Room.cpp` |
+| Ship creation and server systems | `game/server/src/EntityFactory.cpp`, `game/server/src/systems/` |
 | Server CLI, clock loop and signals | `game/server/src/main.cpp` |
 | Client session/scheduling | `game/client/include/NetworkClient.hpp`, `game/client/src/NetworkClient.cpp` |
 | Snapshot-to-ECS mapping | `game/client/src/Client.cpp` |
@@ -102,9 +105,10 @@ Each process has a main thread and one I/O worker. The main thread owns the game
 state. The worker owns socket operations and transfers received bytes through a mutex-protected
 queue. Asio is hidden from game headers. Outgoing buffers remain alive until send completion.
 
-The server uses a steady clock with an approximately 16.67 ms deadline. It catches up after
-short delays and bounds catch-up after a long suspension (250 ms threshold). Movement advances
-by a fixed 1/60 second per executed tick, while inactivity uses elapsed steady time. The client's
+The server loop uses the engine `Clock` and `FixedTimestep`: it polls the network continuously,
+runs as many 1/60-second ticks as the elapsed time requires, and bounds catch-up after a long
+suspension (250 ms). Movement advances by velocity times the tick duration, while inactivity
+uses elapsed steady time. The client's
 FixedTimestep advances local stars; networking also uses the steady clock. Registries and
 schedulers are not thread-safe and must remain on their owning main thread.
 
@@ -583,24 +587,24 @@ received snapshots may never have been seen. Future combat effects must tolerate
 | UDP send completes with an error code | Error code is ignored; no retry or caller notification |
 | Receive inbox full | Drop new arrivals; do not evict already queued data |
 | Pending send limit reached | `send()` returns silently without posting the datagram |
-| Outgoing raw datagram exceeds 1200 bytes | Throw `UDP datagram exceeds 1200 bytes` |
-| Invalid outgoing packet values | Encoder throws `Invalid outgoing packet` |
-| Writer would exceed maximum packet bytes | Throw `Packet too large` |
+| Outgoing raw datagram exceeds 1200 bytes | Throw `NetError` (`datagram exceeds the maximum size`) |
+| Invalid outgoing packet values | Encoder throws `GameError` (`invalid outgoing packet`) |
+| Writer would exceed maximum packet bytes | `ByteWriter` throws `NetError` |
 | Exception escapes an I/O handler | Worker stores it; next `checkHealth`, `poll` or `send` rethrows on main thread |
 | Allocation/thread creation failure | May throw; not translated into a malformed-packet drop; entry-point exception handling terminates with 84 |
-| Five unanswered join attempts | Throw `Connection timed out after five attempts`; client exits 84 |
-| Valid full-server rejection | Throw `Server full`; client exits 84 |
-| Valid version rejection | Throw `Protocol version mismatch`; client exits 84 |
-| Five seconds without fresh accepted server traffic | Throw `Connection lost: no server packet for five seconds`; client exits 84 |
-| Valid ordered shutdown message | Throw `Server stopped`; client exits 84 |
-| Server SIGINT/SIGTERM | Best-effort shutdown sends, 50 ms dispatch wait, normal exit 0 if no exception |
-| Normal client window close | Best-effort DISCONNECT, 50 ms dispatch wait, normal exit 0 |
+| Five unanswered join attempts | Throw `GameError` (`connection timed out after five attempts`); client exits 84 |
+| Valid full-server rejection | Throw `GameError` (`server full`); client exits 84 |
+| Valid version rejection | Throw `GameError` (`protocol version mismatch`); client exits 84 |
+| Five seconds without fresh accepted server traffic | Throw `GameError` (`connection lost`); client exits 84 |
+| Valid ordered shutdown message | Throw `GameError` (`server stopped`); client exits 84 |
+| Server SIGINT/SIGTERM | Best-effort shutdown sends, flushed by the transport destructor (at most 200 ms), normal exit 0 |
+| Normal client window close | Best-effort DISCONNECT, flushed by the transport destructor (at most 200 ms), normal exit 0 |
 
 `send()` successfully returning only means it did not throw; it does not prove queuing,
 sending or reception. Persistent receive errors are not classified or backed off, and transport
 health does not detect an unreachable peer. Session timers provide the eventual liveness signal.
-The client may prefix expected network errors with `unexpected error` because they are caught
-by its generic exception handler. There is no reconnect/menu recovery in that handler.
+All errors derive from `engine::EngineError` (`NetError` in the engine, `GameError` in the game),
+so both entry points report them with the same handler. There is no reconnect/menu recovery in that handler.
 
 ## 7. Developer API usage
 
@@ -613,7 +617,7 @@ by its generic exception handler. There is no reconnect/menu recovery in that ha
 | `send(peer, bytes)` | Asynchronous best effort, maximum 1200 bytes; may silently drop on saturation |
 | `poll()` | Transfer all queued datagrams to caller; returns immediately, possibly empty |
 | `checkHealth()` | Rethrow worker exception if stored; does not test peer reachability |
-| Destructor | Stop I/O and join worker; does not guarantee pending packets are flushed |
+| Destructor | Wait up to 200 ms for pending sends, then stop I/O and join the worker |
 
 Use transport from its owning main thread. Do not race teardown against another caller or
 access the game registry from the I/O worker. Data buffers remain alive until send completion.
@@ -657,15 +661,14 @@ from invalid fields. Packet fields are an in-memory model; only fields selected 
 `NetworkClient::update(buttons)` polls inbound traffic and schedules outgoing messages. Call it
 regularly from the frame loop. `takeSnapshot()` returns the latest pending snapshot once, or
 `nullopt`; intermediate snapshots within a single poll are intentionally superseded.
-`connected()` means ACCEPT was received, not that first confirmation/snapshot has arrived.
 `disconnect()` sends a best-effort packet and clears the local token; it does not await an ACK.
 Continue teardown as in `Client::run`, or allow the server's timeout to handle a lost departure.
 The object is not designed for reconnect after `disconnect()`; construct a new client session.
 
-`Server::step(now)` must run at the intended fixed tick rate: it expires sessions, consumes
-received packets, advances movement and sends scheduled snapshots. `now` measures inactivity;
-it is not a variable movement delta. `shutdown()` dispatches a best-effort event; the entry point
-handles signals and gives it a short dispatch window. The server links no rendering/input module.
+`Server::poll()` expires silent sessions and handles received packets; call it continuously.
+`Server::tick(dt)` releases stale inputs, updates the `Room` (one ECS scheduler run) and sends a
+snapshot every third tick; call it at the fixed tick rate. `shutdown()` dispatches a best-effort
+event; the transport destructor gives it a short dispatch window. The server links no rendering/input module.
 
 ## 8. Security and protocol evolution
 
@@ -684,27 +687,7 @@ I/O failures and backoff, plus reliability for messages that must not be lost. T
 not implemented. Any incompatible header/payload change requires a version bump, RFC updates,
 golden vectors and client/server changes together.
 
-## 9. Tests and troubleshooting
-
-Run the existing automated checks after building:
-
-```sh
-ctest --test-dir build --output-on-failure
-```
-
-The `protocol` test validates golden CONNECT/INPUT bytes, round trips for every message type,
-truncated prefixes, trailing bytes, direction/version/magic checks, reserved bits, modular wrap,
-maximum snapshots, duplicate/missing entity references and randomized input.
-The `udp_integration` test, enabled when Python 3 is found, starts the real server and independent
-UDP clients, then the C++ NetworkClient. It checks pending confirmation, retry idempotency,
-replication, authoritative movement, stale input, input freshness, wrong tokens/endpoints,
-malformed/oversize input, heartbeat echo, version/full-server rejection, departure and timeout.
-Neither test opens graphical windows.
-
-Not yet covered comprehensively: deliberate random/burst loss, delayed/reordered snapshots
-through a proxy, queue saturation, every platform-specific socket failure, server restart races,
-GUI behavior, Windows crossplay, or all arithmetic half-range edge cases. Passing current tests
-does not establish robustness under every network condition.
+## 9. Troubleshooting
 
 | Symptom | Checks and action |
 |---|---|
@@ -718,8 +701,6 @@ does not establish robustness under every network condition.
 | Client disappears from other windows | Explicit quit or server timeout; absence in full snapshot removes ship |
 | Packet injection has no effect | Check type/direction, lengths, fields, endpoint/token and freshness |
 | No useful log for a bad datagram | Silent drop is intentional; there are currently no rejection counters |
-| UDP test fails with `Operation not permitted` | Test environment must permit creating/binding loopback UDP sockets |
-| UDP integration test is absent | Configure CMake with a discoverable Python 3 interpreter and tests enabled |
 
 For a manual acceptance run, verify two windows, movement, clamping, window focus, quitting,
 client termination and server shutdown. Keep future loss/delay tests isolated from an active

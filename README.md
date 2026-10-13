@@ -97,18 +97,9 @@ rm -rf build/CMakeCache.txt build/CMakeFiles
 Use arrow keys to move and Escape to quit. The client accepts numeric IPv4 addresses.
 Space is reserved for shooting, which is not implemented yet. All players currently use the same ship sprite.
 
-## Tests
-
-```sh
-ctest --test-dir build --output-on-failure
-```
-
-The codec test checks wire bytes and malformed packets. With Python 3 available, the UDP
-integration test starts a real server and checks multiple clients, movement, timeouts and departures.
-
 ## Documentation
 
-See [doc/](doc/) for the project documentation, including [RESEAU.md](doc/RESEAU.md).
+See [docs/](docs/) for the project documentation, including [RESEAU.md](docs/RESEAU.md).
 
 ## License
 

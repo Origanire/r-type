@@ -1,6 +1,6 @@
 site_name: R-Type
 site_description: Developer documentation of the R-Type project and its game engine
-docs_dir: doc
+docs_dir: docs
 
 theme:
   name: material
@@ -21,14 +21,30 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Network documentation: RESEAU.md
+  - Getting started:
+      - Installation: getting-started/installation.md
+      - Building: getting-started/building.md
+      - Running: getting-started/running.md
   - Architecture:
       - Overview: architecture/overview.md
       - Engine modules: architecture/engine-modules.md
       - ECS: architecture/ecs.md
+      - Networking: architecture/networking.md
+      - Threading: architecture/threading.md
       - Rendering: architecture/rendering.md
+  - Network documentation (RFC): RESEAU.md
   - Coding conventions: conventions.md
   - Guides:
       - Add a component: guides/add-a-component.md
       - Add a system: guides/add-a-system.md
+      - Add an enemy: guides/add-an-enemy.md
+      - Add a wave: guides/add-a-wave.md
+  - Comparative study:
+      - Overview: comparative-study/index.md
+      - Libraries: comparative-study/libraries.md
+      - Algorithms and data structures: comparative-study/algorithms-and-data-structures.md
+      - Storage: comparative-study/storage.md
+      - Security: comparative-study/security.md
+      - Networking: comparative-study/networking.md
+  - Accessibility: accessibility.md
   - Implementation roadmap: roadmap.md

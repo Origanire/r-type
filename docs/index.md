@@ -3,7 +3,7 @@
 The project currently provides a networked movement prototype. Combat is planned.
 Build and quick-start commands are in the repository [README](../README.md).
 
-- [Network documentation: protocol, usage, APIs, errors and tests](RESEAU.md)
+- [Network documentation: protocol, usage, APIs and errors](RESEAU.md)
 - [Architecture overview](architecture/overview.md)
 - [Engine modules](architecture/engine-modules.md)
 - [Entity Component System](architecture/ecs.md)
@@ -24,5 +24,5 @@ python -m pip install mkdocs-material pymdown-extensions
 mkdocs serve
 ```
 
-MkDocs reads the Markdown files in `doc/`. The documentation site has not been deployed.
+MkDocs reads the Markdown files in `docs/`. The documentation site has not been deployed.
 The project subject PDFs are retained in this directory as reference material.

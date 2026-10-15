@@ -179,7 +179,9 @@ add_executable(r-type_client
     game/client/src/main.cpp
     game/client/src/Client.cpp
     game/client/src/NetworkClient.cpp
+    game/client/src/SpriteSheet.cpp
     game/client/src/systems/StarfieldSystem.cpp
+    game/client/src/systems/ShipAnimationSystem.cpp
     game/client/src/systems/RenderSystem.cpp
 )
 target_include_directories(r-type_client PRIVATE

@@ -8,7 +8,10 @@
 #include "GameConstants.hpp"
 #include "Position.hpp"
 #include "RenderSystem.hpp"
+#include "ShipAnimationSystem.hpp"
+#include "ShipTilt.hpp"
 #include "Sprite.hpp"
+#include "SpriteSheet.hpp"
 #include "Star.hpp"
 #include "StarfieldSystem.hpp"
 
@@ -20,9 +23,7 @@ namespace {
 
 constexpr unsigned int WINDOW_WIDTH = 1280;
 constexpr unsigned int WINDOW_HEIGHT = 720;
-constexpr const char *PLAYER_TEXTURE = "player";
-constexpr engine::render::IntRect PLAYER_FRAME{66, 0, 33, 17};
-constexpr float PLAYER_SCALE = PLAYER_WIDTH / static_cast<float>(PLAYER_FRAME.width);
+constexpr float PLAYER_SCALE = PLAYER_WIDTH / static_cast<float>(PLAYER_SHIP_SHEET.frameWidth);
 
 struct StarLayer
 {
@@ -38,13 +39,33 @@ constexpr StarLayer STAR_LAYERS[] = {
     {25, 240.f, 4.f, {255, 255, 255, 255}},
 };
 
+// The player slot picks the ship color, so each of the four players keeps the same ship.
+int playerRow(const protocol::WorldSnapshot &snapshot, std::uint16_t entityId)
+{
+    for (std::size_t slot = 0; slot < snapshot.players.size(); ++slot) {
+        if (snapshot.players[slot].state != protocol::SLOT_EMPTY && snapshot.players[slot].entityId == entityId)
+            return static_cast<int>(slot);
+    }
+    return 0;
+}
+
+// Screen Y grows downwards: a smaller Y means the ship goes up.
+float verticalDirection(float previousY, float nextY)
+{
+    if (nextY < previousY)
+        return 1.f;
+    if (nextY > previousY)
+        return -1.f;
+    return 0.f;
+}
+
 } // namespace
 
 Client::Client(const std::filesystem::path &assetsDir, engine::net::Endpoint server)
     : m_window(WINDOW_WIDTH, WINDOW_HEIGHT, "R-Type", {WORLD_WIDTH, WORLD_HEIGHT}), m_renderer(m_window, m_textures),
       m_timestep(1.f / static_cast<float>(protocol::TICK_RATE)), m_network(std::move(server))
 {
-    m_textures.load(PLAYER_TEXTURE, (assetsDir / "sprites" / "players" / "r-typesheet42.gif").string());
+    m_textures.load(PLAYER_SHIP_SHEET.texture, (assetsDir / "sprites" / PLAYER_SHIP_SHEET.path).string());
     registerComponents();
     registerSystems();
     createStarfield();
@@ -73,11 +94,13 @@ void Client::registerComponents()
     m_registry.registerComponent<Position>();
     m_registry.registerComponent<Sprite>();
     m_registry.registerComponent<Star>();
+    m_registry.registerComponent<ShipTilt>();
 }
 
 void Client::registerSystems()
 {
     m_logic.addSystem(Phase::Update, starfieldSystem);
+    m_logic.addSystem(Phase::Update, shipAnimationSystem);
     m_render.addSystem(Phase::Render, RenderSystem(m_renderer));
 }
 
@@ -100,14 +123,17 @@ void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
 {
     std::unordered_set<std::uint16_t> visible;
     auto &positions = m_registry.getComponents<Position>();
+    auto &tilts = m_registry.getComponents<ShipTilt>();
     for (const auto &remote : snapshot.entities) {
         if (remote.kind != protocol::KIND_PLAYER_SHIP)
             continue;
         visible.insert(remote.id);
+        const Position next{static_cast<float>(remote.x), static_cast<float>(remote.y)};
         auto found = m_networkEntities.find(remote.id);
         if (found == m_networkEntities.end())
-            found = m_networkEntities.emplace(remote.id, createShip()).first;
-        positions[found->second] = Position{static_cast<float>(remote.x), static_cast<float>(remote.y)};
+            found = m_networkEntities.emplace(remote.id, createShip(playerRow(snapshot, remote.id), next)).first;
+        tilts[found->second]->direction = verticalDirection(positions[found->second]->y, next.y);
+        positions[found->second] = next;
     }
     for (auto it = m_networkEntities.begin(); it != m_networkEntities.end();) {
         if (visible.contains(it->first)) {
@@ -119,11 +145,13 @@ void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
     }
 }
 
-engine::ecs::Entity Client::createShip()
+engine::ecs::Entity Client::createShip(int row, Position position)
 {
     engine::ecs::Entity ship = m_registry.spawnEntity();
-    m_registry.addComponent(ship, Position{});
-    m_registry.addComponent(ship, Sprite{PLAYER_TEXTURE, PLAYER_FRAME, PLAYER_SCALE});
+    m_registry.addComponent(ship, position);
+    m_registry.addComponent(
+        ship, Sprite{PLAYER_SHIP_SHEET.texture, PLAYER_SHIP_SHEET.frame(PLAYER_SHIP_FLAT_COLUMN, row), PLAYER_SCALE});
+    m_registry.addComponent(ship, ShipTilt{row});
     return ship;
 }
 

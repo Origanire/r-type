@@ -1,18 +1,20 @@
 #pragma once
 
+#include "ClientWorld.hpp"
 #include "IRenderer.hpp"
-#include "SystemContext.hpp"
+#include "ISystem.hpp"
 
 namespace rtype::client {
 
-class RenderSystem
+class RenderSystem : public engine::ecs::ISystem
 {
 public:
-    explicit RenderSystem(engine::render::IRenderer &renderer);
+    RenderSystem(ClientWorld &world, engine::render::IRenderer &renderer);
 
-    void operator()(engine::ecs::SystemContext &context) const;
+    void update(float dt) override;
 
 private:
+    ClientWorld &m_world;
     engine::render::IRenderer &m_renderer;
 };
 

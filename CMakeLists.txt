@@ -64,9 +64,8 @@ target_include_directories(engine_core PUBLIC engine/core/include)
 # --- engine_ecs: entities, components, systems
 add_library(engine_ecs
     engine/ecs/src/Entity.cpp
-    engine/ecs/src/Registry.cpp
-    engine/ecs/src/CommandBuffer.cpp
-    engine/ecs/src/Scheduler.cpp
+    engine/ecs/src/EntityManager.cpp
+    engine/ecs/src/SystemManager.cpp
 )
 target_include_directories(engine_ecs PUBLIC engine/ecs/include)
 target_link_libraries(engine_ecs PUBLIC engine_core)
@@ -164,7 +163,7 @@ add_executable(r-type_server
     game/server/src/systems/InputSystem.cpp
     game/server/src/systems/MovementSystem.cpp
     game/server/src/systems/BoundarySystem.cpp
-    game/server/src/systems/SnapshotSystem.cpp
+    game/server/src/Snapshot.cpp
 )
 target_include_directories(r-type_server PRIVATE
     game/server/include

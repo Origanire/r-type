@@ -1,22 +1,21 @@
 #include "StarfieldSystem.hpp"
 
 #include "GameConstants.hpp"
-#include "Position.hpp"
-#include "Registry.hpp"
-#include "Star.hpp"
 
 namespace rtype::client {
 
-void starfieldSystem(engine::ecs::SystemContext &context)
+StarfieldSystem::StarfieldSystem(ClientWorld &world) : m_world(world)
 {
-    auto &positions = context.registry.getComponents<Position>();
-    auto &stars = context.registry.getComponents<Star>();
-    for (std::size_t i = 0; i < positions.size() && i < stars.size(); ++i) {
-        if (!positions[i] || !stars[i])
-            continue;
-        positions[i]->x -= stars[i]->speed * context.dt;
-        if (positions[i]->x < -stars[i]->size)
-            positions[i]->x += WORLD_WIDTH + stars[i]->size;
+}
+
+void StarfieldSystem::update(float dt)
+{
+    for (std::size_t i : m_world.entities.with(POSITION | STAR)) {
+        Position &position = m_world.positions[i];
+        const Star &star = m_world.stars[i];
+        position.x -= star.speed * dt;
+        if (position.x < -star.size)
+            position.x += WORLD_WIDTH + star.size;
     }
 }
 

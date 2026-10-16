@@ -2,14 +2,8 @@
 
 namespace engine::ecs {
 
-Entity::Entity(std::size_t index, Generation generation) noexcept
-    : m_index(index), m_generation(generation)
+Entity::Entity(std::size_t index, std::uint32_t generation) noexcept : m_index(index), m_generation(generation)
 {
-}
-
-Entity::operator std::size_t() const noexcept
-{
-    return m_index;
 }
 
 std::size_t Entity::index() const noexcept
@@ -17,7 +11,7 @@ std::size_t Entity::index() const noexcept
     return m_index;
 }
 
-Entity::Generation Entity::generation() const noexcept
+std::uint32_t Entity::generation() const noexcept
 {
     return m_generation;
 }

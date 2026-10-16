@@ -2,11 +2,11 @@
 
 #include <vector>
 
-#include "Registry.hpp"
 #include "RtypeProtocol.hpp"
+#include "ServerWorld.hpp"
 
 namespace rtype::server {
 
-std::vector<protocol::NetworkEntity> collectNetworkEntities(engine::ecs::Registry &registry);
+std::vector<protocol::NetworkEntity> collectNetworkEntities(const ServerWorld &world);
 
 } // namespace rtype::server

@@ -6,10 +6,9 @@
 #include <optional>
 #include <vector>
 
-#include "Entity.hpp"
-#include "Registry.hpp"
 #include "RtypeProtocol.hpp"
-#include "Scheduler.hpp"
+#include "ServerWorld.hpp"
+#include "SystemManager.hpp"
 
 namespace rtype::server {
 
@@ -25,14 +24,14 @@ public:
 
     std::uint32_t tick() const;
     std::uint16_t playerNetworkId(std::size_t slot) const;
-    std::vector<protocol::NetworkEntity> networkEntities();
+    std::vector<protocol::NetworkEntity> networkEntities() const;
 
 private:
     std::uint16_t nextNetworkId();
     bool networkIdInUse(std::uint16_t networkId) const;
 
-    engine::ecs::Registry m_registry;
-    engine::ecs::Scheduler m_scheduler;
+    ServerWorld m_world;
+    engine::ecs::SystemManager m_systems;
     std::array<std::optional<engine::ecs::Entity>, protocol::MAX_PLAYERS> m_ships;
     std::uint16_t m_nextNetworkId = 1;
     std::uint32_t m_tick = 0;

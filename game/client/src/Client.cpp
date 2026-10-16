@@ -1,5 +1,6 @@
 #include "Client.hpp"
 
+#include <memory>
 #include <random>
 #include <unordered_set>
 #include <utility>
@@ -13,8 +14,6 @@
 #include "StarfieldSystem.hpp"
 
 namespace rtype::client {
-
-using engine::ecs::Phase;
 
 namespace {
 
@@ -45,7 +44,6 @@ Client::Client(const std::filesystem::path &assetsDir, engine::net::Endpoint ser
       m_timestep(1.f / static_cast<float>(protocol::TICK_RATE)), m_network(std::move(server))
 {
     m_textures.load(PLAYER_TEXTURE, (assetsDir / "sprites" / "players" / "r-typesheet42.gif").string());
-    registerComponents();
     registerSystems();
     createStarfield();
 }
@@ -62,23 +60,16 @@ void Client::run()
             applySnapshot(*snapshot);
         m_timestep.addTime(clock.restart());
         while (m_timestep.step())
-            m_logic.run(m_registry, m_timestep.stepSeconds());
-        m_render.run(m_registry, 0.f);
+            m_logic.update(m_timestep.stepSeconds());
+        m_render.update(0.f);
     }
     m_network.disconnect();
 }
 
-void Client::registerComponents()
-{
-    m_registry.registerComponent<Position>();
-    m_registry.registerComponent<Sprite>();
-    m_registry.registerComponent<Star>();
-}
-
 void Client::registerSystems()
 {
-    m_logic.addSystem(Phase::Update, starfieldSystem);
-    m_render.addSystem(Phase::Render, RenderSystem(m_renderer));
+    m_logic.add(std::make_unique<StarfieldSystem>(m_world));
+    m_render.add(std::make_unique<RenderSystem>(m_world, m_renderer));
 }
 
 void Client::createStarfield()
@@ -89,9 +80,10 @@ void Client::createStarfield()
 
     for (const StarLayer &layer : STAR_LAYERS) {
         for (int i = 0; i < layer.count; ++i) {
-            engine::ecs::Entity star = m_registry.spawnEntity();
-            m_registry.addComponent(star, Position{randomX(random), randomY(random)});
-            m_registry.addComponent(star, Star{layer.speed, layer.size, layer.color});
+            engine::ecs::Entity star = m_world.entities.create();
+            m_world.positions[star.index()] = Position{randomX(random), randomY(random)};
+            m_world.stars[star.index()] = Star{layer.speed, layer.size, layer.color};
+            m_world.entities.addComponents(star, POSITION | STAR);
         }
     }
 }
@@ -99,7 +91,6 @@ void Client::createStarfield()
 void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
 {
     std::unordered_set<std::uint16_t> visible;
-    auto &positions = m_registry.getComponents<Position>();
     for (const auto &remote : snapshot.entities) {
         if (remote.kind != protocol::KIND_PLAYER_SHIP)
             continue;
@@ -107,23 +98,24 @@ void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
         auto found = m_networkEntities.find(remote.id);
         if (found == m_networkEntities.end())
             found = m_networkEntities.emplace(remote.id, createShip()).first;
-        positions[found->second] = Position{static_cast<float>(remote.x), static_cast<float>(remote.y)};
+        m_world.positions[found->second.index()] = Position{static_cast<float>(remote.x), static_cast<float>(remote.y)};
     }
     for (auto it = m_networkEntities.begin(); it != m_networkEntities.end();) {
         if (visible.contains(it->first)) {
             ++it;
             continue;
         }
-        m_registry.killEntity(it->second);
+        m_world.entities.destroy(it->second);
         it = m_networkEntities.erase(it);
     }
 }
 
 engine::ecs::Entity Client::createShip()
 {
-    engine::ecs::Entity ship = m_registry.spawnEntity();
-    m_registry.addComponent(ship, Position{});
-    m_registry.addComponent(ship, Sprite{PLAYER_TEXTURE, PLAYER_FRAME, PLAYER_SCALE});
+    engine::ecs::Entity ship = m_world.entities.create();
+    m_world.positions[ship.index()] = Position{};
+    m_world.sprites[ship.index()] = Sprite{PLAYER_TEXTURE, PLAYER_FRAME, PLAYER_SCALE};
+    m_world.entities.addComponents(ship, POSITION | SPRITE);
     return ship;
 }
 

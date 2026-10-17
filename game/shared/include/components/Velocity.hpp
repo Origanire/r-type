@@ -1,11 +1,9 @@
 #pragma once
 
+#include "PhysicsComponents.hpp"
+
 namespace rtype {
 
-struct Velocity
-{
-    float x = 0.f;
-    float y = 0.f;
-};
+using Velocity = engine::physics::Velocity;
 
 } // namespace rtype

@@ -17,8 +17,8 @@ There is one room. Communication uses IPv4 UDP, with numeric IPv4 addresses only
 | Sessions | Four slots, endpoint/token checks, explicit departure and five-second expiration |
 | Simulation | Server movement at 60 ticks/s; snapshots every third tick |
 | Client presentation | Replicated ship creation/update/removal and local stars |
-| Input | Arrow keys; Fire bit is transmitted but does not create missiles yet |
-| Events | Join/departure/shutdown are emitted; combat events are defined but not emitted yet |
+| Input | Arrow keys; held Fire creates a kind-2 missile every 0.2 s, removed once it leaves the world |
+| Events | Join/departure/shutdown are emitted; `GameEvents` broadcasts ENTITY_DESTROYED/PLAYER_KILLED before the next snapshot, but nothing raises them until collisions exist |
 | Cosmetic event playback | Not implemented; snapshots update the actual displayed ships |
 | Heartbeat | Request/acknowledgement supported; no RTT/ping display yet |
 | Recovery | Complete snapshots and periodic inputs; no reliable event channel |

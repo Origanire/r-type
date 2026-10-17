@@ -26,4 +26,7 @@ inline constexpr int PLAYER_SHIP_MAX_TILT = 2;
 // r-typesheet1: the basic shot of the player ship, its trail on the left.
 inline constexpr SpriteSheet PLAYER_MISSILE_SHEET{"player_missiles", "projectiles/r-typesheet1.gif", 249, 90, 16, 4};
 
+// r-typesheet5: the basic Bydo, facing left, one column per animation frame.
+inline constexpr SpriteSheet BYDO_SHEET{"bydos", "enemies/r-typesheet5.gif", 0, 0, 33, 36};
+
 } // namespace rtype::client

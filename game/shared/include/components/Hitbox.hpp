@@ -1,11 +1,9 @@
 #pragma once
 
+#include "PhysicsComponents.hpp"
+
 namespace rtype {
 
-struct Hitbox
-{
-    float width = 0.f;
-    float height = 0.f;
-};
+using Hitbox = engine::physics::Hitbox;
 
 } // namespace rtype

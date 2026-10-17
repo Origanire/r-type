@@ -18,6 +18,7 @@ There is one room. Communication uses IPv4 UDP, with numeric IPv4 addresses only
 | Simulation | Server movement at 60 ticks/s; snapshots every third tick |
 | Client presentation | Replicated ship creation/update/removal and local stars |
 | Input | Arrow keys; held Fire creates a kind-2 missile every 0.2 s, removed once it leaves the world |
+| Enemies | Kind-3 Bydos spawn beyond the right edge every 0.6–1.8 s at a random height, flying straight, in a sine wave or in a zigzag; removed once past the left edge |
 | Events | Join/departure/shutdown are emitted; `GameEvents` broadcasts ENTITY_DESTROYED/PLAYER_KILLED before the next snapshot, but nothing raises them until collisions exist |
 | Cosmetic event playback | Not implemented; snapshots update the actual displayed ships |
 | Heartbeat | Request/acknowledgement supported; no RTT/ping display yet |

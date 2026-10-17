@@ -22,7 +22,7 @@ Implement in this order. Keep authoritative logic on the server and use snapshot
 | ID | Task | Depends on | Definition of done |
 |---|---|---|---|
 | G1 | Shared gameplay dimensions/rules and server ECS systems | N5 | Speed/size/timing constants are named; simulation can be tested without rendering |
-| G2 | Shooting | G1 | Held Fire creates kind-2 missiles at a server-limited cadence; both clients see them; offscreen missiles are removed |
+| G2 | Shooting (implemented) | G1 | Held Fire creates kind-2 missiles at a server-limited cadence; both clients see them; offscreen missiles are removed |
 | G3 | Basic enemies | G1 | Kind-3 enemies spawn on the right and move left; rendering uses the enemy assets |
 | G4 | Collision and damage | G2, G3 | Reusable AABB tests; each impact is resolved once; destroyed entities disappear on every client |
 | G5 | Lives, score and death | G4 | Server updates player fields; deaths and scoring match on all clients; HUD displays authoritative values |

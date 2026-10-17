@@ -4,7 +4,7 @@ namespace rtype::client {
 
 engine::render::IntRect SpriteSheet::frame(int column, int row) const
 {
-    return {column * frameWidth, row * frameHeight, frameWidth, frameHeight};
+    return {left + column * frameWidth, top + row * frameHeight, frameWidth, frameHeight};
 }
 
 } // namespace rtype::client

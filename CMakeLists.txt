@@ -72,13 +72,13 @@ target_include_directories(engine_ecs PUBLIC engine/ecs/include)
 target_link_libraries(engine_ecs PUBLIC engine_core)
 
 # --- engine_physics: transform, velocity, hitboxes, movement, collisions
-# add_library(engine_physics
-#     engine/physics/src/Aabb.cpp
-#     engine/physics/src/MovementSystem.cpp
-#     engine/physics/src/CollisionSystem.cpp
-# )
-# target_include_directories(engine_physics PUBLIC engine/physics/include)
-# target_link_libraries(engine_physics PUBLIC engine_core engine_ecs)
+add_library(engine_physics
+    engine/physics/src/Aabb.cpp
+    engine/physics/src/MovementSystem.cpp
+    engine/physics/src/CollisionSystem.cpp
+)
+target_include_directories(engine_physics PUBLIC engine/physics/include)
+target_link_libraries(engine_physics PUBLIC engine_core engine_ecs)
 
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
 add_library(engine_net
@@ -140,7 +140,7 @@ add_library(rtype_shared
     game/shared/src/PortOption.cpp
 )
 target_include_directories(rtype_shared PUBLIC game/shared/include game/shared/include/components)
-target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
+target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_physics engine_net)
 
 # Planned:
 # add_library(rtype_shared
@@ -166,7 +166,6 @@ add_executable(r-type_server
     game/server/src/systems/ShootingSystem.cpp
     game/server/src/systems/SpawnSystem.cpp
     game/server/src/systems/EnemyMovementSystem.cpp
-    game/server/src/systems/MovementSystem.cpp
     game/server/src/systems/BoundarySystem.cpp
     game/server/src/systems/OffscreenSystem.cpp
     game/server/src/systems/SnapshotSystem.cpp

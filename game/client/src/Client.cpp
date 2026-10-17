@@ -25,6 +25,7 @@ constexpr unsigned int WINDOW_WIDTH = 1280;
 constexpr unsigned int WINDOW_HEIGHT = 720;
 constexpr float PLAYER_SCALE = PLAYER_WIDTH / static_cast<float>(PLAYER_SHIP_SHEET.frameWidth);
 constexpr float MISSILE_SCALE = MISSILE_WIDTH / static_cast<float>(PLAYER_MISSILE_SHEET.frameWidth);
+constexpr float BYDO_SCALE = BYDO_WIDTH / static_cast<float>(BYDO_SHEET.frameWidth);
 
 struct StarLayer
 {
@@ -68,6 +69,7 @@ Client::Client(const std::filesystem::path &assetsDir, engine::net::Endpoint ser
 {
     m_textures.load(PLAYER_SHIP_SHEET.texture, (assetsDir / "sprites" / PLAYER_SHIP_SHEET.path).string());
     m_textures.load(PLAYER_MISSILE_SHEET.texture, (assetsDir / "sprites" / PLAYER_MISSILE_SHEET.path).string());
+    m_textures.load(BYDO_SHEET.texture, (assetsDir / "sprites" / BYDO_SHEET.path).string());
     registerComponents();
     registerSystems();
     createStarfield();
@@ -128,13 +130,15 @@ void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
     auto &tilts = m_registry.getComponents<ShipTilt>();
     for (const auto &remote : snapshot.entities) {
         const bool ship = remote.kind == protocol::KIND_PLAYER_SHIP;
-        if (!ship && remote.kind != protocol::KIND_PLAYER_MISSILE)
+        if (!ship && remote.kind != protocol::KIND_PLAYER_MISSILE && remote.kind != protocol::KIND_BYDO)
             continue;
         visible.insert(remote.id);
         const Position next{static_cast<float>(remote.x), static_cast<float>(remote.y)};
         auto found = m_networkEntities.find(remote.id);
         if (found == m_networkEntities.end()) {
-            const engine::ecs::Entity entity = ship ? createShip(playerRow(snapshot, remote.id), next) : createMissile(next);
+            engine::ecs::Entity entity = ship ? createShip(playerRow(snapshot, remote.id), next)
+                : remote.kind == protocol::KIND_BYDO ? createBydo(next)
+                                                     : createMissile(next);
             found = m_networkEntities.emplace(remote.id, entity).first;
         }
         if (ship)
@@ -167,6 +171,14 @@ engine::ecs::Entity Client::createMissile(Position position)
     m_registry.addComponent(missile, position);
     m_registry.addComponent(missile, Sprite{PLAYER_MISSILE_SHEET.texture, PLAYER_MISSILE_SHEET.frame(0, 0), MISSILE_SCALE});
     return missile;
+}
+
+engine::ecs::Entity Client::createBydo(Position position)
+{
+    engine::ecs::Entity bydo = m_registry.spawnEntity();
+    m_registry.addComponent(bydo, position);
+    m_registry.addComponent(bydo, Sprite{BYDO_SHEET.texture, BYDO_SHEET.frame(0, 0), BYDO_SCALE});
+    return bydo;
 }
 
 } // namespace rtype::client

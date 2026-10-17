@@ -1,11 +1,9 @@
 #pragma once
 
+#include "PhysicsComponents.hpp"
+
 namespace rtype {
 
-struct Position
-{
-    float x = 0.f;
-    float y = 0.f;
-};
+using Position = engine::physics::Position;
 
 } // namespace rtype

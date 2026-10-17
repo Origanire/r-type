@@ -37,7 +37,7 @@ Room::Room()
     m_scheduler.addSystem(Phase::Update, ShootingSystem([this] { return nextNetworkId(); }));
     m_scheduler.addSystem(Phase::Update, SpawnSystem([this] { return nextNetworkId(); }));
     m_scheduler.addSystem(Phase::Update, enemyMovementSystem);
-    m_scheduler.addSystem(Phase::Physics, movementSystem);
+    m_scheduler.addSystem(Phase::Physics, engine::physics::movementSystem);
     m_scheduler.addSystem(Phase::Physics, boundarySystem);
     m_scheduler.addSystem(Phase::Physics, offscreenSystem);
 }

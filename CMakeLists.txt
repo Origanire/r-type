@@ -155,7 +155,7 @@ target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
 #     PRIVATE nlohmann_json::nlohmann_json)
 
 # --- r-type_server [p.1][p.9]: authoritative server (never links render, audio, input or ui)
-# Planned: AISystem, DamageSystem, DeathSystem, SpawnSystem
+# Planned: DamageSystem, DeathSystem
 add_executable(r-type_server
     game/server/src/main.cpp
     game/server/src/Server.cpp
@@ -164,6 +164,8 @@ add_executable(r-type_server
     game/server/src/GameEvents.cpp
     game/server/src/systems/InputSystem.cpp
     game/server/src/systems/ShootingSystem.cpp
+    game/server/src/systems/SpawnSystem.cpp
+    game/server/src/systems/EnemyMovementSystem.cpp
     game/server/src/systems/MovementSystem.cpp
     game/server/src/systems/BoundarySystem.cpp
     game/server/src/systems/OffscreenSystem.cpp

@@ -9,26 +9,11 @@
 #include "PlayerInput.hpp"
 #include "Position.hpp"
 #include "Registry.hpp"
-#include "Replicated.hpp"
 #include "RtypeProtocol.hpp"
 #include "Shooter.hpp"
+#include "SnapshotSystem.hpp"
 
 namespace rtype::server {
-
-namespace {
-
-std::size_t countReplicated(engine::ecs::Registry &registry)
-{
-    auto &replicated = registry.getComponents<Replicated>();
-    std::size_t count = 0;
-    for (std::size_t i = 0; i < replicated.size(); ++i) {
-        if (replicated[i])
-            ++count;
-    }
-    return count;
-}
-
-} // namespace
 
 ShootingSystem::ShootingSystem(std::function<std::uint16_t()> nextNetworkId)
     : m_nextNetworkId(std::move(nextNetworkId))

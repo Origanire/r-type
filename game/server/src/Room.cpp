@@ -1,6 +1,8 @@
 #include "Room.hpp"
 
 #include "BoundarySystem.hpp"
+#include "Enemy.hpp"
+#include "EnemyMovementSystem.hpp"
 #include "EntityFactory.hpp"
 #include "GameError.hpp"
 #include "Hitbox.hpp"
@@ -13,6 +15,7 @@
 #include "Replicated.hpp"
 #include "Shooter.hpp"
 #include "ShootingSystem.hpp"
+#include "SpawnSystem.hpp"
 #include "SnapshotSystem.hpp"
 #include "Velocity.hpp"
 
@@ -29,8 +32,11 @@ Room::Room()
     m_registry.registerComponent<Replicated>();
     m_registry.registerComponent<Shooter>();
     m_registry.registerComponent<Projectile>();
+    m_registry.registerComponent<Enemy>();
     m_scheduler.addSystem(Phase::Input, inputSystem);
     m_scheduler.addSystem(Phase::Update, ShootingSystem([this] { return nextNetworkId(); }));
+    m_scheduler.addSystem(Phase::Update, SpawnSystem([this] { return nextNetworkId(); }));
+    m_scheduler.addSystem(Phase::Update, enemyMovementSystem);
     m_scheduler.addSystem(Phase::Physics, movementSystem);
     m_scheduler.addSystem(Phase::Physics, boundarySystem);
     m_scheduler.addSystem(Phase::Physics, offscreenSystem);

@@ -31,6 +31,7 @@ private:
     void applySnapshot(const protocol::WorldSnapshot &snapshot);
     engine::ecs::Entity createShip(int row, Position position);
     engine::ecs::Entity createMissile(Position position);
+    engine::ecs::Entity createBydo(Position position);
 
     engine::render::Window m_window;
     engine::render::TextureManager m_textures;

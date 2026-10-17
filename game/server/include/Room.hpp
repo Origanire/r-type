@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Entity.hpp"
+#include "GameEvents.hpp"
 #include "Registry.hpp"
 #include "RtypeProtocol.hpp"
 #include "Scheduler.hpp"
@@ -26,6 +27,7 @@ public:
     std::uint32_t tick() const;
     std::uint16_t playerNetworkId(std::size_t slot) const;
     std::vector<protocol::NetworkEntity> networkEntities();
+    std::vector<protocol::Packet> takeEvents();
 
 private:
     std::uint16_t nextNetworkId();
@@ -33,6 +35,7 @@ private:
 
     engine::ecs::Registry m_registry;
     engine::ecs::Scheduler m_scheduler;
+    GameEvents m_events;
     std::array<std::optional<engine::ecs::Entity>, protocol::MAX_PLAYERS> m_ships;
     std::uint16_t m_nextNetworkId = 1;
     std::uint32_t m_tick = 0;

@@ -15,4 +15,9 @@ inline constexpr float PLAYER_SPAWN_Y = 200.f;
 inline constexpr float PLAYER_SPAWN_SPACING = 160.f;
 inline constexpr std::uint8_t PLAYER_START_LIVES = 3;
 
+inline constexpr float MISSILE_SPEED = 1500.f;
+inline constexpr float MISSILE_WIDTH = 48.f;
+inline constexpr float MISSILE_HEIGHT = 12.f;
+inline constexpr float FIRE_INTERVAL = 0.2f;
+
 } // namespace rtype

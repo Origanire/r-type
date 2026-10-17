@@ -20,4 +20,13 @@ inline constexpr float MISSILE_WIDTH = 48.f;
 inline constexpr float MISSILE_HEIGHT = 12.f;
 inline constexpr float FIRE_INTERVAL = 0.2f;
 
+inline constexpr float BYDO_SPEED = 250.f;
+inline constexpr float BYDO_WIDTH = 66.f;
+inline constexpr float BYDO_HEIGHT = 72.f;
+inline constexpr float BYDO_SPAWN_MIN_INTERVAL = 0.6f;
+inline constexpr float BYDO_SPAWN_MAX_INTERVAL = 1.8f;
+inline constexpr float BYDO_SINE_AMPLITUDE = 150.f;
+inline constexpr float BYDO_SINE_FREQUENCY = 3.f;
+inline constexpr float BYDO_ZIGZAG_SPEED = 250.f;
+
 } // namespace rtype

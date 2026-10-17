@@ -27,6 +27,7 @@ inline constexpr std::uint8_t RESERVED_BUTTONS = 0xE0;
 
 inline constexpr std::uint8_t KIND_PLAYER_SHIP = 1;
 inline constexpr std::uint8_t KIND_PLAYER_MISSILE = 2;
+inline constexpr std::uint8_t KIND_BYDO = 3;
 
 inline constexpr std::uint8_t REJECT_SERVER_FULL = 1;
 inline constexpr std::uint8_t REJECT_VERSION_MISMATCH = 2;

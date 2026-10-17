@@ -24,6 +24,7 @@ namespace {
 constexpr unsigned int WINDOW_WIDTH = 1280;
 constexpr unsigned int WINDOW_HEIGHT = 720;
 constexpr float PLAYER_SCALE = PLAYER_WIDTH / static_cast<float>(PLAYER_SHIP_SHEET.frameWidth);
+constexpr float MISSILE_SCALE = MISSILE_WIDTH / static_cast<float>(PLAYER_MISSILE_SHEET.frameWidth);
 
 struct StarLayer
 {
@@ -66,6 +67,7 @@ Client::Client(const std::filesystem::path &assetsDir, engine::net::Endpoint ser
       m_timestep(1.f / static_cast<float>(protocol::TICK_RATE)), m_network(std::move(server))
 {
     m_textures.load(PLAYER_SHIP_SHEET.texture, (assetsDir / "sprites" / PLAYER_SHIP_SHEET.path).string());
+    m_textures.load(PLAYER_MISSILE_SHEET.texture, (assetsDir / "sprites" / PLAYER_MISSILE_SHEET.path).string());
     registerComponents();
     registerSystems();
     createStarfield();
@@ -125,14 +127,18 @@ void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
     auto &positions = m_registry.getComponents<Position>();
     auto &tilts = m_registry.getComponents<ShipTilt>();
     for (const auto &remote : snapshot.entities) {
-        if (remote.kind != protocol::KIND_PLAYER_SHIP)
+        const bool ship = remote.kind == protocol::KIND_PLAYER_SHIP;
+        if (!ship && remote.kind != protocol::KIND_PLAYER_MISSILE)
             continue;
         visible.insert(remote.id);
         const Position next{static_cast<float>(remote.x), static_cast<float>(remote.y)};
         auto found = m_networkEntities.find(remote.id);
-        if (found == m_networkEntities.end())
-            found = m_networkEntities.emplace(remote.id, createShip(playerRow(snapshot, remote.id), next)).first;
-        tilts[found->second]->direction = verticalDirection(positions[found->second]->y, next.y);
+        if (found == m_networkEntities.end()) {
+            const engine::ecs::Entity entity = ship ? createShip(playerRow(snapshot, remote.id), next) : createMissile(next);
+            found = m_networkEntities.emplace(remote.id, entity).first;
+        }
+        if (ship)
+            tilts[found->second]->direction = verticalDirection(positions[found->second]->y, next.y);
         positions[found->second] = next;
     }
     for (auto it = m_networkEntities.begin(); it != m_networkEntities.end();) {
@@ -153,6 +159,14 @@ engine::ecs::Entity Client::createShip(int row, Position position)
         ship, Sprite{PLAYER_SHIP_SHEET.texture, PLAYER_SHIP_SHEET.frame(PLAYER_SHIP_FLAT_COLUMN, row), PLAYER_SCALE});
     m_registry.addComponent(ship, ShipTilt{row});
     return ship;
+}
+
+engine::ecs::Entity Client::createMissile(Position position)
+{
+    engine::ecs::Entity missile = m_registry.spawnEntity();
+    m_registry.addComponent(missile, position);
+    m_registry.addComponent(missile, Sprite{PLAYER_MISSILE_SHEET.texture, PLAYER_MISSILE_SHEET.frame(0, 0), MISSILE_SCALE});
+    return missile;
 }
 
 } // namespace rtype::client

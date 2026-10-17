@@ -51,8 +51,8 @@ changing entity membership while iterating.
 ## Current integration
 
 The server's `Room` owns a registry and a scheduler running at 60 ticks per second:
-`inputSystem` (Input phase) turns the received buttons into a velocity, then `movementSystem`
-and `boundarySystem` (Physics phase) move the ships and keep them inside the world.
+`inputSystem` (Input phase) turns the received buttons into a velocity, then
+`engine::physics::movementSystem` and `boundarySystem` (Physics phase) move the ships and keep them inside the world.
 `EntityFactory` builds a player ship from its components (`Position`, `Velocity`, `Hitbox`,
 `PlayerInput`, `Replicated`), and `collectNetworkEntities` turns `Position` + `Replicated`
 into the entity list of a snapshot.

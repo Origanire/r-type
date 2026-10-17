@@ -40,6 +40,9 @@ void Server::tick(float dt)
             m_room.setButtons(slot, 0);
     }
     m_room.update(dt);
+    // Events go out before the snapshot, so clients still know the last position of a destroyed entity.
+    for (const auto &event : m_room.takeEvents())
+        broadcast(event);
     if (m_room.tick() % protocol::SNAPSHOT_INTERVAL_TICKS == 0)
         sendSnapshots();
 }

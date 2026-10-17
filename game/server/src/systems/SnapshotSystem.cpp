@@ -8,6 +8,17 @@
 
 namespace rtype::server {
 
+std::size_t countReplicated(engine::ecs::Registry &registry)
+{
+    auto &replicated = registry.getComponents<Replicated>();
+    std::size_t count = 0;
+    for (std::size_t i = 0; i < replicated.size(); ++i) {
+        if (replicated[i])
+            ++count;
+    }
+    return count;
+}
+
 std::vector<protocol::NetworkEntity> collectNetworkEntities(engine::ecs::Registry &registry)
 {
     auto &positions = registry.getComponents<Position>();

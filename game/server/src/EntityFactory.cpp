@@ -1,5 +1,6 @@
 #include "EntityFactory.hpp"
 
+#include "Enemy.hpp"
 #include "GameConstants.hpp"
 #include "Hitbox.hpp"
 #include "PlayerInput.hpp"
@@ -33,6 +34,19 @@ void createPlayerMissile(
     registry.addComponent(missile, Hitbox{MISSILE_WIDTH, MISSILE_HEIGHT});
     registry.addComponent(missile, Projectile{});
     registry.addComponent(missile, Replicated{networkId, protocol::KIND_PLAYER_MISSILE});
+}
+
+void createBydo(engine::ecs::Registry &registry, const engine::ecs::Entity &bydo, Position origin, EnemyPattern pattern,
+    bool goingUp, std::uint16_t networkId)
+{
+    float verticalSpeed = 0.f;
+    if (pattern == EnemyPattern::Zigzag)
+        verticalSpeed = goingUp ? -BYDO_ZIGZAG_SPEED : BYDO_ZIGZAG_SPEED;
+    registry.addComponent(bydo, origin);
+    registry.addComponent(bydo, Velocity{-BYDO_SPEED, verticalSpeed});
+    registry.addComponent(bydo, Hitbox{BYDO_WIDTH, BYDO_HEIGHT});
+    registry.addComponent(bydo, Enemy{pattern, origin.y});
+    registry.addComponent(bydo, Replicated{networkId, protocol::KIND_BYDO});
 }
 
 } // namespace rtype::server

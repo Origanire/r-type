@@ -12,7 +12,9 @@ The client loads `assets/sprites/players/r-typesheet42.gif`, described by `PLAYE
 player slot read from the snapshot picks the row, so the four players have different ships. Each
 column is a tilt: column 2 is flat, columns 3-4 lean up and columns 0-1 lean down.
 `ShipAnimationSystem` moves the tilt towards the vertical direction seen between two snapshots, at
-8 frames per second, and updates the sprite rectangle. `RenderSystem` draws stars then ship sprites. Three star layers (120, 60 and 25 stars) use different speeds, sizes and colors.
+8 frames per second, and updates the sprite rectangle. Kind-2 missiles use the basic shot of
+`assets/sprites/projectiles/r-typesheet1.gif` (249, 90, 16, 4) at scale 3. `RenderSystem` draws stars
+then sprites. Three star layers (120, 60 and 25 stars) use different speeds, sizes and colors.
 
 Snapshots supply ship positions. New IDs create sprites, missing IDs destroy them, and unknown
 kinds are skipped. The starfield remains local decoration. CMake copies assets beside the client;

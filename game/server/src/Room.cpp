@@ -6,9 +6,13 @@
 #include "Hitbox.hpp"
 #include "InputSystem.hpp"
 #include "MovementSystem.hpp"
+#include "OffscreenSystem.hpp"
 #include "PlayerInput.hpp"
 #include "Position.hpp"
+#include "Projectile.hpp"
 #include "Replicated.hpp"
+#include "Shooter.hpp"
+#include "ShootingSystem.hpp"
 #include "SnapshotSystem.hpp"
 #include "Velocity.hpp"
 
@@ -23,9 +27,13 @@ Room::Room()
     m_registry.registerComponent<Hitbox>();
     m_registry.registerComponent<PlayerInput>();
     m_registry.registerComponent<Replicated>();
+    m_registry.registerComponent<Shooter>();
+    m_registry.registerComponent<Projectile>();
     m_scheduler.addSystem(Phase::Input, inputSystem);
+    m_scheduler.addSystem(Phase::Update, ShootingSystem([this] { return nextNetworkId(); }));
     m_scheduler.addSystem(Phase::Physics, movementSystem);
     m_scheduler.addSystem(Phase::Physics, boundarySystem);
+    m_scheduler.addSystem(Phase::Physics, offscreenSystem);
 }
 
 void Room::spawnPlayer(std::size_t slot)
@@ -74,6 +82,11 @@ std::uint16_t Room::playerNetworkId(std::size_t slot) const
 std::vector<protocol::NetworkEntity> Room::networkEntities()
 {
     return collectNetworkEntities(m_registry);
+}
+
+std::vector<protocol::Packet> Room::takeEvents()
+{
+    return m_events.take();
 }
 
 std::uint16_t Room::nextNetworkId()

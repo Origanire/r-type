@@ -11,7 +11,7 @@ only handle presentation (stars, effects, rendering).
 3. Register it in a phase and add its `.cpp` to `CMakeLists.txt`:
 
 ```cpp
-m_scheduler.addSystem(engine::ecs::Phase::Physics, movementSystem);
+m_scheduler.addSystem(engine::ecs::Phase::Physics, engine::physics::movementSystem);
 ```
 
 Scale simulation changes by `context.dt`; never move a fixed distance per rendered frame.
@@ -21,3 +21,12 @@ Commands execute after the complete scheduler run, not immediately between phase
 
 For authoritative gameplay, run the system on the server (in `Room`), replicate results through
 snapshots, and let the client render. Client systems must not decide scores, collisions or deaths.
+
+To react to collisions, register an `engine::physics::CollisionSystem` with a listener. It is
+called once per overlapping pair (`Collision{first, second}`), after every pair has been found,
+so the listener may queue kills through the command buffer or game events:
+
+```cpp
+m_scheduler.addSystem(engine::ecs::Phase::Physics, engine::physics::CollisionSystem(
+    [this](const engine::physics::Collision &collision) { /* damage, destroy... */ }));
+```

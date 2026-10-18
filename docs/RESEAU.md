@@ -19,14 +19,16 @@ There is one room. Communication uses IPv4 UDP, with numeric IPv4 addresses only
 | Client presentation | Replicated ship creation/update/removal and local stars |
 | Input | Arrow keys; held Fire creates a kind-2 missile every 0.2 s, removed once it leaves the world |
 | Enemies | Kind-3 Bydos spawn beyond the right edge every 0.6–1.8 s at a random height, flying straight, in a sine wave or in a zigzag; removed once past the left edge |
-| Events | Join/departure/shutdown are emitted; `GameEvents` broadcasts ENTITY_DESTROYED/PLAYER_KILLED before the next snapshot, but nothing raises them until collisions exist |
+| Combat | A player missile hitting a Bydo removes the missile and deals 1 damage; a destroyed Bydo gives 100 points to the shooter. A Bydo hitting a ship destroys both: the player loses a life and respawns after 2 s with 2 s of invulnerability while lives remain |
+| Game state | Waiting with no player; playing once a player joins; game over when no present player has lives left, then a new round (full lives, zero score, empty world) after 5 s. A player joining during a game over waits for that round |
+| Events | Join/departure/shutdown are emitted; ENTITY_DESTROYED (destroyed Bydo or ship) and PLAYER_KILLED are broadcast before the next snapshot. Spent missiles only disappear from snapshots |
 | Cosmetic event playback | Not implemented; snapshots update the actual displayed ships |
 | Heartbeat | Request/acknowledgement supported; no RTT/ping display yet |
 | Recovery | Complete snapshots and periodic inputs; no reliable event channel |
 | Advanced smoothing | No interpolation, prediction or reconciliation yet |
 
 A message being documented or decoded does not mean its gameplay effect exists.
-Current player lives (3) and score (0) are placeholders, not working damage/scoring rules.
+Player lives and score in snapshots are authoritative; the client does not display them yet (no HUD).
 
 ## 2. Quick start and operating instructions
 

@@ -18,6 +18,7 @@ public:
     Entity create();
     void destroy(const Entity &entity);
     bool isAlive(const Entity &entity) const;
+    Entity entityAt(std::size_t index) const;
 
     void addComponents(const Entity &entity, ComponentMask components);
     void removeComponents(const Entity &entity, ComponentMask components);

@@ -5,6 +5,7 @@
 
 #include "EntityManager.hpp"
 #include "Position.hpp"
+#include "ShipTilt.hpp"
 #include "Sprite.hpp"
 #include "Star.hpp"
 
@@ -15,6 +16,7 @@ inline constexpr std::size_t MAX_ENTITIES = 1024;
 inline constexpr engine::ecs::ComponentMask POSITION = 1 << 0;
 inline constexpr engine::ecs::ComponentMask SPRITE = 1 << 1;
 inline constexpr engine::ecs::ComponentMask STAR = 1 << 2;
+inline constexpr engine::ecs::ComponentMask SHIP_TILT = 1 << 3;
 
 struct ClientWorld
 {
@@ -22,6 +24,7 @@ struct ClientWorld
     std::vector<Position> positions = std::vector<Position>(MAX_ENTITIES);
     std::vector<Sprite> sprites = std::vector<Sprite>(MAX_ENTITIES);
     std::vector<Star> stars = std::vector<Star>(MAX_ENTITIES);
+    std::vector<ShipTilt> shipTilts = std::vector<ShipTilt>(MAX_ENTITIES);
 };
 
 } // namespace rtype::client

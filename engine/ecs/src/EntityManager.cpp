@@ -39,6 +39,13 @@ bool EntityManager::isAlive(const Entity &entity) const
     return index < m_alive.size() && m_alive[index] && m_generations[index] == entity.generation();
 }
 
+Entity EntityManager::entityAt(std::size_t index) const
+{
+    if (index >= m_alive.size() || !m_alive[index])
+        throw EcsError("EntityManager: no living entity at this index");
+    return Entity(index, m_generations[index]);
+}
+
 void EntityManager::addComponents(const Entity &entity, ComponentMask components)
 {
     checkAlive(entity);

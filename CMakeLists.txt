@@ -70,14 +70,12 @@ add_library(engine_ecs
 target_include_directories(engine_ecs PUBLIC engine/ecs/include)
 target_link_libraries(engine_ecs PUBLIC engine_core)
 
-# --- engine_physics: transform, velocity, hitboxes, movement, collisions
-# add_library(engine_physics
-#     engine/physics/src/Aabb.cpp
-#     engine/physics/src/MovementSystem.cpp
-#     engine/physics/src/CollisionSystem.cpp
-# )
-# target_include_directories(engine_physics PUBLIC engine/physics/include)
-# target_link_libraries(engine_physics PUBLIC engine_core engine_ecs)
+# --- engine_physics: bounding boxes and collision detection
+add_library(engine_physics
+    engine/physics/src/Aabb.cpp
+    engine/physics/src/Collision.cpp
+)
+target_include_directories(engine_physics PUBLIC engine/physics/include)
 
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
 add_library(engine_net
@@ -154,22 +152,28 @@ target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
 #     PRIVATE nlohmann_json::nlohmann_json)
 
 # --- r-type_server [p.1][p.9]: authoritative server (never links render, audio, input or ui)
-# Planned: AISystem, ShootingSystem, DamageSystem, DeathSystem, SpawnSystem
 add_executable(r-type_server
     game/server/src/main.cpp
     game/server/src/Server.cpp
     game/server/src/Room.cpp
     game/server/src/EntityFactory.cpp
+    game/server/src/GameEvents.cpp
     game/server/src/systems/InputSystem.cpp
+    game/server/src/systems/ShootingSystem.cpp
+    game/server/src/systems/SpawnSystem.cpp
+    game/server/src/systems/EnemyMovementSystem.cpp
+    game/server/src/systems/InvulnerabilitySystem.cpp
     game/server/src/systems/MovementSystem.cpp
     game/server/src/systems/BoundarySystem.cpp
+    game/server/src/systems/CollisionSystem.cpp
+    game/server/src/systems/OffscreenSystem.cpp
     game/server/src/Snapshot.cpp
 )
 target_include_directories(r-type_server PRIVATE
     game/server/include
     game/server/include/components
     game/server/include/systems)
-target_link_libraries(r-type_server PRIVATE rtype_shared)
+target_link_libraries(r-type_server PRIVATE rtype_shared engine_physics)
 
 # --- r-type_client [p.1][p.10]: display, input, sound
 # Planned: SceneManager, Settings, scenes/*, NetworkSync, Interpolation,
@@ -178,7 +182,9 @@ add_executable(r-type_client
     game/client/src/main.cpp
     game/client/src/Client.cpp
     game/client/src/NetworkClient.cpp
+    game/client/src/SpriteSheet.cpp
     game/client/src/systems/StarfieldSystem.cpp
+    game/client/src/systems/ShipAnimationSystem.cpp
     game/client/src/systems/RenderSystem.cpp
 )
 target_include_directories(r-type_client PRIVATE

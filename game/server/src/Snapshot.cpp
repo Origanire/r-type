@@ -30,6 +30,11 @@ void collect(const ServerWorld &world, bool playerShips, std::vector<protocol::N
 
 } // namespace
 
+std::size_t countReplicated(const ServerWorld &world)
+{
+    return world.entities.with(REPLICATED).size();
+}
+
 std::vector<protocol::NetworkEntity> collectNetworkEntities(const ServerWorld &world)
 {
     std::vector<protocol::NetworkEntity> entities;

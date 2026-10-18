@@ -9,6 +9,7 @@
 #include "FixedTimestep.hpp"
 #include "InputManager.hpp"
 #include "NetworkClient.hpp"
+#include "Position.hpp"
 #include "SfmlRenderer.hpp"
 #include "SystemManager.hpp"
 #include "TextureManager.hpp"
@@ -27,7 +28,9 @@ private:
     void registerSystems();
     void createStarfield();
     void applySnapshot(const protocol::WorldSnapshot &snapshot);
-    engine::ecs::Entity createShip();
+    engine::ecs::Entity createShip(int row, Position position);
+    engine::ecs::Entity createMissile(Position position);
+    engine::ecs::Entity createBydo(Position position);
 
     engine::render::Window m_window;
     engine::render::TextureManager m_textures;

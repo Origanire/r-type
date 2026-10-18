@@ -13,13 +13,16 @@
 
 namespace rtype::server {
 
-SpawnSystem::SpawnSystem(std::function<std::uint16_t()> nextNetworkId)
-    : m_nextNetworkId(std::move(nextNetworkId)), m_random(std::random_device{}()), m_timer(randomInterval())
+SpawnSystem::SpawnSystem(std::function<std::uint16_t()> nextNetworkId, std::function<bool()> canSpawn)
+    : m_nextNetworkId(std::move(nextNetworkId)), m_canSpawn(std::move(canSpawn)), m_random(std::random_device{}()),
+      m_timer(randomInterval())
 {
 }
 
 void SpawnSystem::operator()(engine::ecs::SystemContext &context)
 {
+    if (!m_canSpawn())
+        return;
     m_timer -= context.dt;
     if (m_timer > 0.f)
         return;

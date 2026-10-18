@@ -1,28 +1,26 @@
 #include "Client.hpp"
 
+#include <memory>
 #include <random>
 #include <unordered_set>
 #include <utility>
 
 #include "Clock.hpp"
 #include "GameConstants.hpp"
-#include "Position.hpp"
 #include "RenderSystem.hpp"
-#include "Sprite.hpp"
-#include "Star.hpp"
+#include "ShipAnimationSystem.hpp"
+#include "SpriteSheet.hpp"
 #include "StarfieldSystem.hpp"
 
 namespace rtype::client {
-
-using engine::ecs::Phase;
 
 namespace {
 
 constexpr unsigned int WINDOW_WIDTH = 1280;
 constexpr unsigned int WINDOW_HEIGHT = 720;
-constexpr const char *PLAYER_TEXTURE = "player";
-constexpr engine::render::IntRect PLAYER_FRAME{66, 0, 33, 17};
-constexpr float PLAYER_SCALE = PLAYER_WIDTH / static_cast<float>(PLAYER_FRAME.width);
+constexpr float PLAYER_SCALE = PLAYER_WIDTH / static_cast<float>(PLAYER_SHIP_SHEET.frameWidth);
+constexpr float MISSILE_SCALE = MISSILE_WIDTH / static_cast<float>(PLAYER_MISSILE_SHEET.frameWidth);
+constexpr float BYDO_SCALE = BYDO_WIDTH / static_cast<float>(BYDO_SHEET.frameWidth);
 
 struct StarLayer
 {
@@ -38,14 +36,33 @@ constexpr StarLayer STAR_LAYERS[] = {
     {25, 240.f, 4.f, {255, 255, 255, 255}},
 };
 
+int playerRow(const protocol::WorldSnapshot &snapshot, std::uint16_t entityId)
+{
+    for (std::size_t slot = 0; slot < snapshot.players.size(); ++slot) {
+        if (snapshot.players[slot].state != protocol::SLOT_EMPTY && snapshot.players[slot].entityId == entityId)
+            return static_cast<int>(slot);
+    }
+    return 0;
+}
+
+float verticalDirection(float previousY, float nextY)
+{
+    if (nextY < previousY)
+        return 1.f;
+    if (nextY > previousY)
+        return -1.f;
+    return 0.f;
+}
+
 } // namespace
 
 Client::Client(const std::filesystem::path &assetsDir, engine::net::Endpoint server)
     : m_window(WINDOW_WIDTH, WINDOW_HEIGHT, "R-Type", {WORLD_WIDTH, WORLD_HEIGHT}), m_renderer(m_window, m_textures),
       m_timestep(1.f / static_cast<float>(protocol::TICK_RATE)), m_network(std::move(server))
 {
-    m_textures.load(PLAYER_TEXTURE, (assetsDir / "sprites" / "players" / "r-typesheet42.gif").string());
-    registerComponents();
+    m_textures.load(PLAYER_SHIP_SHEET.texture, (assetsDir / "sprites" / PLAYER_SHIP_SHEET.path).string());
+    m_textures.load(PLAYER_MISSILE_SHEET.texture, (assetsDir / "sprites" / PLAYER_MISSILE_SHEET.path).string());
+    m_textures.load(BYDO_SHEET.texture, (assetsDir / "sprites" / BYDO_SHEET.path).string());
     registerSystems();
     createStarfield();
 }
@@ -62,23 +79,17 @@ void Client::run()
             applySnapshot(*snapshot);
         m_timestep.addTime(clock.restart());
         while (m_timestep.step())
-            m_logic.run(m_registry, m_timestep.stepSeconds());
-        m_render.run(m_registry, 0.f);
+            m_logic.update(m_timestep.stepSeconds());
+        m_render.update(0.f);
     }
     m_network.disconnect();
 }
 
-void Client::registerComponents()
-{
-    m_registry.registerComponent<Position>();
-    m_registry.registerComponent<Sprite>();
-    m_registry.registerComponent<Star>();
-}
-
 void Client::registerSystems()
 {
-    m_logic.addSystem(Phase::Update, starfieldSystem);
-    m_render.addSystem(Phase::Render, RenderSystem(m_renderer));
+    m_logic.add(std::make_unique<StarfieldSystem>(m_world));
+    m_logic.add(std::make_unique<ShipAnimationSystem>(m_world));
+    m_render.add(std::make_unique<RenderSystem>(m_world, m_renderer));
 }
 
 void Client::createStarfield()
@@ -89,9 +100,10 @@ void Client::createStarfield()
 
     for (const StarLayer &layer : STAR_LAYERS) {
         for (int i = 0; i < layer.count; ++i) {
-            engine::ecs::Entity star = m_registry.spawnEntity();
-            m_registry.addComponent(star, Position{randomX(random), randomY(random)});
-            m_registry.addComponent(star, Star{layer.speed, layer.size, layer.color});
+            engine::ecs::Entity star = m_world.entities.create();
+            m_world.positions[star.index()] = Position{randomX(random), randomY(random)};
+            m_world.stars[star.index()] = Star{layer.speed, layer.size, layer.color};
+            m_world.entities.addComponents(star, POSITION | STAR);
         }
     }
 }
@@ -99,32 +111,62 @@ void Client::createStarfield()
 void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
 {
     std::unordered_set<std::uint16_t> visible;
-    auto &positions = m_registry.getComponents<Position>();
     for (const auto &remote : snapshot.entities) {
-        if (remote.kind != protocol::KIND_PLAYER_SHIP)
+        const bool ship = remote.kind == protocol::KIND_PLAYER_SHIP;
+        if (!ship && remote.kind != protocol::KIND_PLAYER_MISSILE && remote.kind != protocol::KIND_BYDO)
             continue;
         visible.insert(remote.id);
+        const Position next{static_cast<float>(remote.x), static_cast<float>(remote.y)};
         auto found = m_networkEntities.find(remote.id);
-        if (found == m_networkEntities.end())
-            found = m_networkEntities.emplace(remote.id, createShip()).first;
-        positions[found->second] = Position{static_cast<float>(remote.x), static_cast<float>(remote.y)};
+        if (found == m_networkEntities.end()) {
+            engine::ecs::Entity entity = ship ? createShip(playerRow(snapshot, remote.id), next)
+                : remote.kind == protocol::KIND_BYDO ? createBydo(next)
+                                                     : createMissile(next);
+            found = m_networkEntities.emplace(remote.id, entity).first;
+        }
+        std::size_t i = found->second.index();
+        if (ship)
+            m_world.shipTilts[i].direction = verticalDirection(m_world.positions[i].y, next.y);
+        m_world.positions[i] = next;
     }
     for (auto it = m_networkEntities.begin(); it != m_networkEntities.end();) {
         if (visible.contains(it->first)) {
             ++it;
             continue;
         }
-        m_registry.killEntity(it->second);
+        m_world.entities.destroy(it->second);
         it = m_networkEntities.erase(it);
     }
 }
 
-engine::ecs::Entity Client::createShip()
+engine::ecs::Entity Client::createShip(int row, Position position)
 {
-    engine::ecs::Entity ship = m_registry.spawnEntity();
-    m_registry.addComponent(ship, Position{});
-    m_registry.addComponent(ship, Sprite{PLAYER_TEXTURE, PLAYER_FRAME, PLAYER_SCALE});
+    engine::ecs::Entity ship = m_world.entities.create();
+    m_world.positions[ship.index()] = position;
+    m_world.sprites[ship.index()] =
+        Sprite{PLAYER_SHIP_SHEET.texture, PLAYER_SHIP_SHEET.frame(PLAYER_SHIP_FLAT_COLUMN, row), PLAYER_SCALE};
+    m_world.shipTilts[ship.index()] = ShipTilt{row, 0.f, 0.f};
+    m_world.entities.addComponents(ship, POSITION | SPRITE | SHIP_TILT);
     return ship;
+}
+
+engine::ecs::Entity Client::createMissile(Position position)
+{
+    engine::ecs::Entity missile = m_world.entities.create();
+    m_world.positions[missile.index()] = position;
+    m_world.sprites[missile.index()] =
+        Sprite{PLAYER_MISSILE_SHEET.texture, PLAYER_MISSILE_SHEET.frame(0, 0), MISSILE_SCALE};
+    m_world.entities.addComponents(missile, POSITION | SPRITE);
+    return missile;
+}
+
+engine::ecs::Entity Client::createBydo(Position position)
+{
+    engine::ecs::Entity bydo = m_world.entities.create();
+    m_world.positions[bydo.index()] = position;
+    m_world.sprites[bydo.index()] = Sprite{BYDO_SHEET.texture, BYDO_SHEET.frame(0, 0), BYDO_SCALE};
+    m_world.entities.addComponents(bydo, POSITION | SPRITE);
+    return bydo;
 }
 
 } // namespace rtype::client

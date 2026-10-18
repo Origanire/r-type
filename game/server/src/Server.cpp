@@ -2,8 +2,6 @@
 
 #include <iostream>
 
-#include "GameConstants.hpp"
-
 namespace rtype::server {
 
 using protocol::MessageType;
@@ -40,6 +38,8 @@ void Server::tick(float dt)
             m_room.setButtons(slot, 0);
     }
     m_room.update(dt);
+    for (const auto &event : m_room.takeEvents())
+        broadcast(event);
     if (m_room.tick() % protocol::SNAPSHOT_INTERVAL_TICKS == 0)
         sendSnapshots();
 }
@@ -163,13 +163,9 @@ void Server::sendSnapshots()
     protocol::Packet packet;
     packet.type = MessageType::Snapshot;
     packet.snapshot.tick = m_room.tick();
+    packet.snapshot.gameState = m_room.gameState();
+    packet.snapshot.players = m_room.playerStates();
     packet.snapshot.entities = m_room.networkEntities();
-    for (std::size_t slot = 0; slot < m_sessions.size(); ++slot) {
-        if (!m_sessions[slot] || !m_sessions[slot]->confirmed)
-            continue;
-        packet.snapshot.gameState = protocol::GAME_PLAYING;
-        packet.snapshot.players[slot] = {protocol::SLOT_ALIVE, PLAYER_START_LIVES, 0, m_room.playerNetworkId(slot)};
-    }
     broadcast(packet);
 }
 

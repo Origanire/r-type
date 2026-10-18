@@ -1,20 +1,16 @@
 #include "MovementSystem.hpp"
 
-#include "Position.hpp"
-#include "Registry.hpp"
-#include "Velocity.hpp"
-
 namespace rtype::server {
 
-void movementSystem(engine::ecs::SystemContext &context)
+MovementSystem::MovementSystem(ServerWorld &world) : m_world(world)
 {
-    auto &positions = context.registry.getComponents<Position>();
-    auto &velocities = context.registry.getComponents<Velocity>();
-    for (std::size_t i = 0; i < positions.size() && i < velocities.size(); ++i) {
-        if (!positions[i] || !velocities[i])
-            continue;
-        positions[i]->x += velocities[i]->x * context.dt;
-        positions[i]->y += velocities[i]->y * context.dt;
+}
+
+void MovementSystem::update(float dt)
+{
+    for (std::size_t i : m_world.entities.with(POSITION | VELOCITY)) {
+        m_world.positions[i].x += m_world.velocities[i].x * dt;
+        m_world.positions[i].y += m_world.velocities[i].y * dt;
     }
 }
 

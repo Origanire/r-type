@@ -1,9 +1,19 @@
 #pragma once
 
-#include "SystemContext.hpp"
+#include "ISystem.hpp"
+#include "ServerWorld.hpp"
 
 namespace rtype::server {
 
-void boundarySystem(engine::ecs::SystemContext &context);
+class BoundarySystem : public engine::ecs::ISystem
+{
+public:
+    explicit BoundarySystem(ServerWorld &world);
+
+    void update(float dt) override;
+
+private:
+    ServerWorld &m_world;
+};
 
 } // namespace rtype::server

@@ -1,10 +1,5 @@
 #include "RenderSystem.hpp"
 
-#include "Position.hpp"
-#include "Registry.hpp"
-#include "Sprite.hpp"
-#include "Star.hpp"
-
 namespace rtype::client {
 
 namespace {
@@ -13,25 +8,22 @@ constexpr engine::render::Color BACKGROUND{5, 5, 20, 255};
 
 } // namespace
 
-RenderSystem::RenderSystem(engine::render::IRenderer &renderer) : m_renderer(renderer)
+RenderSystem::RenderSystem(ClientWorld &world, engine::render::IRenderer &renderer) : m_world(world), m_renderer(renderer)
 {
 }
 
-void RenderSystem::operator()(engine::ecs::SystemContext &context) const
+void RenderSystem::update(float)
 {
-    auto &positions = context.registry.getComponents<Position>();
-    auto &stars = context.registry.getComponents<Star>();
-    auto &sprites = context.registry.getComponents<Sprite>();
     m_renderer.clear(BACKGROUND);
-    for (std::size_t i = 0; i < positions.size() && i < stars.size(); ++i) {
-        if (positions[i] && stars[i])
-            m_renderer.drawRect({positions[i]->x, positions[i]->y}, {stars[i]->size, stars[i]->size}, stars[i]->color);
+    for (std::size_t i : m_world.entities.with(POSITION | STAR)) {
+        const Position &position = m_world.positions[i];
+        const Star &star = m_world.stars[i];
+        m_renderer.drawRect({position.x, position.y}, {star.size, star.size}, star.color);
     }
-    for (std::size_t i = 0; i < positions.size() && i < sprites.size(); ++i) {
-        if (positions[i] && sprites[i]) {
-            const float scale = sprites[i]->scale;
-            m_renderer.drawTexture(sprites[i]->texture, sprites[i]->source, {positions[i]->x, positions[i]->y}, {scale, scale});
-        }
+    for (std::size_t i : m_world.entities.with(POSITION | SPRITE)) {
+        const Position &position = m_world.positions[i];
+        const Sprite &sprite = m_world.sprites[i];
+        m_renderer.drawTexture(sprite.texture, sprite.source, {position.x, position.y}, {sprite.scale, sprite.scale});
     }
     m_renderer.display();
 }

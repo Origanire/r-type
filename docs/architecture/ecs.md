@@ -8,7 +8,9 @@ An old handle therefore cannot modify a newly spawned entity at the same index.
 
 `SparseArray<T>` uses `vector<optional<T>>`: the entity index selects a component slot;
 a missing optional means that the entity does not have that component. Register each component
-type before accessing it. The registry stores typed arrays behind `std::any`/`std::type_index`.
+type before accessing it. Every `SparseArray<T>` implements the `IComponentArray` interface
+(one virtual `erase(index)`); the registry stores them as `std::unique_ptr<IComponentArray>` keyed
+by `std::type_index`, so `killEntity()` can clear an entity in every array without knowing their types.
 
 ```cpp
 engine::ecs::Registry registry;
@@ -51,8 +53,8 @@ changing entity membership while iterating.
 ## Current integration
 
 The server's `Room` owns a registry and a scheduler running at 60 ticks per second:
-`inputSystem` (Input phase) turns the received buttons into a velocity, then `movementSystem`
-and `boundarySystem` (Physics phase) move the ships and keep them inside the world.
+`inputSystem` (Input phase) turns the received buttons into a velocity, then
+`engine::physics::movementSystem` and `boundarySystem` (Physics phase) move the ships and keep them inside the world.
 `EntityFactory` builds a player ship from its components (`Position`, `Velocity`, `Hitbox`,
 `PlayerInput`, `Replicated`), and `collectNetworkEntities` turns `Position` + `Replicated`
 into the entity list of a snapshot.

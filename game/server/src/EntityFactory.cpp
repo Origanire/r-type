@@ -2,8 +2,10 @@
 
 #include "Enemy.hpp"
 #include "GameConstants.hpp"
+#include "Health.hpp"
 #include "Hitbox.hpp"
 #include "PlayerInput.hpp"
+#include "PlayerShip.hpp"
 #include "Position.hpp"
 #include "Projectile.hpp"
 #include "Replicated.hpp"
@@ -22,17 +24,18 @@ engine::ecs::Entity createPlayerShip(engine::ecs::Registry &registry, std::size_
     registry.addComponent(ship, Hitbox{PLAYER_WIDTH, PLAYER_HEIGHT});
     registry.addComponent(ship, PlayerInput{});
     registry.addComponent(ship, Shooter{});
+    registry.addComponent(ship, PlayerShip{slot});
     registry.addComponent(ship, Replicated{networkId, protocol::KIND_PLAYER_SHIP});
     return ship;
 }
 
-void createPlayerMissile(
-    engine::ecs::Registry &registry, const engine::ecs::Entity &missile, Position origin, std::uint16_t networkId)
+void createPlayerMissile(engine::ecs::Registry &registry, const engine::ecs::Entity &missile, Position origin,
+    std::size_t ownerSlot, std::uint16_t networkId)
 {
     registry.addComponent(missile, origin);
     registry.addComponent(missile, Velocity{MISSILE_SPEED, 0.f});
     registry.addComponent(missile, Hitbox{MISSILE_WIDTH, MISSILE_HEIGHT});
-    registry.addComponent(missile, Projectile{});
+    registry.addComponent(missile, Projectile{ownerSlot});
     registry.addComponent(missile, Replicated{networkId, protocol::KIND_PLAYER_MISSILE});
 }
 
@@ -46,6 +49,7 @@ void createBydo(engine::ecs::Registry &registry, const engine::ecs::Entity &bydo
     registry.addComponent(bydo, Velocity{-BYDO_SPEED, verticalSpeed});
     registry.addComponent(bydo, Hitbox{BYDO_WIDTH, BYDO_HEIGHT});
     registry.addComponent(bydo, Enemy{pattern, origin.y});
+    registry.addComponent(bydo, Health{BYDO_HEALTH});
     registry.addComponent(bydo, Replicated{networkId, protocol::KIND_BYDO});
 }
 

@@ -24,8 +24,8 @@ Implement in this order. Keep authoritative logic on the server and use snapshot
 | G1 | Shared gameplay dimensions/rules and server ECS systems | N5 | Speed/size/timing constants are named; simulation can be tested without rendering |
 | G2 | Shooting (implemented) | G1 | Held Fire creates kind-2 missiles at a server-limited cadence; both clients see them; offscreen missiles are removed |
 | G3 | Basic enemies | G1 | Kind-3 enemies spawn on the right and move left; rendering uses the enemy assets |
-| G4 | Collision and damage | G2, G3 | Reusable AABB tests; each impact is resolved once; destroyed entities disappear on every client |
-| G5 | Lives, score and death | G4 | Server updates player fields; deaths and scoring match on all clients; HUD displays authoritative values |
+| G4 | Collision and damage (implemented) | G2, G3 | Reusable AABB tests; each impact is resolved once; destroyed entities disappear on every client |
+| G5 | Lives, score and death (implemented on the server, HUD missing) | G4 | Server updates player fields; deaths and scoring match on all clients; HUD displays authoritative values |
 | G6 | Waves and game states | G3, G5 | Configured waves progress through waiting/playing/game-over; empty sessions do not keep a combat round alive |
 | G7 | Enemy shots | G4, G5 | Kind-4 missiles damage players using the same collision rules |
 | G8 | Animation and audio feedback | G2-G7 | Effects are cosmetic; losing an event never changes gameplay truth |

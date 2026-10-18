@@ -1,32 +1,77 @@
 # Add a system
 
-Read the [ECS overview](../architecture/ecs.md) first. A system describes one behavior over
-entities having a required set of components. Gameplay systems run on the server; client systems
-only handle presentation (stars, effects, rendering).
+A system is one behavior applied to every entity having a given set of components. Gameplay
+systems run on the server; client systems only handle presentation.
 
-1. Declare the system in the module's `include/systems/` directory, for example
-   `void movementSystem(engine::ecs::SystemContext &context);`.
-2. Implement it in `src/systems/`: fetch the component arrays with
-   `context.registry.getComponents<T>()` and visit the indices where all of them are present.
-3. Register it in a phase and add its `.cpp` to `CMakeLists.txt`:
+## 1. Declare the class
+
+`game/server/include/systems/ShieldSystem.hpp`:
 
 ```cpp
-m_scheduler.addSystem(engine::ecs::Phase::Physics, engine::physics::movementSystem);
+#pragma once
+
+#include "ISystem.hpp"
+#include "ServerWorld.hpp"
+
+namespace rtype::server {
+
+class ShieldSystem : public engine::ecs::ISystem
+{
+public:
+    explicit ShieldSystem(ServerWorld &world);
+
+    void update(float dt) override;
+
+private:
+    ServerWorld &m_world;
+};
+
+} // namespace rtype::server
 ```
 
-Scale simulation changes by `context.dt`; never move a fixed distance per rendered frame.
-Use `context.commands.spawn(...)` and `kill(...)` for structural changes during iteration. Spawn
-callbacks receive `(Registry &, const Entity &)`, where components can be initialized after iteration.
-Commands execute after the complete scheduler run, not immediately between phases.
+## 2. Implement it
 
-For authoritative gameplay, run the system on the server (in `Room`), replicate results through
-snapshots, and let the client render. Client systems must not decide scores, collisions or deaths.
-
-To react to collisions, register an `engine::physics::CollisionSystem` with a listener. It is
-called once per overlapping pair (`Collision{first, second}`), after every pair has been found,
-so the listener may queue kills through the command buffer or game events:
+`game/server/src/systems/ShieldSystem.cpp`:
 
 ```cpp
-m_scheduler.addSystem(engine::ecs::Phase::Physics, engine::physics::CollisionSystem(
-    [this](const engine::physics::Collision &collision) { /* damage, destroy... */ }));
+#include "ShieldSystem.hpp"
+
+namespace rtype::server {
+
+ShieldSystem::ShieldSystem(ServerWorld &world) : m_world(world)
+{
+}
+
+void ShieldSystem::update(float)
+{
+    for (std::size_t i : m_world.entities.with(SHIELD)) {
+        if (m_world.shields[i].charges <= 0)
+            m_world.entities.removeComponents(m_world.entities.entityAt(i), SHIELD);
+    }
+}
+
+} // namespace rtype::server
 ```
+
+Rules inside `update`:
+
+- Scale every change over time by `dt`.
+- Creating or destroying entities while iterating is safe: `with()` returns a copy.
+- Use `entityAt(i)` to get a handle when an engine call needs one.
+
+## 3. Register it
+
+Add it in the `Room` constructor at the right place in the order, and add the `.cpp` to the
+`r-type_server` target in `CMakeLists.txt`:
+
+```cpp
+m_systems.add(std::make_unique<ShieldSystem>(m_world));
+```
+
+If the system needs something owned by `Room` (network ids, game state), pass a callback to its
+constructor, as `ShootingSystem` and `SpawnSystem` do.
+
+## Client systems
+
+Client systems follow the same pattern with `ClientWorld`. Register them in `Client::registerSystems`:
+`m_logic` for fixed-step logic, `m_render` for drawing.

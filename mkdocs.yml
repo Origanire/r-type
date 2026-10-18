@@ -6,6 +6,8 @@ theme:
   name: material
   features:
     - navigation.sections
+    - navigation.top
+    - search.highlight
     - content.code.copy
 
 markdown_extensions:
@@ -28,23 +30,27 @@ nav:
   - Architecture:
       - Overview: architecture/overview.md
       - Engine modules: architecture/engine-modules.md
-      - ECS: architecture/ecs.md
+      - Entity Component System: architecture/ecs.md
+      - Server: architecture/server.md
+      - Client: architecture/client.md
       - Networking: architecture/networking.md
       - Threading: architecture/threading.md
       - Rendering: architecture/rendering.md
-  - Network documentation (RFC): RESEAU.md
-  - Coding conventions: conventions.md
+      - Design decisions: architecture/decisions.md
+  - Protocol (RFC): protocol.md
   - Guides:
       - Add a component: guides/add-a-component.md
       - Add a system: guides/add-a-system.md
       - Add an enemy: guides/add-an-enemy.md
-      - Add a wave: guides/add-a-wave.md
+  - Contributing:
+      - Onboarding: contributing/onboarding.md
+      - Coding conventions: contributing/conventions.md
   - Comparative study:
       - Overview: comparative-study/index.md
-      - Libraries: comparative-study/libraries.md
+      - Libraries and tools: comparative-study/libraries.md
       - Algorithms and data structures: comparative-study/algorithms-and-data-structures.md
+      - Networking: comparative-study/networking.md
       - Storage: comparative-study/storage.md
       - Security: comparative-study/security.md
-      - Networking: comparative-study/networking.md
   - Accessibility: accessibility.md
-  - Implementation roadmap: roadmap.md
+  - Roadmap: roadmap.md

@@ -1,65 +1,125 @@
 # Entity Component System
 
-## Entities and component storage
+The engine provides a bitmask-based ECS with generational entities. The engine tracks which
+components each entity has; the game owns the component values in plain arrays.
 
-An `Entity` contains an index and a generation. `Registry::spawnEntity()` allocates or reuses
-an index. `killEntity()` clears every component, marks the slot dead and increments its generation.
-An old handle therefore cannot modify a newly spawned entity at the same index.
+## Concepts
 
-`SparseArray<T>` uses `vector<optional<T>>`: the entity index selects a component slot;
-a missing optional means that the entity does not have that component. Register each component
-type before accessing it. Every `SparseArray<T>` implements the `IComponentArray` interface
-(one virtual `erase(index)`); the registry stores them as `std::unique_ptr<IComponentArray>` keyed
-by `std::type_index`, so `killEntity()` can clear an entity in every array without knowing their types.
+| Concept | In the code |
+|---|---|
+| Entity | `engine::ecs::Entity`: an index (row) and a generation |
+| Component | A plain struct in `game/`, e.g. `Position { float x; float y; }` |
+| Component bit | A game constant, e.g. `POSITION = 1 << 0` |
+| World | A game struct holding an `EntityManager` and one `std::vector` per component |
+| System | A class implementing `engine::ecs::ISystem::update(float dt)` |
+
+Think of a spreadsheet: each row is an entity, each column a component type. `EntityManager` holds
+the column of ticked boxes; the world holds the value columns.
+
+## Entity
+
+An `Entity` is a small value type (`index()`, `generation()`). Only `EntityManager` can create one.
+When an entity is destroyed, the generation of its row is incremented, so any copy of the old handle
+becomes invalid even if the row is immediately reused.
+
+## EntityManager
 
 ```cpp
-engine::ecs::Registry registry;
-registry.registerComponent<rtype::Position>();
-const auto ship = registry.spawnEntity();
-registry.addComponent(ship, rtype::Position{200.f, 540.f});
-auto &position = *registry.getComponents<rtype::Position>()[ship];
-position.x += 10.f;
-registry.killEntity(ship);
+using ComponentMask = std::uint32_t;
+
+class EntityManager
+{
+public:
+    explicit EntityManager(std::size_t capacity);
+    Entity create();
+    void destroy(const Entity &entity);
+    bool isAlive(const Entity &entity) const;
+    Entity entityAt(std::size_t index) const;
+    void addComponents(const Entity &entity, ComponentMask components);
+    void removeComponents(const Entity &entity, ComponentMask components);
+    bool hasComponents(const Entity &entity, ComponentMask components) const;
+    std::vector<std::size_t> with(ComponentMask components) const;
+};
 ```
 
-Direct `SparseArray` access is low-level: mutable indexing may grow the array. Prefer registry
-operations for adding/removing components so that entity liveness is checked.
+| Function | Behavior |
+|---|---|
+| `create()` | Takes the most recently freed row, marks it alive with an empty mask. Throws `EcsError` when full. |
+| `destroy(e)` | Clears the mask, increments the generation, frees the row. No effect on a dead entity. |
+| `isAlive(e)` | True if the row is alive and has the same generation as `e`. |
+| `entityAt(i)` | Handle of the living entity at row `i`. Throws `EcsError` if the row is dead. |
+| `addComponents(e, bits)` | `mask |= bits`. Throws `EcsError` on a dead entity. |
+| `removeComponents(e, bits)` | `mask &= ~bits`. No effect on a dead entity. |
+| `hasComponents(e, bits)` | `(mask & bits) == bits` on a living entity. |
+| `with(bits)` | Copy of the rows of living entities having every requested bit. |
 
-## Systems and scheduling
+Because `with()` returns a copy, systems may create or destroy entities while iterating; no deferred
+command queue is needed. A mask holds up to 32 component types per world.
 
-A system is a plain function (or callable object) with the signature `void(SystemContext &)`.
-The context gives access to the registry, the command buffer and the delta time. A system fetches
-the component arrays it needs and visits the indices where all of them are present:
+## Worlds
+
+Each program defines its own world. Every component array has the same size as the
+`EntityManager`, so `array[entity.index()]` is always valid.
 
 ```cpp
-void movementSystem(engine::ecs::SystemContext &context)
+inline constexpr std::size_t MAX_ENTITIES = 1024;
+inline constexpr engine::ecs::ComponentMask POSITION = 1 << 0;
+inline constexpr engine::ecs::ComponentMask VELOCITY = 1 << 1;
+
+struct ServerWorld
 {
-    auto &positions = context.registry.getComponents<rtype::Position>();
-    auto &velocities = context.registry.getComponents<rtype::Velocity>();
-    for (std::size_t i = 0; i < positions.size() && i < velocities.size(); ++i) {
-        if (!positions[i] || !velocities[i])
-            continue;
-        positions[i]->x += velocities[i]->x * context.dt;
-        positions[i]->y += velocities[i]->y * context.dt;
+    engine::ecs::EntityManager entities{MAX_ENTITIES};
+    std::vector<Position> positions = std::vector<Position>(MAX_ENTITIES);
+    std::vector<Velocity> velocities = std::vector<Velocity>(MAX_ENTITIES);
+};
+```
+
+| World | Components |
+|---|---|
+| `ServerWorld` | Position, Velocity, Hitbox, PlayerInput, Replicated, Shooter, Projectile, Enemy, Health, PlayerShip, Invulnerable |
+| `ClientWorld` | Position, Sprite, Star, ShipTilt |
+
+## Creating an entity
+
+Always in three steps: take a row, write **every** component it will have (rows are recycled without
+being cleared), then set the bits so that systems see a complete entity.
+
+```cpp
+engine::ecs::Entity ship = world.entities.create();
+world.positions[ship.index()] = Position{PLAYER_SPAWN_X, spawnY};
+world.velocities[ship.index()] = Velocity{};
+world.entities.addComponents(ship, POSITION | VELOCITY);
+```
+
+The server keeps these recipes in `EntityFactory` (`createPlayerShip`, `createPlayerMissile`,
+`createBydo`). Components can also be added or removed later: a respawned ship receives
+`INVULNERABLE`, which `InvulnerabilitySystem` removes when its timer expires.
+
+## Systems
+
+```cpp
+class MovementSystem : public engine::ecs::ISystem
+{
+public:
+    explicit MovementSystem(ServerWorld &world);
+    void update(float dt) override;
+private:
+    ServerWorld &m_world;
+};
+
+void MovementSystem::update(float dt)
+{
+    for (std::size_t i : m_world.entities.with(POSITION | VELOCITY)) {
+        m_world.positions[i].x += m_world.velocities[i].x * dt;
+        m_world.positions[i].y += m_world.velocities[i].y * dt;
     }
 }
 ```
 
-`Scheduler::addSystem(phase, system)` registers a system. `Scheduler::run(registry, dt)` runs
-`Input`, `Update`, `Physics`, then `Render`, preserving registration order within each phase.
-Deferred spawn/kill commands are applied after the complete run: use the command buffer when
-changing entity membership while iterating.
+`SystemManager` owns systems as `std::unique_ptr<ISystem>` and runs them in insertion order. It
+rejects null systems and negative `dt` with `EcsError`.
 
-## Current integration
+## Threading
 
-The server's `Room` owns a registry and a scheduler running at 60 ticks per second:
-`inputSystem` (Input phase) turns the received buttons into a velocity, then
-`engine::physics::movementSystem` and `boundarySystem` (Physics phase) move the ships and keep them inside the world.
-`EntityFactory` builds a player ship from its components (`Position`, `Velocity`, `Hitbox`,
-`PlayerInput`, `Replicated`), and `collectNetworkEntities` turns `Position` + `Replicated`
-into the entity list of a snapshot.
-
-The client has separate logic and render schedulers. Local star positions are updated at a fixed
-1/60-second timestep; rendering receives a zero delta time. Network ship positions are changed
-only by snapshots. A map associates protocol `u16` IDs with local generational entity handles.
-Neither registry nor scheduler is thread-safe; the network I/O worker never accesses them.
+The ECS is not thread-safe and does not need to be: each world is only used by the main thread of
+its program. The network thread never touches it.

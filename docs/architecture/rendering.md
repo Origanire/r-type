@@ -1,24 +1,31 @@
 # Rendering
 
-`Window` owns the SFML window, close/Escape events, focus and a view spanning the logical
-1920 x 1080 world. Its default pixel size is 1280 x 720 and its frame limit is 60 FPS.
+## Engine side
 
-`TextureManager` loads textures by name and throws `RenderError` for missing resources.
-`IRenderer` defines clear, rectangle, texture and display operations. `SfmlRenderer` implements
-those operations without requiring game rules or network packet types.
+| Class | Role |
+|---|---|
+| `Window` | Owns the SFML window (1280 × 720, 60 FPS limit), handles close and Escape, reports focus. Its view always shows the logical 1920 × 1080 world, whatever the window size. |
+| `TextureManager` | Loads textures by name; throws `RenderError` if a file is missing or unknown. |
+| `IRenderer` | Interface: `clear`, `drawRect`, `drawTexture`, `display`. |
+| `SfmlRenderer` | `IRenderer` implementation using SFML. |
 
-The client loads `assets/sprites/players/r-typesheet42.gif`, described by `PLAYER_SHIP_SHEET`
-(`SpriteSheet.hpp`): a grid of 33 x 17 frames drawn at scale 3. Each row is a ship color and the
-player slot read from the snapshot picks the row, so the four players have different ships. Each
-column is a tilt: column 2 is flat, columns 3-4 lean up and columns 0-1 lean down.
-`ShipAnimationSystem` moves the tilt towards the vertical direction seen between two snapshots, at
-8 frames per second, and updates the sprite rectangle. Kind-2 missiles use the basic shot of
-`assets/sprites/projectiles/r-typesheet1.gif` (249, 90, 16, 4) at scale 3. `RenderSystem` draws stars
-then sprites. Three star layers (120, 60 and 25 stars) use different speeds, sizes and colors.
+Game code draws through `IRenderer` only. SFML types never appear in game components.
 
-Snapshots supply ship positions. New IDs create sprites, missing IDs destroy them, and unknown
-kinds are skipped. The starfield remains local decoration. CMake copies assets beside the client;
-the entry point first searches there, then in the current working directory.
+## Game side
 
-Future work: enemies/projectile assets and animations, interpolation, HUD,
-fonts, resize/aspect-ratio policy and accessibility settings.
+`RenderSystem` clears the screen, draws every `Position + Star` entity as a small rectangle, then
+every `Position + Sprite` entity as a textured sprite.
+
+| Entity | Sprite sheet | Frame |
+|---|---|---|
+| Player ship | `sprites/players/r-typesheet42.gif` | 33 × 17 grid: one row per player color, one column per tilt (2 = flat, 3–4 up, 0–1 down), scale 3 |
+| Player missile | `sprites/projectiles/r-typesheet1.gif` | 16 × 4 at (249, 90), scaled to 48 × 12 |
+| Bydo | `sprites/enemies/r-typesheet5.gif` | 33 × 36, scaled to 66 × 72 |
+
+Sheets are described by `SpriteSheet` constants in `SpriteSheet.hpp`; `frame(column, row)` returns
+the source rectangle.
+
+## Assets
+
+CMake copies `assets/` next to the client executable after each build. At startup the client looks
+for `assets/` beside the executable, then in the current directory.

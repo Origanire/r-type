@@ -1,111 +1,85 @@
 # R-Type
 
 A networked multiplayer horizontal shoot'em up, written in C++20 on top of our own game engine.
-
-> Work in progress: up to four clients share server-controlled movement. Combat is not implemented yet.
+Up to four players join an authoritative server, shoot missiles and fight Bydos.
 
 ## Features
 
-- Reusable ECS engine and SFML rendering/input
-- Binary UDP protocol, four-player sessions and authoritative movement
-- Full snapshots, heartbeats, disconnects and inactivity timeouts
-- Local scrolling starfield
+- Reusable, modular game engine: ECS, physics, UDP networking, SFML rendering, input
+- Authoritative server with a fixed 60 Hz simulation, multithreaded network I/O
+- Binary UDP protocol with sessions, heartbeats, timeouts and packet validation
+- Four distinguishable players, missiles, Bydos with three movement patterns
+- Collisions, lives, respawn with invulnerability, score, game over and new rounds
+- Scrolling starfield
 
 ## Supported platforms
 
-| OS | Status |
-|---|---|
-| Linux (Ubuntu) | Supported |
-| Windows | Intended; build and crossplay validation pending |
+| OS | Server | Client |
+|---|---|---|
+| Linux (Ubuntu) | Supported | Supported |
+| Windows 10/11 (MSVC) | Supported | Supported |
 
 ## Dependencies
 
-All libraries are fetched by [vcpkg](https://vcpkg.io) in manifest mode (`vcpkg.json`). Nothing needs to be installed on the system except:
+Fetched automatically by [vcpkg](https://vcpkg.io) from `vcpkg.json`: **SFML 3**, **Asio**,
+**nlohmann-json**. You only need a C++20 compiler (GCC, Clang or MSVC), CMake 3.21+, vcpkg, and on
+Linux the X11/OpenGL/udev development packages. Full instructions:
+[Installation](docs/getting-started/installation.md).
 
-- a C++20 compiler (GCC, Clang or MSVC)
-- CMake 3.21 or newer
-- vcpkg installed in `.vcpkg/`, or an external installation selected with `CMAKE_TOOLCHAIN_FILE`
-- on Linux, the system development packages SFML needs (X11, OpenGL, udev)
+## Quick start
 
-| Library | Used for |
-|---|---|
-| SFML | Rendering, audio, input (client only) |
-| Asio (standalone) | Networking |
-| nlohmann-json | Configuration and game data |
-
-## Build
-
-### First-time setup on Linux (Ubuntu / Debian)
-
-Install the build tools and system development packages required by SFML:
-
-```sh
-sudo apt update
-sudo apt install build-essential cmake ninja-build git curl zip unzip tar pkg-config \
-    libx11-dev libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev
-```
-
-From the project root, install vcpkg locally (the `.vcpkg/` directory is ignored by Git):
+### Linux
 
 ```sh
 git clone https://github.com/microsoft/vcpkg.git .vcpkg
 ./.vcpkg/bootstrap-vcpkg.sh -disableMetrics
-```
-
-If vcpkg is already installed elsewhere, use its absolute path for `VCPKG_ROOT` instead.
-See the [official vcpkg setup guide](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash).
-
-### Configure and compile
-
-Run from the project root. CMake automatically uses the local `.vcpkg/` installation:
-
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release &&
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
 ```
 
-For vcpkg installed elsewhere, explicitly select its toolchain:
+### Windows (PowerShell, with `VCPKG_ROOT` set)
 
-```sh
-export VCPKG_ROOT="/absolute/path/to/vcpkg"
-cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release &&
-cmake --build build --parallel 2
+```powershell
+cmake -S . -B out -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
+cmake --build out --config Release --parallel 4
 ```
 
-The first configuration automatically downloads and builds the libraries in `vcpkg.json`.
-Binaries are written to `build/bin/`.
-
-The old command with an empty `VCPKG_ROOT` produces the path
-`/scripts/buildsystems/vcpkg.cmake`. CMake now replaces that path with the local
-`.vcpkg/` toolchain automatically, including when it is already in the cache.
-
-If you change to another vcpkg installation, clear the generated CMake cache
-before configuring again:
-
-```sh
-rm -rf build/CMakeCache.txt build/CMakeFiles
-```
+More details: [Building](docs/getting-started/building.md).
 
 ## Usage
 
 ```sh
 ./build/bin/r-type_server -p 4242
-# In another terminal; repeat for a second client:
 ./build/bin/r-type_client -h 127.0.0.1 -p 4242
 ```
 
-Use arrow keys to move and Escape to quit. The client accepts numeric IPv4 addresses.
-Space is reserved for shooting, which is not implemented yet. All players currently use the same ship sprite.
+Start the server, then one client per player, each in its own terminal. On Windows the binaries are
+in `out\bin\Release\`. Arrow keys move, Space fires, Escape quits.
+See [Running](docs/getting-started/running.md) for LAN play and all options.
 
 ## Documentation
 
-See [docs/](docs/) for the project documentation, including [RESEAU.md](docs/RESEAU.md).
+| Topic | Link |
+|---|---|
+| Documentation home | [docs/index.md](docs/index.md) |
+| Architecture | [docs/architecture/overview.md](docs/architecture/overview.md) |
+| Network protocol (RFC) | [docs/protocol.md](docs/protocol.md) |
+| Contributing | [docs/contributing/onboarding.md](docs/contributing/onboarding.md) |
+| Comparative study | [docs/comparative-study/index.md](docs/comparative-study/index.md) |
+| Accessibility | [docs/accessibility.md](docs/accessibility.md) |
+
+The documentation is also a searchable website: run `mkdocs serve` (see [docs/index.md](docs/index.md)).
 
 ## License
 
-<!-- TODO -->
+This project is an Epitech school project. No open-source license has been chosen yet; all rights
+reserved by the authors.
 
 ## Authors
 
-<!-- TODO: team members -->
-thread byte shiftin numero paquet
+| Name | GitHub |
+|---|---|
+| Mohamed Erraji | [Mimo1709](https://github.com/Mimo1709) |
+| Milo Bousquet | [Origanire](https://github.com/Origanire) |
+| Nathan Muzay | [NathanMuzay](https://github.com/NathanMuzay) |
+| Erwan Abab | [Erouanee](https://github.com/Erouanee) |

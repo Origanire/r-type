@@ -1,4 +1,4 @@
-# Network documentation (RESEAU)
+# Network protocol (RFC)
 
 This guide describes the current implementation, its public APIs, operating instructions,
 error handling and known gaps. It is the single version-1 wire reference, including field
@@ -74,7 +74,7 @@ The server binds all IPv4 interfaces. Each client uses a different ephemeral UDP
 For LAN use, replace 127.0.0.1 with the server's LAN IPv4 address and permit traffic on its UDP
 port. On different machines, 127.0.0.1 always addresses that client's own machine.
 Internet reachability, NAT traversal, automatic discovery and firewall configuration are not
-provided by the application. Windows build/crossplay validation remains pending.
+provided by the application. Linux and Windows builds use the same protocol code.
 
 ## 3. Architecture and source map
 
@@ -97,8 +97,8 @@ flowchart LR
 | Big-endian byte writer/reader | `engine/net/include/ByteWriter.hpp`, `engine/net/include/ByteReader.hpp` |
 | Message encoding, decoding and validation | `game/shared/src/protocol/Codec.cpp` |
 | Sessions, tokens, timeouts and events | `game/server/include/Server.hpp`, `game/server/src/Server.cpp` |
-| Game world (ECS registry and 60 Hz scheduler) | `game/server/include/Room.hpp`, `game/server/src/Room.cpp` |
-| Ship creation and server systems | `game/server/src/EntityFactory.cpp`, `game/server/src/systems/` |
+| Game world (ECS world and 60 Hz system manager) | `game/server/include/Room.hpp`, `game/server/src/Room.cpp` |
+| Entity creation and server systems | `game/server/src/EntityFactory.cpp`, `game/server/src/systems/` |
 | Server CLI, clock loop and signals | `game/server/src/main.cpp` |
 | Client session/scheduling | `game/client/include/NetworkClient.hpp`, `game/client/src/NetworkClient.cpp` |
 | Snapshot-to-ECS mapping | `game/client/src/Client.cpp` |
@@ -112,8 +112,8 @@ The server loop uses the engine `Clock` and `FixedTimestep`: it polls the networ
 runs as many 1/60-second ticks as the elapsed time requires, and bounds catch-up after a long
 suspension (250 ms). Movement advances by velocity times the tick duration, while inactivity
 uses elapsed steady time. The client's
-FixedTimestep advances local stars; networking also uses the steady clock. Registries and
-schedulers are not thread-safe and must remain on their owning main thread.
+FixedTimestep advances local stars and ship tilt; networking also uses the steady clock. ECS worlds and
+system managers are not thread-safe and must remain on their owning main thread.
 
 ## 4. Protocol reference
 
@@ -352,7 +352,7 @@ that is still in use.
 
 ##### `ENTITY_DESTROYED` (0x85)
 
-An entity was destroyed during the game (as opposed to leaving the screen). The client plays an explosion
+An entity was destroyed during the game (as opposed to leaving the screen). A client may play an explosion
 at the last known position of the entity.
 
 | Field | Type | Description |
@@ -623,7 +623,7 @@ so both entry points report them with the same handler. There is no reconnect/me
 | Destructor | Wait up to 200 ms for pending sends, then stop I/O and join the worker |
 
 Use transport from its owning main thread. Do not race teardown against another caller or
-access the game registry from the I/O worker. Data buffers remain alive until send completion.
+access the game world from the I/O worker. Data buffers remain alive until send completion.
 
 ### Encode and decode
 
@@ -669,7 +669,7 @@ Continue teardown as in `Client::run`, or allow the server's timeout to handle a
 The object is not designed for reconnect after `disconnect()`; construct a new client session.
 
 `Server::poll()` expires silent sessions and handles received packets; call it continuously.
-`Server::tick(dt)` releases stale inputs, updates the `Room` (one ECS scheduler run) and sends a
+`Server::tick(dt)` releases stale inputs, updates the `Room` (one run of its systems), broadcasts gameplay events and sends a
 snapshot every third tick; call it at the fixed tick rate. `shutdown()` dispatches a best-effort
 event; the transport destructor gives it a short dispatch window. The server links no rendering/input module.
 

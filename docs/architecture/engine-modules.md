@@ -1,27 +1,56 @@
 # Engine modules
 
-This inventory describes code actually compiled by CMake.
+Each module lives in `engine/<module>/` with `include/` and `src/` folders, has its own namespace
+(`engine::<module>`, except `engine` for core) and is built as its own static library. A game links
+only the modules it needs.
 
-| Module | Existing responsibilities | Remaining work |
+| Module | Provides | Depends on |
 |---|---|---|
-| `engine_core` | `EngineError`, `Clock`, `FixedTimestep` | Logger, configuration, paths, event bus |
-| `engine_ecs` | Generational entities, typed component arrays, registry, phase scheduler, deferred commands | Dedicated ECS tests, usage documentation extensions |
-| `engine_net` | IPv4 UDP socket, private Asio implementation, background I/O, bounded inbox/outbox, big-endian `ByteWriter`/`ByteReader`, `NetError` | Metrics, IPv6/DNS if needed, stronger connection authentication |
-| `engine_render` | Window/events, renderer interface, SFML implementation, named textures | Fonts, animation, palette support |
-| `engine_input` | Keyboard-to-action bindings, focus handling, action bitmask | Saved bindings, settings UI, controller support |
-| `engine_physics` | `Position`/`Velocity`/`Hitbox` components, AABB overlap, `movementSystem` (velocity × dt), `CollisionSystem` reporting each overlapping pair as a `Collision` event to a listener | Broad phase (spatial grid) if entity counts grow, collision layers |
-| `engine_audio` | Not implemented | Sound/music loading and playback |
-| `engine_ui` | Not implemented | Menus, widgets, settings, HUD |
+| `engine_core` | `EngineError` (base of every project exception), `CoreError`, `Clock` (steady clock stopwatch), `FixedTimestep` (fixed-step accumulator with catch-up limit) | — |
+| `engine_ecs` | `Entity` (index + generation), `EntityManager` (component masks, free list, queries), `ISystem`, `SystemManager`, `EcsError` | core |
+| `engine_physics` | `Aabb`, `overlaps()`, `Body`, `CollisionPair`, `findCollisions()` | — |
+| `engine_net` | `UdpTransport` (IPv4 UDP socket with a background I/O thread, bounded queues), `Endpoint`, `Datagram`, big-endian `ByteWriter` / `ByteReader`, `NetError` | core, Asio (private) |
+| `engine_render` | `Window`, `IRenderer`, `SfmlRenderer`, `TextureManager`, `Color` / `Vector2` / `IntRect`, `RenderError` | core, SFML Graphics |
+| `engine_input` | `Action`, `KeyBindings` (remappable), `InputManager` (focus-aware sampling, action bitmask) | core, SFML Window |
+| `engine_audio` | Not implemented yet | — |
+| `engine_ui` | Not implemented yet | — |
 
-## Game modules
+## Rules
 
-- `rtype_shared` is a compiled library containing the binary codec (built on `ByteWriter` and
-  `ByteReader`), plus shared headers: components (`Position`, `Velocity`, `Hitbox`, aliases of the `engine_physics` ones), game
-  constants (`GameConstants.hpp`), protocol types and constants, `GameError` and CLI port parsing.
-- The server is split in two. `Server` owns the UDP transport and the four optional sessions
-  (connection, tokens, sequences, timeouts, events). `Room` owns the game world: an ECS registry,
-  a 60 Hz scheduler with `inputSystem`, `engine::physics::movementSystem` and `boundarySystem`, and the
-  `EntityFactory`. It links no SFML rendering/input/audio library.
-- `NetworkClient` owns connection retries, the server endpoint, token, outgoing sequence,
-  periodic inputs/heartbeats, snapshot ordering and timeout detection.
-- `Client` owns presentation, converts snapshots to ECS entities and retains local star entities.
+- No engine file includes a file from `game/`.
+- Third-party libraries stay inside the module that wraps them: Asio is a private dependency of
+  `engine_net`, and SFML only appears in `engine_render` and `engine_input`.
+- The engine never stores game data. The ECS records which components an entity has; the game owns
+  the component values (see [ECS](ecs.md)).
+- `engine_physics` does not depend on the ECS: it works on plain rectangles, so any game, with any
+  storage, can use it.
+
+## Errors
+
+```text
+std::exception
+└── engine::EngineError          engine/core
+    ├── engine::CoreError        engine/core
+    ├── engine::ecs::EcsError    engine/ecs
+    ├── engine::net::NetError    engine/net
+    ├── engine::render::RenderError  engine/render
+    └── rtype::GameError         game/shared
+```
+
+Every message starts with the name of the class that raised it. Both entry points catch
+`EngineError`, then `std::exception`, print the message and return 84.
+
+## Time
+
+`Clock::restart()` returns the seconds elapsed since the previous call, measured with
+`std::chrono::steady_clock` (never affected by system clock changes). `FixedTimestep` accumulates
+this time and releases it in fixed steps:
+
+```cpp
+timestep.addTime(clock.restart());
+while (timestep.step())
+    update(timestep.stepSeconds());
+```
+
+The simulation therefore advances by identical `dt` values regardless of CPU speed. Each frame adds
+at most 0.25 s, so a long freeze cannot trigger an endless catch-up.

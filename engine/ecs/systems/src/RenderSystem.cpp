@@ -6,7 +6,7 @@
 
 namespace engine::ecs {
 
-RenderSystem::RenderSystem(Registry &registry, render::IRenderer &renderer, render::Color background)
+RenderSystem::RenderSystem(Registry &registry, render::IRenderer &renderer, Color background)
     : m_registry(registry), m_renderer(renderer), m_background(background)
 {
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 
 #include <SFML/Window/Keyboard.hpp>
 
@@ -11,6 +12,8 @@ namespace engine::input {
 class KeyBindings
 {
 public:
+    static constexpr std::size_t ACTION_COUNT = static_cast<std::size_t>(Action::Fire) + 1;
+
     KeyBindings();
 
     void bind(Action action, sf::Keyboard::Key key);

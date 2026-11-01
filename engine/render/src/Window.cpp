@@ -15,7 +15,7 @@ Window::Window(unsigned int width, unsigned int height, const std::string &title
     if (!m_window.isOpen())
         throw RenderError("Window: cannot open the window");
     m_window.setFramerateLimit(60);
-    m_window.setView(sf::View(sf::FloatRect({0.f, 0.f}, {worldSize.x, worldSize.y})));
+    m_window.setView(sf::View(sf::FloatRect({0.f, 0.f}, {worldSize.x(), worldSize.y()})));
 }
 
 void Window::processEvents()

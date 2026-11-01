@@ -13,7 +13,8 @@
 #include "Parallax.hpp"
 #include "PlayerControl.hpp"
 #include "RectShape.hpp"
-#include "RenderTypes.hpp"
+#include "Color.hpp"
+#include "IntRect.hpp"
 #include "Replicated.hpp"
 #include "SceneError.hpp"
 #include "ScoreValue.hpp"
@@ -31,7 +32,7 @@ namespace {
 constexpr std::size_t RECT_VALUES = 4;
 constexpr std::size_t COLOR_VALUES = 4;
 
-render::IntRect readRect(const DataNode &node, const std::string &key)
+IntRect readRect(const DataNode &node, const std::string &key)
 {
     const std::vector<DataNode> values = node.child(key).items();
     if (values.size() != RECT_VALUES)
@@ -39,7 +40,7 @@ render::IntRect readRect(const DataNode &node, const std::string &key)
     return {values[0].asInt(), values[1].asInt(), values[2].asInt(), values[3].asInt()};
 }
 
-render::Color readColor(const DataNode &node, const std::string &key)
+Color readColor(const DataNode &node, const std::string &key)
 {
     const std::vector<DataNode> values = node.child(key).items();
     if (values.size() != COLOR_VALUES)

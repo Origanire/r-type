@@ -21,7 +21,7 @@ public:
 
 private:
     KeyBindings m_bindings;
-    std::array<bool, ACTION_COUNT> m_pressed{};
+    std::array<bool, KeyBindings::ACTION_COUNT> m_pressed{};
 };
 
 } // namespace engine::input

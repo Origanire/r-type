@@ -4,7 +4,7 @@
 
 namespace engine::ecs {
 
-Sprite::Sprite(std::string texture, render::IntRect source, float scale)
+Sprite::Sprite(std::string texture, IntRect source, float scale)
     : m_texture(std::move(texture)), m_source(source), m_scale(scale)
 {
 }
@@ -14,12 +14,12 @@ const std::string &Sprite::texture() const
     return m_texture;
 }
 
-render::IntRect Sprite::source() const
+IntRect Sprite::source() const
 {
     return m_source;
 }
 
-void Sprite::setSource(render::IntRect source)
+void Sprite::setSource(IntRect source)
 {
     m_source = source;
 }

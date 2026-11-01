@@ -2,7 +2,9 @@
 
 #include <string>
 
-#include "RenderTypes.hpp"
+#include "Color.hpp"
+#include "IntRect.hpp"
+#include "Vector2.hpp"
 
 namespace engine::render {
 

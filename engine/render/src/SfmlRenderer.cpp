@@ -9,7 +9,7 @@ namespace {
 
 sf::Color toSfml(Color color)
 {
-    return sf::Color(color.r, color.g, color.b, color.a);
+    return sf::Color(color.r(), color.g(), color.b(), color.a());
 }
 
 } // namespace
@@ -25,8 +25,8 @@ void SfmlRenderer::clear(Color color)
 
 void SfmlRenderer::drawRect(Vector2 position, Vector2 size, Color color)
 {
-    sf::RectangleShape rect({size.x, size.y});
-    rect.setPosition({position.x, position.y});
+    sf::RectangleShape rect({size.x(), size.y()});
+    rect.setPosition({position.x(), position.y()});
     rect.setFillColor(toSfml(color));
     m_window.native().draw(rect);
 }
@@ -34,9 +34,9 @@ void SfmlRenderer::drawRect(Vector2 position, Vector2 size, Color color)
 void SfmlRenderer::drawTexture(const std::string &texture, IntRect source, Vector2 position, Vector2 scale)
 {
     sf::Sprite sprite(m_textures.get(texture));
-    sprite.setTextureRect(sf::IntRect({source.x, source.y}, {source.width, source.height}));
-    sprite.setPosition({position.x, position.y});
-    sprite.setScale({scale.x, scale.y});
+    sprite.setTextureRect(sf::IntRect({source.x(), source.y()}, {source.width(), source.height()}));
+    sprite.setPosition({position.x(), position.y()});
+    sprite.setScale({scale.x(), scale.y()});
     m_window.native().draw(sprite);
 }
 

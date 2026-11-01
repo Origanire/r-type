@@ -4,7 +4,7 @@
 
 #include <SFML/Graphics/RenderWindow.hpp>
 
-#include "RenderTypes.hpp"
+#include "Vector2.hpp"
 
 namespace engine::render {
 

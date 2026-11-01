@@ -56,6 +56,9 @@ add_library(engine_core
     engine/core/src/EngineError.cpp
     engine/core/src/Clock.cpp
     engine/core/src/FixedTimestep.cpp
+    engine/core/src/Color.cpp
+    engine/core/src/Vector2.cpp
+    engine/core/src/IntRect.cpp
 )
 target_include_directories(engine_core PUBLIC engine/core/include)
 # Uncomment once Config.cpp exists
@@ -65,6 +68,8 @@ target_include_directories(engine_core PUBLIC engine/core/include)
 add_library(engine_physics
     engine/physics/src/Aabb.cpp
     engine/physics/src/Collision.cpp
+    engine/physics/src/Body.cpp
+    engine/physics/src/CollisionPair.cpp
 )
 target_include_directories(engine_physics PUBLIC engine/physics/include)
 

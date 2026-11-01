@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Clock.hpp"
+#include "Color.hpp"
 #include "ComponentRegistration.hpp"
 #include "EngineComponentLoaders.hpp"
 #include "GameError.hpp"
@@ -27,7 +28,7 @@ namespace {
 
 constexpr std::size_t COLOR_VALUES = 4;
 
-engine::render::Color readColor(const engine::scene::DataNode &values)
+engine::Color readColor(const engine::scene::DataNode &values)
 {
     const std::vector<engine::scene::DataNode> channels = values.items();
     if (channels.size() != COLOR_VALUES)
@@ -144,7 +145,7 @@ void Client::createStarfield()
     for (const engine::scene::DataNode &layer : m_config.child("starfield").items()) {
         const int count = layer.getInt("count");
         const float size = layer.getFloat("size");
-        const engine::render::Color color = readColor(layer.child("color"));
+        const engine::Color color = readColor(layer.child("color"));
         for (int i = 0; i < count; ++i) {
             const engine::ecs::Entity star = m_registry.spawn();
             m_registry.emplace<engine::ecs::Transform>(star, randomX(random), randomY(random));

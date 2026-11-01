@@ -21,13 +21,13 @@ void CollisionSystem::update(float)
     for (std::size_t i : m_registry.view<Transform, Collider>()) {
         const Transform &transform = transforms.at(i);
         const Collider &collider = colliders.at(i);
-        bodies.push_back({i, {transform.x(), transform.y(), collider.width(), collider.height()}});
+        bodies.emplace_back(i, physics::Aabb(transform.x(), transform.y(), collider.width(), collider.height()));
     }
     for (const physics::CollisionPair &pair : physics::findCollisions(bodies)) {
-        const Collider &first = colliders.at(pair.first);
-        const Collider &second = colliders.at(pair.second);
+        const Collider &first = colliders.at(pair.first());
+        const Collider &second = colliders.at(pair.second());
         if (first.canHit(second) || second.canHit(first))
-            m_collisions.push(CollisionEvent(m_registry.entityAt(pair.first), m_registry.entityAt(pair.second)));
+            m_collisions.push(CollisionEvent(m_registry.entityAt(pair.first()), m_registry.entityAt(pair.second())));
     }
 }
 

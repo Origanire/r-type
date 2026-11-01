@@ -3,44 +3,48 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
-#include <utility>
 
-#include "BoundarySystem.hpp"
+#include "BoundsSystem.hpp"
 #include "CollisionSystem.hpp"
-#include "EnemyMovementSystem.hpp"
-#include "EntityFactory.hpp"
-#include "GameConstants.hpp"
+#include "ComponentRegistration.hpp"
+#include "DamageSystem.hpp"
+#include "EngineComponentLoaders.hpp"
 #include "GameError.hpp"
-#include "InputSystem.hpp"
+#include "Invulnerable.hpp"
 #include "InvulnerabilitySystem.hpp"
+#include "MovementPatternSystem.hpp"
 #include "MovementSystem.hpp"
 #include "OffscreenSystem.hpp"
-#include "ShootingSystem.hpp"
+#include "PlayerControl.hpp"
+#include "PlayerControlSystem.hpp"
+#include "Replicated.hpp"
+#include "ScoreValue.hpp"
 #include "Snapshot.hpp"
-#include "SpawnSystem.hpp"
+#include "SpawnerSystem.hpp"
+#include "Transform.hpp"
+#include "WeaponSystem.hpp"
 
 namespace rtype::server {
 
-Room::Room()
+using engine::ecs::Entity;
+
+Room::Room(const std::filesystem::path &dataDirectory)
+    : m_config(engine::scene::DataNode::fromFile(dataDirectory / "rtype_game.json")), m_rules(m_config.child("rules")),
+      m_prefabs(m_registry, m_factory), m_cleanup(m_registry)
 {
-    m_systems.add(std::make_unique<InputSystem>(m_world));
-    m_systems.add(std::make_unique<ShootingSystem>(m_world, [this] { return nextNetworkId(); }));
-    m_systems.add(std::make_unique<SpawnSystem>(
-        m_world, [this] { return nextNetworkId(); }, [this] { return m_gameState == protocol::GAME_PLAYING; }));
-    m_systems.add(std::make_unique<EnemyMovementSystem>(m_world));
-    m_systems.add(std::make_unique<InvulnerabilitySystem>(m_world));
-    m_systems.add(std::make_unique<MovementSystem>(m_world));
-    m_systems.add(std::make_unique<BoundarySystem>(m_world));
-    m_systems.add(std::make_unique<CollisionSystem>(m_world,
-        [this](const engine::ecs::Entity &first, const engine::ecs::Entity &second) { onCollision(first, second); }));
-    m_systems.add(std::make_unique<OffscreenSystem>(m_world));
+    engine::ecs::registerEngineComponents(m_registry);
+    m_layers.load(m_config.child("layers"));
+    engine::scene::addEngineComponentLoaders(m_factory, m_layers);
+    m_prefabs.load(engine::scene::DataNode::fromFile(dataDirectory / "rtype_server_prefabs.json"));
+    registerSystems();
+    m_prefabs.spawn(m_rules.spawnerPrefab());
 }
 
 void Room::spawnPlayer(std::size_t slot)
 {
     if (slot >= m_players.size() || m_players[slot])
         throw GameError("Room: invalid or occupied player slot");
-    m_players[slot] = Player{PLAYER_START_LIVES};
+    m_players[slot] = PlayerSlot(m_rules.startLives());
     if (m_gameState == protocol::GAME_WAITING)
         m_gameState = protocol::GAME_PLAYING;
     if (m_gameState == protocol::GAME_PLAYING)
@@ -52,7 +56,7 @@ void Room::removePlayer(std::size_t slot)
     if (slot >= m_players.size() || !m_players[slot])
         return;
     if (m_ships[slot])
-        m_world.entities.destroy(*m_ships[slot]);
+        m_registry.kill(*m_ships[slot]);
     m_ships[slot].reset();
     m_players[slot].reset();
     if (std::none_of(m_players.begin(), m_players.end(), [](const auto &player) { return player.has_value(); })) {
@@ -65,14 +69,20 @@ void Room::setButtons(std::size_t slot, std::uint8_t buttons)
 {
     if (slot >= m_ships.size() || !m_ships[slot])
         return;
-    m_world.inputs[m_ships[slot]->index()].buttons = buttons;
+    auto &control = m_registry.get<engine::ecs::PlayerControl>(*m_ships[slot]);
+    control.setDirection(buttons & protocol::BUTTON_UP, buttons & protocol::BUTTON_DOWN,
+        buttons & protocol::BUTTON_LEFT, buttons & protocol::BUTTON_RIGHT);
+    control.setFiring(buttons & protocol::BUTTON_FIRE);
 }
 
 void Room::update(float dt)
 {
     updateRespawns(dt);
     m_systems.update(dt);
+    assignNetworkIds();
+    handleDeaths();
     updateGameState(dt);
+    m_cleanup.update(dt);
     ++m_tick;
 }
 
@@ -94,14 +104,14 @@ std::array<protocol::PlayerState, protocol::MAX_PLAYERS> Room::playerStates() co
             continue;
         const std::uint16_t shipId = m_ships[slot] ? networkIdOf(*m_ships[slot]) : 0;
         const std::uint8_t state = shipId != 0 ? protocol::SLOT_ALIVE : protocol::SLOT_DEAD;
-        states[slot] = {state, m_players[slot]->lives, m_players[slot]->score, shipId};
+        states[slot] = {state, m_players[slot]->lives(), m_players[slot]->score(), shipId};
     }
     return states;
 }
 
 std::vector<protocol::NetworkEntity> Room::networkEntities() const
 {
-    return collectNetworkEntities(m_world);
+    return collectNetworkEntities(m_registry);
 }
 
 std::vector<protocol::Packet> Room::takeEvents()
@@ -109,15 +119,31 @@ std::vector<protocol::Packet> Room::takeEvents()
     return m_events.take();
 }
 
+void Room::registerSystems()
+{
+    m_systems.add(std::make_unique<engine::ecs::PlayerControlSystem>(m_registry));
+    m_systems.add(std::make_unique<engine::ecs::WeaponSystem>(
+        m_registry, m_prefabs, [this] { return canSpawnReplicated(); }));
+    m_systems.add(std::make_unique<engine::ecs::SpawnerSystem>(
+        m_registry, m_prefabs, [this] { return m_gameState == protocol::GAME_PLAYING && canSpawnReplicated(); }));
+    m_systems.add(std::make_unique<engine::ecs::MovementPatternSystem>(m_registry));
+    m_systems.add(std::make_unique<engine::ecs::InvulnerabilitySystem>(m_registry));
+    m_systems.add(std::make_unique<engine::ecs::MovementSystem>(m_registry));
+    m_systems.add(std::make_unique<engine::ecs::BoundsSystem>(m_registry));
+    m_systems.add(std::make_unique<engine::ecs::CollisionSystem>(m_registry, m_collisions));
+    m_systems.add(std::make_unique<engine::ecs::DamageSystem>(m_registry, m_collisions, m_deaths));
+    m_systems.add(std::make_unique<engine::ecs::OffscreenSystem>(m_registry));
+}
+
 void Room::updateRespawns(float dt)
 {
     if (m_gameState != protocol::GAME_PLAYING)
         return;
     for (std::size_t slot = 0; slot < m_players.size(); ++slot) {
-        if (!m_players[slot] || m_ships[slot] || m_players[slot]->lives == 0)
+        if (!m_players[slot] || m_ships[slot] || m_players[slot]->lives() == 0)
             continue;
-        m_players[slot]->respawnTimer -= dt;
-        if (m_players[slot]->respawnTimer <= 0.f)
+        m_players[slot]->elapseRespawn(dt);
+        if (m_players[slot]->respawnTimer() <= 0.f)
             spawnShip(slot, true);
     }
 }
@@ -126,10 +152,10 @@ void Room::updateGameState(float dt)
 {
     if (m_gameState == protocol::GAME_PLAYING) {
         const bool livesLeft = std::any_of(
-            m_players.begin(), m_players.end(), [](const auto &player) { return player && player->lives > 0; });
+            m_players.begin(), m_players.end(), [](const auto &player) { return player && player->lives() > 0; });
         if (!livesLeft) {
             m_gameState = protocol::GAME_OVER;
-            m_gameOverTimer = GAME_OVER_DELAY;
+            m_gameOverTimer = m_rules.gameOverDelay();
             std::cout << "Game over" << std::endl;
         }
     } else if (m_gameState == protocol::GAME_OVER) {
@@ -139,23 +165,64 @@ void Room::updateGameState(float dt)
     }
 }
 
+void Room::assignNetworkIds()
+{
+    auto &replicated = m_registry.getComponents<engine::ecs::Replicated>();
+    for (std::size_t i : m_registry.view<engine::ecs::Replicated>()) {
+        if (replicated.at(i).networkId() == 0)
+            replicated.at(i).setNetworkId(nextNetworkId());
+    }
+}
+
+void Room::handleDeaths()
+{
+    for (const engine::ecs::DeathEvent &death : m_deaths.take()) {
+        const Entity victim = death.victim();
+        const std::uint16_t networkId = networkIdOf(victim);
+        if (networkId != 0)
+            m_events.entityDestroyed(networkId);
+        if (const auto slot = shipSlot(victim)) {
+            m_ships[*slot].reset();
+            m_events.playerKilled(*slot);
+            m_players[*slot]->loseLife(m_rules.respawnDelay());
+            std::cout << "Player " << *slot << " killed, " << static_cast<int>(m_players[*slot]->lives())
+                      << " lives left" << std::endl;
+        }
+        if (!death.killer() || !m_registry.has<engine::ecs::ScoreValue>(victim))
+            continue;
+        const auto owner = ownerSlot(*death.killer());
+        if (owner && m_players[*owner])
+            m_players[*owner]->addScore(m_registry.get<engine::ecs::ScoreValue>(victim).points());
+    }
+}
+
 void Room::spawnShip(std::size_t slot, bool invulnerable)
 {
-    m_ships[slot] = createPlayerShip(m_world, slot, nextNetworkId());
-    if (!invulnerable)
-        return;
-    m_world.invulnerables[m_ships[slot]->index()] = Invulnerable{PLAYER_INVULNERABILITY};
-    m_world.entities.addComponents(*m_ships[slot], INVULNERABLE);
+    const Entity ship = m_prefabs.spawn(m_rules.playerPrefab());
+    const float y = m_rules.spawnY() + static_cast<float>(slot) * m_rules.spawnSpacing();
+    if (m_registry.has<engine::ecs::Transform>(ship))
+        m_registry.get<engine::ecs::Transform>(ship).setPosition(m_rules.spawnX(), y);
+    else
+        m_registry.emplace<engine::ecs::Transform>(ship, m_rules.spawnX(), y);
+    if (m_registry.has<engine::ecs::Replicated>(ship))
+        m_registry.get<engine::ecs::Replicated>(ship).setNetworkId(nextNetworkId());
+    if (invulnerable)
+        m_registry.emplace<engine::ecs::Invulnerable>(ship, m_rules.invulnerability());
+    m_ships[slot] = ship;
+    m_shipOwners.insert_or_assign(keyOf(ship), slot);
 }
 
 void Room::restart()
 {
     clearWorld();
+    m_shipOwners.clear();
     for (std::size_t slot = 0; slot < m_players.size(); ++slot) {
         if (!m_players[slot])
             continue;
-        m_players[slot] = Player{PLAYER_START_LIVES};
-        if (!m_ships[slot])
+        m_players[slot] = PlayerSlot(m_rules.startLives());
+        if (m_ships[slot])
+            m_shipOwners.insert_or_assign(keyOf(*m_ships[slot]), slot);
+        else
             spawnShip(slot, false);
     }
     m_gameState = protocol::GAME_PLAYING;
@@ -164,73 +231,40 @@ void Room::restart()
 
 void Room::clearWorld()
 {
-    destroyAll(ENEMY);
-    destroyAll(PROJECTILE);
-}
-
-void Room::onCollision(const engine::ecs::Entity &first, const engine::ecs::Entity &second)
-{
-    if (!m_world.entities.isAlive(first) || !m_world.entities.isAlive(second))
-        return;
-    for (const auto &[a, b] : {std::pair{first, second}, std::pair{second, first}}) {
-        if (!m_world.entities.hasComponents(b, ENEMY))
-            continue;
-        if (m_world.entities.hasComponents(a, PROJECTILE))
-            hitEnemy(a, b);
-        else if (m_world.entities.hasComponents(a, PLAYER_SHIP))
-            hitShip(a, b);
-        return;
+    for (std::size_t i : m_registry.view<engine::ecs::Replicated>()) {
+        const Entity entity = m_registry.entityAt(i);
+        if (!shipSlot(entity))
+            m_registry.kill(entity);
     }
 }
 
-void Room::hitEnemy(const engine::ecs::Entity &missile, const engine::ecs::Entity &enemy)
+bool Room::canSpawnReplicated() const
 {
-    const std::size_t owner = m_world.projectiles[missile.index()].ownerSlot;
-    m_world.entities.destroy(missile);
-    if (m_world.entities.hasComponents(enemy, HEALTH)) {
-        Health &health = m_world.healths[enemy.index()];
-        health.points -= MISSILE_DAMAGE;
-        if (health.points > 0)
-            return;
+    return m_registry.view<engine::ecs::Replicated>().size() < protocol::MAX_ENTITIES;
+}
+
+std::optional<std::size_t> Room::shipSlot(const Entity &entity) const
+{
+    for (std::size_t slot = 0; slot < m_ships.size(); ++slot) {
+        if (m_ships[slot] && *m_ships[slot] == entity)
+            return slot;
     }
-    destroy(enemy);
-    if (owner < m_players.size() && m_players[owner])
-        m_players[owner]->score += BYDO_SCORE;
+    return std::nullopt;
 }
 
-void Room::hitShip(const engine::ecs::Entity &ship, const engine::ecs::Entity &enemy)
+std::optional<std::size_t> Room::ownerSlot(const Entity &entity) const
 {
-    if (m_world.entities.hasComponents(ship, INVULNERABLE))
-        return;
-    const std::size_t slot = m_world.playerShips[ship.index()].slot;
-    destroy(enemy);
-    destroy(ship);
-    m_ships[slot].reset();
-    m_events.playerKilled(slot);
-    Player &player = *m_players[slot];
-    if (player.lives > 0)
-        --player.lives;
-    player.respawnTimer = PLAYER_RESPAWN_DELAY;
-    std::cout << "Player " << slot << " killed, " << static_cast<int>(player.lives) << " lives left" << std::endl;
+    const auto found = m_shipOwners.find(keyOf(entity));
+    if (found == m_shipOwners.end())
+        return std::nullopt;
+    return found->second;
 }
 
-void Room::destroy(const engine::ecs::Entity &entity)
+std::uint16_t Room::networkIdOf(const Entity &entity) const
 {
-    m_events.entityDestroyed(networkIdOf(entity));
-    m_world.entities.destroy(entity);
-}
-
-void Room::destroyAll(engine::ecs::ComponentMask components)
-{
-    for (std::size_t i : m_world.entities.with(components))
-        m_world.entities.destroy(m_world.entities.entityAt(i));
-}
-
-std::uint16_t Room::networkIdOf(const engine::ecs::Entity &entity) const
-{
-    if (!m_world.entities.hasComponents(entity, REPLICATED))
+    if (!m_registry.has<engine::ecs::Replicated>(entity))
         return 0;
-    return m_world.replicated[entity.index()].networkId;
+    return m_registry.get<engine::ecs::Replicated>(entity).networkId();
 }
 
 std::uint16_t Room::nextNetworkId()
@@ -242,11 +276,17 @@ std::uint16_t Room::nextNetworkId()
 
 bool Room::networkIdInUse(std::uint16_t networkId) const
 {
-    for (std::size_t i : m_world.entities.with(REPLICATED)) {
-        if (m_world.replicated[i].networkId == networkId)
+    const auto &replicated = m_registry.getComponents<engine::ecs::Replicated>();
+    for (std::size_t i : m_registry.view<engine::ecs::Replicated>()) {
+        if (replicated.at(i).networkId() == networkId)
             return true;
     }
     return false;
+}
+
+Room::EntityKey Room::keyOf(const Entity &entity)
+{
+    return {entity.index(), entity.generation()};
 }
 
 } // namespace rtype::server

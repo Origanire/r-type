@@ -7,6 +7,7 @@
 #include <string_view>
 #include <thread>
 
+#include "AssetPath.hpp"
 #include "Clock.hpp"
 #include "EngineError.hpp"
 #include "FixedTimestep.hpp"
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
         return 0;
     }
     try {
-        rtype::server::Server server(parseArguments(argc, argv));
+        rtype::server::Server server(parseArguments(argc, argv), rtype::findData(argv[0]));
         std::signal(SIGINT, stop);
         std::signal(SIGTERM, stop);
         engine::Clock clock;

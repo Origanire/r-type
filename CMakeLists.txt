@@ -91,6 +91,10 @@ add_library(engine_ecs
     engine/ecs/components/src/RectShape.cpp
     engine/ecs/components/src/Parallax.cpp
     engine/ecs/components/src/TiltAnimation.cpp
+    engine/ecs/components/src/Weapon.cpp
+    engine/ecs/components/src/SpawnEntry.cpp
+    engine/ecs/components/src/Spawner.cpp
+    engine/ecs/components/src/Replicated.cpp
     engine/ecs/components/src/ComponentRegistration.cpp
     engine/ecs/systems/src/CollisionEvent.cpp
     engine/ecs/systems/src/DeathEvent.cpp
@@ -106,6 +110,8 @@ add_library(engine_ecs
     engine/ecs/systems/src/ParallaxSystem.cpp
     engine/ecs/systems/src/TiltAnimationSystem.cpp
     engine/ecs/systems/src/RenderSystem.cpp
+    engine/ecs/systems/src/WeaponSystem.cpp
+    engine/ecs/systems/src/SpawnerSystem.cpp
 )
 target_include_directories(engine_ecs PUBLIC
     engine/ecs/include
@@ -113,6 +119,17 @@ target_include_directories(engine_ecs PUBLIC
     engine/ecs/systems/include
     engine/render/include)
 target_link_libraries(engine_ecs PUBLIC engine_core engine_physics)
+
+# --- engine_scene: JSON data, component factory, collision layers and prefabs (nlohmann-json hidden inside)
+add_library(engine_scene
+    engine/scene/src/DataNode.cpp
+    engine/scene/src/LayerTable.cpp
+    engine/scene/src/ComponentFactory.cpp
+    engine/scene/src/EngineComponentLoaders.cpp
+    engine/scene/src/PrefabLibrary.cpp
+)
+target_include_directories(engine_scene PUBLIC engine/scene/include)
+target_link_libraries(engine_scene PUBLIC engine_core engine_ecs PRIVATE nlohmann_json::nlohmann_json)
 
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
 add_library(engine_net
@@ -168,66 +185,40 @@ target_link_libraries(engine_input PUBLIC engine_core SFML::Window)
 # Game: R-Type, built on the engine.
 # ---------------------------------------------------------------------------
 
-# --- rtype_shared: components, protocol, game data (client + server)
+# --- rtype_shared: protocol, codec and helpers shared by the client and the server
 add_library(rtype_shared
     game/shared/src/protocol/Codec.cpp
     game/shared/src/PortOption.cpp
+    game/shared/src/AssetPath.cpp
 )
-target_include_directories(rtype_shared PUBLIC game/shared/include game/shared/include/components)
+target_include_directories(rtype_shared PUBLIC game/shared/include)
 target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
 
-# Planned:
-# add_library(rtype_shared
-#     game/shared/src/protocol/Codec.cpp
-#     game/shared/src/data/EnemyDefs.cpp
-#     game/shared/src/data/WaveDefs.cpp
-#     game/shared/src/data/GameRules.cpp
-# )
-# target_include_directories(rtype_shared PUBLIC game/shared/include)
-# target_link_libraries(rtype_shared
-#     PUBLIC engine_core engine_ecs engine_physics engine_net
-#     PRIVATE nlohmann_json::nlohmann_json)
+# --- rtype_assets: copies assets/ (sprites) and game/data/ (R-Type JSON files) next to the executables
+add_custom_target(rtype_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:r-type_client>/assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/game/data $<TARGET_FILE_DIR:r-type_client>/data)
 
 # --- r-type_server [p.1][p.9]: authoritative server (never links render, audio, input or ui)
 add_executable(r-type_server
     game/server/src/main.cpp
     game/server/src/Server.cpp
     game/server/src/Room.cpp
-    game/server/src/EntityFactory.cpp
+    game/server/src/GameRules.cpp
+    game/server/src/PlayerSlot.cpp
     game/server/src/GameEvents.cpp
-    game/server/src/systems/InputSystem.cpp
-    game/server/src/systems/ShootingSystem.cpp
-    game/server/src/systems/SpawnSystem.cpp
-    game/server/src/systems/EnemyMovementSystem.cpp
-    game/server/src/systems/InvulnerabilitySystem.cpp
-    game/server/src/systems/MovementSystem.cpp
-    game/server/src/systems/BoundarySystem.cpp
-    game/server/src/systems/CollisionSystem.cpp
-    game/server/src/systems/OffscreenSystem.cpp
     game/server/src/Snapshot.cpp
 )
-target_include_directories(r-type_server PRIVATE
-    game/server/include
-    game/server/include/components
-    game/server/include/systems)
-target_link_libraries(r-type_server PRIVATE rtype_shared engine_physics)
+target_include_directories(r-type_server PRIVATE game/server/include)
+target_link_libraries(r-type_server PRIVATE rtype_shared engine_scene)
+add_dependencies(r-type_server rtype_assets)
 
 # --- r-type_client [p.1][p.10]: display, input, sound
-# Planned: SceneManager, Settings, scenes/*, NetworkSync, Interpolation,
-# Animation, Audio and Hud systems, accessibility/VisualSoundCues
 add_executable(r-type_client
     game/client/src/main.cpp
     game/client/src/Client.cpp
     game/client/src/NetworkClient.cpp
-    game/client/src/SpriteSheet.cpp
-    game/client/src/systems/StarfieldSystem.cpp
-    game/client/src/systems/ShipAnimationSystem.cpp
-    game/client/src/systems/RenderSystem.cpp
 )
-target_include_directories(r-type_client PRIVATE
-    game/client/include
-    game/client/include/components
-    game/client/include/systems)
-target_link_libraries(r-type_client PRIVATE rtype_shared engine_render engine_input)
-add_custom_command(TARGET r-type_client POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:r-type_client>/assets)
+target_include_directories(r-type_client PRIVATE game/client/include)
+target_link_libraries(r-type_client PRIVATE rtype_shared engine_scene engine_render engine_input)
+add_dependencies(r-type_client rtype_assets)

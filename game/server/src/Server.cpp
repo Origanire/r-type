@@ -14,7 +14,8 @@ constexpr std::chrono::milliseconds ACCEPT_REPEAT_DELAY{200};
 
 } // namespace
 
-Server::Server(std::uint16_t port) : m_transport(port), m_random(std::random_device{}())
+Server::Server(std::uint16_t port, const std::filesystem::path &dataDirectory)
+    : m_transport(port), m_room(dataDirectory), m_random(std::random_device{}())
 {
     std::cout << "R-Type server listening on UDP port " << port << std::endl;
 }

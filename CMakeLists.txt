@@ -61,21 +61,58 @@ target_include_directories(engine_core PUBLIC engine/core/include)
 # Uncomment once Config.cpp exists
 # target_link_libraries(engine_core PRIVATE nlohmann_json::nlohmann_json)
 
-# --- engine_ecs: entities, components, systems
-add_library(engine_ecs
-    engine/ecs/src/Entity.cpp
-    engine/ecs/src/EntityManager.cpp
-    engine/ecs/src/SystemManager.cpp
-)
-target_include_directories(engine_ecs PUBLIC engine/ecs/include)
-target_link_libraries(engine_ecs PUBLIC engine_core)
-
-# --- engine_physics: bounding boxes and collision detection
+# --- engine_physics: bounding boxes and collision detection (pure geometry)
 add_library(engine_physics
     engine/physics/src/Aabb.cpp
     engine/physics/src/Collision.cpp
 )
 target_include_directories(engine_physics PUBLIC engine/physics/include)
+
+# --- engine_ecs: entities, registry, components and systems
+# The render headers used here (IRenderer, RenderTypes) contain no SFML: engine_ecs never links SFML.
+add_library(engine_ecs
+    engine/ecs/src/Entity.cpp
+    engine/ecs/src/EntityManager.cpp
+    engine/ecs/src/Registry.cpp
+    engine/ecs/src/SystemManager.cpp
+    engine/ecs/components/src/Transform.cpp
+    engine/ecs/components/src/Velocity.cpp
+    engine/ecs/components/src/Collider.cpp
+    engine/ecs/components/src/Bounded.cpp
+    engine/ecs/components/src/Health.cpp
+    engine/ecs/components/src/ContactDamage.cpp
+    engine/ecs/components/src/Invulnerable.cpp
+    engine/ecs/components/src/MovementPattern.cpp
+    engine/ecs/components/src/DespawnOffscreen.cpp
+    engine/ecs/components/src/PlayerControl.cpp
+    engine/ecs/components/src/Owner.cpp
+    engine/ecs/components/src/ScoreValue.cpp
+    engine/ecs/components/src/Sprite.cpp
+    engine/ecs/components/src/RectShape.cpp
+    engine/ecs/components/src/Parallax.cpp
+    engine/ecs/components/src/TiltAnimation.cpp
+    engine/ecs/components/src/ComponentRegistration.cpp
+    engine/ecs/systems/src/CollisionEvent.cpp
+    engine/ecs/systems/src/DeathEvent.cpp
+    engine/ecs/systems/src/MovementSystem.cpp
+    engine/ecs/systems/src/BoundsSystem.cpp
+    engine/ecs/systems/src/CollisionSystem.cpp
+    engine/ecs/systems/src/PlayerControlSystem.cpp
+    engine/ecs/systems/src/MovementPatternSystem.cpp
+    engine/ecs/systems/src/InvulnerabilitySystem.cpp
+    engine/ecs/systems/src/DamageSystem.cpp
+    engine/ecs/systems/src/OffscreenSystem.cpp
+    engine/ecs/systems/src/CleanupSystem.cpp
+    engine/ecs/systems/src/ParallaxSystem.cpp
+    engine/ecs/systems/src/TiltAnimationSystem.cpp
+    engine/ecs/systems/src/RenderSystem.cpp
+)
+target_include_directories(engine_ecs PUBLIC
+    engine/ecs/include
+    engine/ecs/components/include
+    engine/ecs/systems/include
+    engine/render/include)
+target_link_libraries(engine_ecs PUBLIC engine_core engine_physics)
 
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
 add_library(engine_net

@@ -1,0 +1,77 @@
+{
+  "player_ship": {
+    "Transform": {},
+    "Velocity": {},
+    "Collider": { "width": 99, "height": 51, "layer": "player" },
+    "Bounded": { "minX": 0, "minY": 0, "maxX": 1920, "maxY": 1080 },
+    "Health": { "points": 1 },
+    "PlayerControl": { "speed": 600 },
+    "Weapon": { "prefab": "player_missile", "cooldown": 0.2, "offsetX": 99, "offsetY": 19.5 },
+    "Replicated": { "kind": 1 }
+  },
+  "player_missile": {
+    "Transform": {},
+    "Velocity": { "x": 1500, "y": 0 },
+    "Collider": { "width": 48, "height": 12, "layer": "player_missile", "hits": ["enemy"] },
+    "ContactDamage": { "amount": 1, "destroyOnHit": true },
+    "DespawnOffscreen": { "minX": 0, "minY": 0, "maxX": 1920, "maxY": 1080 },
+    "Replicated": { "kind": 2 }
+  },
+  "bydo_straight": {
+    "Transform": {},
+    "Velocity": { "x": -250, "y": 0 },
+    "Collider": { "width": 66, "height": 72, "layer": "enemy", "hits": ["player"] },
+    "Health": { "points": 1 },
+    "ContactDamage": { "amount": 1, "destroyOnHit": true },
+    "ScoreValue": { "points": 100 },
+    "MovementPattern": { "kind": "straight" },
+    "DespawnOffscreen": { "minX": 0, "minY": -200, "maxX": 2200, "maxY": 1280 },
+    "Replicated": { "kind": 3 }
+  },
+  "bydo_sine": {
+    "Transform": {},
+    "Velocity": { "x": -250, "y": 0 },
+    "Collider": { "width": 66, "height": 72, "layer": "enemy", "hits": ["player"] },
+    "Health": { "points": 1 },
+    "ContactDamage": { "amount": 1, "destroyOnHit": true },
+    "ScoreValue": { "points": 100 },
+    "MovementPattern": { "kind": "sine", "amplitude": 150, "frequency": 3 },
+    "DespawnOffscreen": { "minX": 0, "minY": -200, "maxX": 2200, "maxY": 1280 },
+    "Replicated": { "kind": 3 }
+  },
+  "bydo_zigzag_up": {
+    "Transform": {},
+    "Velocity": { "x": -250, "y": -250 },
+    "Collider": { "width": 66, "height": 72, "layer": "enemy", "hits": ["player"] },
+    "Health": { "points": 1 },
+    "ContactDamage": { "amount": 1, "destroyOnHit": true },
+    "ScoreValue": { "points": 100 },
+    "MovementPattern": { "kind": "zigzag", "verticalSpeed": 250, "minY": 0, "maxY": 1080 },
+    "DespawnOffscreen": { "minX": 0, "minY": -200, "maxX": 2200, "maxY": 1280 },
+    "Replicated": { "kind": 3 }
+  },
+  "bydo_zigzag_down": {
+    "Transform": {},
+    "Velocity": { "x": -250, "y": 250 },
+    "Collider": { "width": 66, "height": 72, "layer": "enemy", "hits": ["player"] },
+    "Health": { "points": 1 },
+    "ContactDamage": { "amount": 1, "destroyOnHit": true },
+    "ScoreValue": { "points": 100 },
+    "MovementPattern": { "kind": "zigzag", "verticalSpeed": 250, "minY": 0, "maxY": 1080 },
+    "DespawnOffscreen": { "minX": 0, "minY": -200, "maxX": 2200, "maxY": 1280 },
+    "Replicated": { "kind": 3 }
+  },
+  "bydo_spawner": {
+    "Spawner": {
+      "x": 1920,
+      "minInterval": 0.6,
+      "maxInterval": 1.8,
+      "entries": [
+        { "prefab": "bydo_straight", "minY": 0, "maxY": 1008, "weight": 2 },
+        { "prefab": "bydo_sine", "minY": 150, "maxY": 858, "weight": 2 },
+        { "prefab": "bydo_zigzag_up", "minY": 0, "maxY": 1008, "weight": 1 },
+        { "prefab": "bydo_zigzag_down", "minY": 0, "maxY": 1008, "weight": 1 }
+      ]
+    }
+  }
+}

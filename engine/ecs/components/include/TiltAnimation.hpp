@@ -10,6 +10,7 @@ class TiltAnimation : public IComponent
 public:
     TiltAnimation(render::IntRect firstFrame, int row, int flatColumn, int maxTilt, float framesPerSecond);
 
+    void setRow(int row);
     void setDirection(float direction);
     float direction() const;
     void advance(float dt);

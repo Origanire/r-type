@@ -1,0 +1,15 @@
+{
+  "ship": {
+    "Transform": {},
+    "Sprite": { "texture": "player_ships", "frame": [66, 0, 33, 17], "scale": 3 },
+    "TiltAnimation": { "frame": [0, 0, 33, 17], "row": 0, "flatColumn": 2, "maxTilt": 2, "framesPerSecond": 8 }
+  },
+  "player_missile": {
+    "Transform": {},
+    "Sprite": { "texture": "player_missiles", "frame": [249, 90, 16, 4], "scale": 3 }
+  },
+  "bydo": {
+    "Transform": {},
+    "Sprite": { "texture": "bydos", "frame": [0, 0, 33, 36], "scale": 2 }
+  }
+}

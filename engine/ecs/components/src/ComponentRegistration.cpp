@@ -12,11 +12,14 @@
 #include "Parallax.hpp"
 #include "PlayerControl.hpp"
 #include "RectShape.hpp"
+#include "Replicated.hpp"
 #include "ScoreValue.hpp"
+#include "Spawner.hpp"
 #include "Sprite.hpp"
 #include "TiltAnimation.hpp"
 #include "Transform.hpp"
 #include "Velocity.hpp"
+#include "Weapon.hpp"
 
 namespace engine::ecs {
 
@@ -39,6 +42,9 @@ void registerEngineComponents(Registry &registry)
     registry.registerComponent<RectShape>();
     registry.registerComponent<Parallax>();
     registry.registerComponent<TiltAnimation>();
+    registry.registerComponent<Weapon>();
+    registry.registerComponent<Spawner>();
+    registry.registerComponent<Replicated>();
 }
 
 } // namespace engine::ecs

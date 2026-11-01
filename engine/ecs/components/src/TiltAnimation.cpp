@@ -11,6 +11,11 @@ TiltAnimation::TiltAnimation(render::IntRect firstFrame, int row, int flatColumn
 {
 }
 
+void TiltAnimation::setRow(int row)
+{
+    m_row = row;
+}
+
 void TiltAnimation::setDirection(float direction)
 {
     m_direction = direction;

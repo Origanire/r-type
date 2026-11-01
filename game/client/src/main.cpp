@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 
+#include "AssetPath.hpp"
 #include "Client.hpp"
 #include "EngineError.hpp"
 #include "GameError.hpp"
@@ -16,14 +17,6 @@ namespace {
 
 constexpr std::string_view USAGE = "Usage: r-type_client [-h IPv4-address] [-p port]";
 constexpr const char *DEFAULT_HOST = "127.0.0.1";
-
-std::filesystem::path findAssets(const char *programPath)
-{
-    std::filesystem::path besideProgram = std::filesystem::absolute(programPath).parent_path() / "assets";
-    if (std::filesystem::exists(besideProgram))
-        return besideProgram;
-    return std::filesystem::current_path() / "assets";
-}
 
 engine::net::Endpoint parseArguments(int argc, char **argv)
 {
@@ -50,7 +43,7 @@ int main(int argc, char **argv)
         return 0;
     }
     try {
-        rtype::client::Client client(findAssets(argv[0]), parseArguments(argc, argv));
+        rtype::client::Client client(rtype::findAssets(argv[0]), rtype::findData(argv[0]), parseArguments(argc, argv));
         client.run();
     } catch (const engine::EngineError &error) {
         std::cerr << "r-type_client: " << error.what() << std::endl;

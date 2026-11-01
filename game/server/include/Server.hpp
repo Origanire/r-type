@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <optional>
 #include <random>
 
@@ -16,7 +17,7 @@ namespace rtype::server {
 class Server
 {
 public:
-    explicit Server(std::uint16_t port);
+    Server(std::uint16_t port, const std::filesystem::path &dataDirectory);
 
     void poll();
     void tick(float dt);

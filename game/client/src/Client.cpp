@@ -1,40 +1,49 @@
 #include "Client.hpp"
 
+#include <charconv>
+#include <cstddef>
 #include <memory>
 #include <random>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "Clock.hpp"
-#include "GameConstants.hpp"
+#include "ComponentRegistration.hpp"
+#include "EngineComponentLoaders.hpp"
+#include "GameError.hpp"
+#include "Parallax.hpp"
+#include "ParallaxSystem.hpp"
+#include "RectShape.hpp"
 #include "RenderSystem.hpp"
-#include "ShipAnimationSystem.hpp"
-#include "SpriteSheet.hpp"
-#include "StarfieldSystem.hpp"
+#include "Sprite.hpp"
+#include "TiltAnimation.hpp"
+#include "TiltAnimationSystem.hpp"
+#include "Transform.hpp"
 
 namespace rtype::client {
 
 namespace {
 
-constexpr unsigned int WINDOW_WIDTH = 1280;
-constexpr unsigned int WINDOW_HEIGHT = 720;
-constexpr float PLAYER_SCALE = PLAYER_WIDTH / static_cast<float>(PLAYER_SHIP_SHEET.frameWidth);
-constexpr float MISSILE_SCALE = MISSILE_WIDTH / static_cast<float>(PLAYER_MISSILE_SHEET.frameWidth);
-constexpr float BYDO_SCALE = BYDO_WIDTH / static_cast<float>(BYDO_SHEET.frameWidth);
+constexpr std::size_t COLOR_VALUES = 4;
 
-struct StarLayer
+engine::render::Color readColor(const engine::scene::DataNode &values)
 {
-    int count;
-    float speed;
-    float size;
-    engine::render::Color color;
-};
+    const std::vector<engine::scene::DataNode> channels = values.items();
+    if (channels.size() != COLOR_VALUES)
+        throw GameError("Client: " + values.path() + " must be [r, g, b, a]");
+    return {static_cast<std::uint8_t>(channels[0].asInt()), static_cast<std::uint8_t>(channels[1].asInt()),
+        static_cast<std::uint8_t>(channels[2].asInt()), static_cast<std::uint8_t>(channels[3].asInt())};
+}
 
-constexpr StarLayer STAR_LAYERS[] = {
-    {120, 40.f, 2.f, {90, 90, 130, 255}},
-    {60, 110.f, 3.f, {170, 170, 210, 255}},
-    {25, 240.f, 4.f, {255, 255, 255, 255}},
-};
+std::uint8_t parseKind(const std::string &text)
+{
+    unsigned value = 0;
+    const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (result.ec != std::errc{} || result.ptr != text.data() + text.size() || value > UINT8_MAX)
+        throw GameError("Client: invalid entity kind " + text);
+    return static_cast<std::uint8_t>(value);
+}
 
 int playerRow(const protocol::WorldSnapshot &snapshot, std::uint16_t entityId)
 {
@@ -54,15 +63,28 @@ float verticalDirection(float previousY, float nextY)
     return 0.f;
 }
 
+engine::scene::DataNode loadConfig(const std::filesystem::path &dataDir)
+{
+    return engine::scene::DataNode::fromFile(dataDir / "rtype_game.json");
+}
+
 } // namespace
 
-Client::Client(const std::filesystem::path &assetsDir, engine::net::Endpoint server)
-    : m_window(WINDOW_WIDTH, WINDOW_HEIGHT, "R-Type", {WORLD_WIDTH, WORLD_HEIGHT}), m_renderer(m_window, m_textures),
+Client::Client(const std::filesystem::path &assetsDir, const std::filesystem::path &dataDir, engine::net::Endpoint server)
+    : m_config(loadConfig(dataDir)),
+      m_window(static_cast<unsigned int>(m_config.child("window").getInt("width")),
+          static_cast<unsigned int>(m_config.child("window").getInt("height")),
+          m_config.child("window").getString("title"),
+          {m_config.child("world").getFloat("width"), m_config.child("world").getFloat("height")}),
+      m_renderer(m_window, m_textures), m_prefabs(m_registry, m_factory),
       m_timestep(1.f / static_cast<float>(protocol::TICK_RATE)), m_network(std::move(server))
 {
-    m_textures.load(PLAYER_SHIP_SHEET.texture, (assetsDir / "sprites" / PLAYER_SHIP_SHEET.path).string());
-    m_textures.load(PLAYER_MISSILE_SHEET.texture, (assetsDir / "sprites" / PLAYER_MISSILE_SHEET.path).string());
-    m_textures.load(BYDO_SHEET.texture, (assetsDir / "sprites" / BYDO_SHEET.path).string());
+    engine::ecs::registerEngineComponents(m_registry);
+    m_layers.load(m_config.child("layers"));
+    engine::scene::addEngineComponentLoaders(m_factory, m_layers);
+    m_prefabs.load(engine::scene::DataNode::fromFile(dataDir / "rtype_client_prefabs.json"));
+    loadTextures(assetsDir);
+    loadKinds();
     registerSystems();
     createStarfield();
 }
@@ -85,25 +107,49 @@ void Client::run()
     m_network.disconnect();
 }
 
+void Client::loadTextures(const std::filesystem::path &assetsDir)
+{
+    const engine::scene::DataNode textures = m_config.child("textures");
+    for (const std::string &name : textures.keys())
+        m_textures.load(name, (assetsDir / textures.getString(name)).string());
+}
+
+void Client::loadKinds()
+{
+    const engine::scene::DataNode kinds = m_config.child("kinds");
+    for (const std::string &kind : kinds.keys()) {
+        const std::string prefab = kinds.getString(kind);
+        if (!m_prefabs.has(prefab))
+            throw GameError("Client: unknown prefab " + prefab + " for entity kind " + kind);
+        m_kindPrefabs.insert_or_assign(parseKind(kind), prefab);
+    }
+}
+
 void Client::registerSystems()
 {
-    m_logic.add(std::make_unique<StarfieldSystem>(m_world));
-    m_logic.add(std::make_unique<ShipAnimationSystem>(m_world));
-    m_render.add(std::make_unique<RenderSystem>(m_world, m_renderer));
+    m_logic.add(std::make_unique<engine::ecs::ParallaxSystem>(m_registry));
+    m_logic.add(std::make_unique<engine::ecs::TiltAnimationSystem>(m_registry));
+    m_render.add(std::make_unique<engine::ecs::RenderSystem>(
+        m_registry, m_renderer, readColor(m_config.child("background"))));
 }
 
 void Client::createStarfield()
 {
+    const float worldWidth = m_config.child("world").getFloat("width");
+    const float worldHeight = m_config.child("world").getFloat("height");
     std::mt19937 random(std::random_device{}());
-    std::uniform_real_distribution<float> randomX(0.f, WORLD_WIDTH);
-    std::uniform_real_distribution<float> randomY(0.f, WORLD_HEIGHT);
+    std::uniform_real_distribution<float> randomX(0.f, worldWidth);
+    std::uniform_real_distribution<float> randomY(0.f, worldHeight);
 
-    for (const StarLayer &layer : STAR_LAYERS) {
-        for (int i = 0; i < layer.count; ++i) {
-            engine::ecs::Entity star = m_world.entities.create();
-            m_world.positions[star.index()] = Position{randomX(random), randomY(random)};
-            m_world.stars[star.index()] = Star{layer.speed, layer.size, layer.color};
-            m_world.entities.addComponents(star, POSITION | STAR);
+    for (const engine::scene::DataNode &layer : m_config.child("starfield").items()) {
+        const int count = layer.getInt("count");
+        const float size = layer.getFloat("size");
+        const engine::render::Color color = readColor(layer.child("color"));
+        for (int i = 0; i < count; ++i) {
+            const engine::ecs::Entity star = m_registry.spawn();
+            m_registry.emplace<engine::ecs::Transform>(star, randomX(random), randomY(random));
+            m_registry.emplace<engine::ecs::RectShape>(star, size, size, color);
+            m_registry.emplace<engine::ecs::Parallax>(star, layer.getFloat("speed"), worldWidth);
         }
     }
 }
@@ -112,61 +158,46 @@ void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
 {
     std::unordered_set<std::uint16_t> visible;
     for (const auto &remote : snapshot.entities) {
-        const bool ship = remote.kind == protocol::KIND_PLAYER_SHIP;
-        if (!ship && remote.kind != protocol::KIND_PLAYER_MISSILE && remote.kind != protocol::KIND_BYDO)
+        const auto prefab = m_kindPrefabs.find(remote.kind);
+        if (prefab == m_kindPrefabs.end())
             continue;
         visible.insert(remote.id);
-        const Position next{static_cast<float>(remote.x), static_cast<float>(remote.y)};
+        const float x = static_cast<float>(remote.x);
+        const float y = static_cast<float>(remote.y);
         auto found = m_networkEntities.find(remote.id);
         if (found == m_networkEntities.end()) {
-            engine::ecs::Entity entity = ship ? createShip(playerRow(snapshot, remote.id), next)
-                : remote.kind == protocol::KIND_BYDO ? createBydo(next)
-                                                     : createMissile(next);
-            found = m_networkEntities.emplace(remote.id, entity).first;
+            const int row = remote.kind == protocol::KIND_PLAYER_SHIP ? playerRow(snapshot, remote.id) : 0;
+            found = m_networkEntities.emplace(remote.id, createRemote(prefab->second, row, x, y)).first;
         }
-        std::size_t i = found->second.index();
-        if (ship)
-            m_world.shipTilts[i].direction = verticalDirection(m_world.positions[i].y, next.y);
-        m_world.positions[i] = next;
+        const engine::ecs::Entity entity = found->second;
+        auto &transform = m_registry.get<engine::ecs::Transform>(entity);
+        if (m_registry.has<engine::ecs::TiltAnimation>(entity))
+            m_registry.get<engine::ecs::TiltAnimation>(entity).setDirection(verticalDirection(transform.y(), y));
+        transform.setPosition(x, y);
     }
     for (auto it = m_networkEntities.begin(); it != m_networkEntities.end();) {
         if (visible.contains(it->first)) {
             ++it;
             continue;
         }
-        m_world.entities.destroy(it->second);
+        m_registry.kill(it->second);
         it = m_networkEntities.erase(it);
     }
 }
 
-engine::ecs::Entity Client::createShip(int row, Position position)
+engine::ecs::Entity Client::createRemote(const std::string &prefab, int row, float x, float y)
 {
-    engine::ecs::Entity ship = m_world.entities.create();
-    m_world.positions[ship.index()] = position;
-    m_world.sprites[ship.index()] =
-        Sprite{PLAYER_SHIP_SHEET.texture, PLAYER_SHIP_SHEET.frame(PLAYER_SHIP_FLAT_COLUMN, row), PLAYER_SCALE};
-    m_world.shipTilts[ship.index()] = ShipTilt{row, 0.f, 0.f};
-    m_world.entities.addComponents(ship, POSITION | SPRITE | SHIP_TILT);
-    return ship;
-}
-
-engine::ecs::Entity Client::createMissile(Position position)
-{
-    engine::ecs::Entity missile = m_world.entities.create();
-    m_world.positions[missile.index()] = position;
-    m_world.sprites[missile.index()] =
-        Sprite{PLAYER_MISSILE_SHEET.texture, PLAYER_MISSILE_SHEET.frame(0, 0), MISSILE_SCALE};
-    m_world.entities.addComponents(missile, POSITION | SPRITE);
-    return missile;
-}
-
-engine::ecs::Entity Client::createBydo(Position position)
-{
-    engine::ecs::Entity bydo = m_world.entities.create();
-    m_world.positions[bydo.index()] = position;
-    m_world.sprites[bydo.index()] = Sprite{BYDO_SHEET.texture, BYDO_SHEET.frame(0, 0), BYDO_SCALE};
-    m_world.entities.addComponents(bydo, POSITION | SPRITE);
-    return bydo;
+    const engine::ecs::Entity entity = m_prefabs.spawn(prefab);
+    if (m_registry.has<engine::ecs::Transform>(entity))
+        m_registry.get<engine::ecs::Transform>(entity).setPosition(x, y);
+    else
+        m_registry.emplace<engine::ecs::Transform>(entity, x, y);
+    if (m_registry.has<engine::ecs::TiltAnimation>(entity) && m_registry.has<engine::ecs::Sprite>(entity)) {
+        auto &animation = m_registry.get<engine::ecs::TiltAnimation>(entity);
+        animation.setRow(row);
+        m_registry.get<engine::ecs::Sprite>(entity).setSource(animation.currentFrame());
+    }
+    return entity;
 }
 
 } // namespace rtype::client

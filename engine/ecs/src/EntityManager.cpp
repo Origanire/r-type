@@ -5,7 +5,7 @@
 namespace engine::ecs {
 
 EntityManager::EntityManager(std::size_t capacity)
-    : m_masks(capacity, 0), m_generations(capacity, 0), m_alive(capacity, false)
+    : m_masks(capacity, 0), m_generations(capacity, 0), m_alive(capacity, false), m_capacity(capacity)
 {
     for (std::size_t index = capacity; index > 0; --index)
         m_freeIndexes.push_back(index - 1);
@@ -14,7 +14,7 @@ EntityManager::EntityManager(std::size_t capacity)
 Entity EntityManager::create()
 {
     if (m_freeIndexes.empty())
-        throw EcsError("EntityManager: no free entity left");
+        grow();
     std::size_t index = m_freeIndexes.back();
     m_freeIndexes.pop_back();
     m_alive[index] = true;
@@ -77,6 +77,16 @@ void EntityManager::checkAlive(const Entity &entity) const
 {
     if (!isAlive(entity))
         throw EcsError("EntityManager: the entity is dead");
+}
+
+void EntityManager::grow()
+{
+    if (m_capacity != 0)
+        throw EcsError("EntityManager: no free entity left");
+    m_masks.push_back(0);
+    m_generations.push_back(0);
+    m_alive.push_back(false);
+    m_freeIndexes.push_back(m_masks.size() - 1);
 }
 
 } // namespace engine::ecs

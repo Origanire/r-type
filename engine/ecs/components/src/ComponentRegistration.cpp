@@ -5,21 +5,31 @@
 #include "Bounded.hpp"
 #include "Collider.hpp"
 #include "ContactDamage.hpp"
+#include "DeathEffect.hpp"
 #include "DespawnOffscreen.hpp"
 #include "Destroyed.hpp"
 #include "Health.hpp"
 #include "Invulnerable.hpp"
+#include "Lives.hpp"
+#include "Match.hpp"
 #include "MovementPattern.hpp"
 #include "Owner.hpp"
 #include "Parallax.hpp"
+#include "Persistent.hpp"
+#include "Player.hpp"
 #include "PlayerControl.hpp"
+#include "PlayerIndex.hpp"
+#include "PlayerLabel.hpp"
 #include "RectShape.hpp"
 #include "Replicated.hpp"
+#include "Respawn.hpp"
+#include "Score.hpp"
 #include "ScoreValue.hpp"
 #include "SoundCue.hpp"
 #include "Spawner.hpp"
 #include "Sprite.hpp"
 #include "SpriteAnimation.hpp"
+#include "StatusText.hpp"
 #include "Text.hpp"
 #include "TiltAnimation.hpp"
 #include "Transform.hpp"
@@ -55,6 +65,16 @@ void registerEngineComponents(Registry &registry)
     registry.registerComponent<SoundCue>();
     registry.registerComponent<Text>();
     registry.registerComponent<Anchor>();
+    registry.registerComponent<Player>();
+    registry.registerComponent<Lives>();
+    registry.registerComponent<Score>();
+    registry.registerComponent<Respawn>();
+    registry.registerComponent<Match>();
+    registry.registerComponent<Persistent>();
+    registry.registerComponent<DeathEffect>();
+    registry.registerComponent<PlayerIndex>();
+    registry.registerComponent<PlayerLabel>();
+    registry.registerComponent<StatusText>();
 }
 
 } // namespace engine::ecs

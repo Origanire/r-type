@@ -2,7 +2,16 @@
   "ship": {
     "Transform": {},
     "Sprite": { "texture": "player_ships", "frame": [66, 0, 33, 17], "scale": 3 },
-    "TiltAnimation": { "frame": [0, 0, 33, 17], "row": 0, "flatColumn": 2, "maxTilt": 2, "framesPerSecond": 8 }
+    "TiltAnimation": { "frame": [0, 0, 33, 17], "row": 0, "flatColumn": 2, "maxTilt": 2, "framesPerSecond": 8 },
+    "PlayerLabel": {
+      "font": "hud",
+      "format": "P{slot}",
+      "size": 20,
+      "offsetX": 30,
+      "offsetY": -26,
+      "colors": [[80, 200, 255, 255], [255, 90, 200, 255], [120, 255, 120, 255], [255, 170, 60, 255]]
+    },
+    "DeathEffect": { "prefab": "explosion" }
   },
   "player_missile": {
     "Transform": {},
@@ -16,12 +25,32 @@
   },
   "bydo": {
     "Transform": {},
-    "Sprite": { "texture": "bydos", "frame": [0, 0, 33, 36], "scale": 2 }
+    "Sprite": { "texture": "bydos", "frame": [0, 0, 33, 36], "scale": 2 },
+    "DeathEffect": { "prefab": "explosion" }
   },
   "explosion": {
     "Transform": {},
     "Sprite": { "texture": "explosions", "frame": [1, 99, 64, 64], "scale": 1.5 },
     "SpriteAnimation": { "frame": [1, 99, 64, 64], "frameCount": 10, "stepX": 65, "framesPerSecond": 20 },
     "SoundCue": { "sound": "explosion" }
+  },
+  "star_far": {
+    "Transform": {},
+    "RectShape": { "width": 2, "height": 2, "color": [90, 90, 130, 255] },
+    "Parallax": { "speed": 40, "wrapWidth": 1920 }
+  },
+  "star_mid": {
+    "Transform": {},
+    "RectShape": { "width": 3, "height": 3, "color": [170, 170, 210, 255] },
+    "Parallax": { "speed": 110, "wrapWidth": 1920 }
+  },
+  "star_near": {
+    "Transform": {},
+    "RectShape": { "width": 4, "height": 4, "color": [255, 255, 255, 255] },
+    "Parallax": { "speed": 240, "wrapWidth": 1920 }
+  },
+  "hud_line": {
+    "Transform": {},
+    "Persistent": {}
   }
 }

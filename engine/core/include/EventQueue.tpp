@@ -19,6 +19,18 @@ std::vector<Event> EventQueue<Event>::take()
 }
 
 template <class Event>
+const std::vector<Event> &EventQueue<Event>::events() const
+{
+    return m_events;
+}
+
+template <class Event>
+void EventQueue<Event>::clear()
+{
+    m_events.clear();
+}
+
+template <class Event>
 std::size_t EventQueue<Event>::size() const
 {
     return m_events.size();

@@ -1,8 +1,8 @@
-#include "ClientSettings.hpp"
+#include "PlayerSettings.hpp"
 
 #include "KeyBindings.hpp"
 
-namespace rtype::client {
+namespace engine::client {
 
 namespace {
 
@@ -11,7 +11,7 @@ constexpr float DEFAULT_SOUND_VOLUME = 70.f;
 
 } // namespace
 
-ClientSettings::ClientSettings(const engine::scene::DataNode &settings)
+PlayerSettings::PlayerSettings(const scene::DataNode &settings)
     : m_up(settings.child("controls").getString("up")), m_down(settings.child("controls").getString("down")),
       m_left(settings.child("controls").getString("left")), m_right(settings.child("controls").getString("right")),
       m_fire(settings.child("controls").getString("fire")), m_toggleFire(settings.getBool("toggleFire", false)),
@@ -22,10 +22,10 @@ ClientSettings::ClientSettings(const engine::scene::DataNode &settings)
 {
 }
 
-void ClientSettings::applyControls(engine::input::InputManager &input) const
+void PlayerSettings::applyControls(input::InputManager &input) const
 {
-    using engine::input::Action;
-    using engine::input::KeyBindings;
+    using input::Action;
+    using input::KeyBindings;
 
     input.bindings().bind(Action::Up, KeyBindings::keyFromName(m_up));
     input.bindings().bind(Action::Down, KeyBindings::keyFromName(m_down));
@@ -35,24 +35,24 @@ void ClientSettings::applyControls(engine::input::InputManager &input) const
     input.setToggle(Action::Fire, m_toggleFire);
 }
 
-bool ClientSettings::showPlayerLabels() const
+bool PlayerSettings::showPlayerLabels() const
 {
     return m_showPlayerLabels;
 }
 
-float ClientSettings::musicVolume() const
+float PlayerSettings::musicVolume() const
 {
     return m_musicVolume;
 }
 
-float ClientSettings::soundVolume() const
+float PlayerSettings::soundVolume() const
 {
     return m_soundVolume;
 }
 
-float ClientSettings::textScale() const
+float PlayerSettings::textScale() const
 {
     return m_textScale;
 }
 
-} // namespace rtype::client
+} // namespace engine::client

@@ -11,6 +11,8 @@ class EventQueue
 public:
     void push(const Event &event);
     std::vector<Event> take();
+    const std::vector<Event> &events() const;
+    void clear();
     std::size_t size() const;
     bool empty() const;
 

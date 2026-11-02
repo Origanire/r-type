@@ -104,6 +104,11 @@ bool DataNode::has(const std::string &key) const
     return m_impl->node().is_object() && m_impl->node().contains(key);
 }
 
+bool DataNode::isString() const
+{
+    return m_impl->node().is_string();
+}
+
 DataNode DataNode::child(const std::string &key) const
 {
     const nlohmann::json &value = member(m_impl->node(), key, m_impl->path());

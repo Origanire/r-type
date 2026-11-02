@@ -54,12 +54,13 @@ const SpawnEntry &SpawnerSystem::pickEntry(const Spawner &spawner)
 void SpawnerSystem::spawn(const Spawner &spawner)
 {
     const SpawnEntry &entry = pickEntry(spawner);
+    const float x = std::uniform_real_distribution<float>(entry.minX(), entry.maxX())(m_random);
     const float y = std::uniform_real_distribution<float>(entry.minY(), entry.maxY())(m_random);
     const Entity entity = m_factory.spawn(entry.prefab());
     if (m_registry.has<Transform>(entity))
-        m_registry.get<Transform>(entity).setPosition(spawner.x(), y);
+        m_registry.get<Transform>(entity).setPosition(x, y);
     else
-        m_registry.emplace<Transform>(entity, spawner.x(), y);
+        m_registry.emplace<Transform>(entity, x, y);
 }
 
 } // namespace engine::ecs

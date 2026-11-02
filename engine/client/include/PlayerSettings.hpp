@@ -5,14 +5,14 @@
 #include "DataNode.hpp"
 #include "InputManager.hpp"
 
-namespace rtype::client {
+namespace engine::client {
 
-class ClientSettings
+class PlayerSettings
 {
 public:
-    explicit ClientSettings(const engine::scene::DataNode &settings);
+    explicit PlayerSettings(const scene::DataNode &settings);
 
-    void applyControls(engine::input::InputManager &input) const;
+    void applyControls(input::InputManager &input) const;
     bool showPlayerLabels() const;
     float musicVolume() const;
     float soundVolume() const;
@@ -31,4 +31,4 @@ private:
     float m_textScale;
 };
 
-} // namespace rtype::client
+} // namespace engine::client

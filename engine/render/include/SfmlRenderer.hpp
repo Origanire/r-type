@@ -14,6 +14,8 @@ class SfmlRenderer : public IRenderer
 public:
     SfmlRenderer(Window &window, const TextureManager &textures, const FontManager &fonts);
 
+    void setTextScale(float scale);
+
     void clear(Color color) override;
     void drawRect(Vector2 position, Vector2 size, Color color) override;
     void drawTexture(const std::string &texture, IntRect source, Vector2 position, Vector2 scale) override;
@@ -25,6 +27,7 @@ private:
     Window &m_window;
     const TextureManager &m_textures;
     const FontManager &m_fonts;
+    float m_textScale;
 };
 
 } // namespace engine::render

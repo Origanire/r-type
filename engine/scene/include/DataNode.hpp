@@ -14,6 +14,7 @@ public:
     static DataNode fromString(const std::string &text, const std::string &source);
 
     bool has(const std::string &key) const;
+    bool isString() const;
     DataNode child(const std::string &key) const;
     std::vector<std::string> keys() const;
     std::vector<DataNode> items() const;

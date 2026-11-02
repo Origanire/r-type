@@ -58,6 +58,7 @@ add_library(engine_core
     engine/core/src/Color.cpp
     engine/core/src/Vector2.cpp
     engine/core/src/IntRect.cpp
+    engine/core/src/TextFormat.cpp
 )
 target_include_directories(engine_core PUBLIC engine/core/include)
 # Uncomment once Config.cpp exists
@@ -104,6 +105,15 @@ add_library(engine_ecs
     engine/ecs/components/src/SoundCue.cpp
     engine/ecs/components/src/Text.cpp
     engine/ecs/components/src/Anchor.cpp
+    engine/ecs/components/src/Player.cpp
+    engine/ecs/components/src/Lives.cpp
+    engine/ecs/components/src/Score.cpp
+    engine/ecs/components/src/Respawn.cpp
+    engine/ecs/components/src/Match.cpp
+    engine/ecs/components/src/DeathEffect.cpp
+    engine/ecs/components/src/PlayerIndex.cpp
+    engine/ecs/components/src/PlayerLabel.cpp
+    engine/ecs/components/src/StatusText.cpp
     engine/ecs/components/src/ComponentRegistration.cpp
     engine/ecs/systems/src/CollisionEvent.cpp
     engine/ecs/systems/src/DeathEvent.cpp
@@ -125,6 +135,13 @@ add_library(engine_ecs
     engine/ecs/systems/src/SpriteAnimationSystem.cpp
     engine/ecs/systems/src/AnchorSystem.cpp
     engine/ecs/systems/src/AudioSystem.cpp
+    engine/ecs/systems/src/MatchSystem.cpp
+    engine/ecs/systems/src/RespawnSystem.cpp
+    engine/ecs/systems/src/LivesSystem.cpp
+    engine/ecs/systems/src/ScoreSystem.cpp
+    engine/ecs/systems/src/DeathEffectSystem.cpp
+    engine/ecs/systems/src/PlayerLabelSystem.cpp
+    engine/ecs/systems/src/StatusTextSystem.cpp
 )
 target_include_directories(engine_ecs PUBLIC
     engine/ecs/include
@@ -134,17 +151,21 @@ target_include_directories(engine_ecs PUBLIC
     engine/audio/include)
 target_link_libraries(engine_ecs PUBLIC engine_core engine_physics)
 
-# --- engine_scene: JSON data, component factory, collision layers and prefabs (nlohmann-json hidden inside)
+# --- engine_scene: JSON data, component and system factories, prefabs and scenes (nlohmann-json hidden inside)
 add_library(engine_scene
     engine/scene/src/DataNode.cpp
+    engine/scene/src/DataReaders.cpp
     engine/scene/src/LayerTable.cpp
     engine/scene/src/ComponentFactory.cpp
     engine/scene/src/EngineComponentLoaders.cpp
     engine/scene/src/PrefabLibrary.cpp
+    engine/scene/src/SystemContext.cpp
+    engine/scene/src/SystemFactory.cpp
+    engine/scene/src/EngineSystemBuilders.cpp
+    engine/scene/src/SceneBuilder.cpp
 )
 target_include_directories(engine_scene PUBLIC engine/scene/include)
 target_link_libraries(engine_scene PUBLIC engine_core engine_ecs PRIVATE nlohmann_json::nlohmann_json)
-
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
 add_library(engine_net
     engine/net/src/ByteReader.cpp
@@ -184,6 +205,14 @@ add_library(engine_input
 target_include_directories(engine_input PUBLIC engine/input/include)
 target_link_libraries(engine_input PUBLIC engine_core SFML::Window)
 
+# --- engine_client: window, resources, systems and scene of a game JSON file, fed by any transport (client only)
+add_library(engine_client
+    engine/client/src/GameView.cpp
+    engine/client/src/PlayerSettings.cpp
+)
+target_include_directories(engine_client PUBLIC engine/client/include)
+target_link_libraries(engine_client PUBLIC engine_scene engine_render engine_audio engine_input)
+
 # --- engine_ui: widgets for menus and settings (client only)
 # add_library(engine_ui
 #     engine/ui/src/Widget.cpp
@@ -203,6 +232,7 @@ add_library(rtype_shared
     game/shared/src/protocol/Codec.cpp
     game/shared/src/PortOption.cpp
     game/shared/src/AssetPath.cpp
+    game/shared/src/CommandLine.cpp
 )
 target_include_directories(rtype_shared PUBLIC game/shared/include)
 target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
@@ -231,9 +261,7 @@ add_executable(r-type_client
     game/client/src/main.cpp
     game/client/src/Client.cpp
     game/client/src/NetworkClient.cpp
-    game/client/src/ClientSettings.cpp
-    game/client/src/Hud.cpp
 )
 target_include_directories(r-type_client PRIVATE game/client/include)
-target_link_libraries(r-type_client PRIVATE rtype_shared engine_scene engine_render engine_input engine_audio)
+target_link_libraries(r-type_client PRIVATE rtype_shared engine_client)
 add_dependencies(r-type_client rtype_assets)

@@ -1,5 +1,7 @@
 #include "ComponentRegistration.hpp"
 
+#include "Anchor.hpp"
+#include "AutoFire.hpp"
 #include "Bounded.hpp"
 #include "Collider.hpp"
 #include "ContactDamage.hpp"
@@ -14,8 +16,11 @@
 #include "RectShape.hpp"
 #include "Replicated.hpp"
 #include "ScoreValue.hpp"
+#include "SoundCue.hpp"
 #include "Spawner.hpp"
 #include "Sprite.hpp"
+#include "SpriteAnimation.hpp"
+#include "Text.hpp"
 #include "TiltAnimation.hpp"
 #include "Transform.hpp"
 #include "Velocity.hpp"
@@ -45,6 +50,11 @@ void registerEngineComponents(Registry &registry)
     registry.registerComponent<Weapon>();
     registry.registerComponent<Spawner>();
     registry.registerComponent<Replicated>();
+    registry.registerComponent<AutoFire>();
+    registry.registerComponent<SpriteAnimation>();
+    registry.registerComponent<SoundCue>();
+    registry.registerComponent<Text>();
+    registry.registerComponent<Anchor>();
 }
 
 } // namespace engine::ecs

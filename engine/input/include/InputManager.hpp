@@ -18,10 +18,14 @@ public:
     std::uint8_t toBits() const;
 
     KeyBindings &bindings();
+    void setToggle(Action action, bool toggle);
 
 private:
     KeyBindings m_bindings;
     std::array<bool, KeyBindings::ACTION_COUNT> m_pressed{};
+    std::array<bool, KeyBindings::ACTION_COUNT> m_toggle{};
+    std::array<bool, KeyBindings::ACTION_COUNT> m_latched{};
+    std::array<bool, KeyBindings::ACTION_COUNT> m_wasDown{};
 };
 
 } // namespace engine::input

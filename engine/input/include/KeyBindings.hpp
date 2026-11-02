@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <string>
 
 #include <SFML/Window/Keyboard.hpp>
 
@@ -18,6 +19,7 @@ public:
 
     void bind(Action action, sf::Keyboard::Key key);
     sf::Keyboard::Key keyFor(Action action) const;
+    static sf::Keyboard::Key keyFromName(const std::string &name);
 
 private:
     std::array<sf::Keyboard::Key, ACTION_COUNT> m_keys;

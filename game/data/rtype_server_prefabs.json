@@ -17,6 +17,14 @@
     "DespawnOffscreen": { "minX": 0, "minY": 0, "maxX": 1920, "maxY": 1080 },
     "Replicated": { "kind": 2 }
   },
+  "enemy_missile": {
+    "Transform": {},
+    "Velocity": { "x": -600, "y": 0 },
+    "Collider": { "width": 27, "height": 24, "layer": "enemy_missile", "hits": ["player"] },
+    "ContactDamage": { "amount": 1, "destroyOnHit": true },
+    "DespawnOffscreen": { "minX": 0, "minY": -200, "maxX": 2200, "maxY": 1280 },
+    "Replicated": { "kind": 4 }
+  },
   "bydo_straight": {
     "Transform": {},
     "Velocity": { "x": -250, "y": 0 },
@@ -25,6 +33,7 @@
     "ContactDamage": { "amount": 1, "destroyOnHit": true },
     "ScoreValue": { "points": 100 },
     "MovementPattern": { "kind": "straight" },
+    "AutoFire": { "prefab": "enemy_missile", "minInterval": 1.5, "maxInterval": 3.0, "offsetX": -20, "offsetY": 24 },
     "DespawnOffscreen": { "minX": 0, "minY": -200, "maxX": 2200, "maxY": 1280 },
     "Replicated": { "kind": 3 }
   },
@@ -36,6 +45,7 @@
     "ContactDamage": { "amount": 1, "destroyOnHit": true },
     "ScoreValue": { "points": 100 },
     "MovementPattern": { "kind": "sine", "amplitude": 150, "frequency": 3 },
+    "AutoFire": { "prefab": "enemy_missile", "minInterval": 2.0, "maxInterval": 3.5, "offsetX": -20, "offsetY": 24 },
     "DespawnOffscreen": { "minX": 0, "minY": -200, "maxX": 2200, "maxY": 1280 },
     "Replicated": { "kind": 3 }
   },

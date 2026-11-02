@@ -42,6 +42,13 @@ void NetworkClient::disconnect()
     m_token = 0;
 }
 
+std::vector<protocol::Packet> NetworkClient::takeEvents()
+{
+    std::vector<protocol::Packet> events;
+    events.swap(m_events);
+    return events;
+}
+
 std::optional<protocol::WorldSnapshot> NetworkClient::takeSnapshot()
 {
     std::optional<protocol::WorldSnapshot> snapshot = std::move(m_snapshot);
@@ -70,6 +77,8 @@ bool NetworkClient::handlePacket(const protocol::Packet &packet)
     }
     if (packet.type == MessageType::ServerShutdown)
         throw GameError("NetworkClient: server stopped");
+    if (packet.type == MessageType::EntityDestroyed || packet.type == MessageType::PlayerKilled)
+        m_events.push_back(packet);
     if (!m_serverSequence || protocol::isNewer(packet.sequence, *m_serverSequence))
         m_serverSequence = packet.sequence;
     return true;

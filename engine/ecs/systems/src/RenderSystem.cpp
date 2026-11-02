@@ -2,6 +2,7 @@
 
 #include "RectShape.hpp"
 #include "Sprite.hpp"
+#include "Text.hpp"
 #include "Transform.hpp"
 
 namespace engine::ecs {
@@ -27,6 +28,14 @@ void RenderSystem::update(float)
         const Sprite &sprite = sprites.at(i);
         m_renderer.drawTexture(
             sprite.texture(), sprite.source(), {transform.x(), transform.y()}, {sprite.scale(), sprite.scale()});
+    }
+    const auto &texts = m_registry.getComponents<Text>();
+    for (std::size_t i : m_registry.view<Transform, Text>()) {
+        const Transform &transform = transforms.at(i);
+        const Text &text = texts.at(i);
+        if (!text.content().empty())
+            m_renderer.drawText(
+                text.font(), text.content(), text.size(), {transform.x(), transform.y()}, text.color());
     }
     m_renderer.display();
 }

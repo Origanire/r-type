@@ -43,8 +43,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 find_package(Threads REQUIRED)
 find_package(asio CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-# Add Audio to the components once engine_audio is written
-find_package(SFML 3 COMPONENTS Graphics Window System CONFIG REQUIRED)
+find_package(SFML 3 COMPONENTS Graphics Window System Audio CONFIG REQUIRED)
 
 # ---------------------------------------------------------------------------
 # Engine: knows nothing about R-Type. One module = one library [p.16].
@@ -74,7 +73,7 @@ add_library(engine_physics
 target_include_directories(engine_physics PUBLIC engine/physics/include)
 
 # --- engine_ecs: entities, registry, components and systems
-# The render headers used here (IRenderer, RenderTypes) contain no SFML: engine_ecs never links SFML.
+# The render and audio interfaces used here (IRenderer, IAudio) contain no SFML: engine_ecs never links SFML.
 add_library(engine_ecs
     engine/ecs/src/Entity.cpp
     engine/ecs/src/EntityManager.cpp
@@ -100,6 +99,11 @@ add_library(engine_ecs
     engine/ecs/components/src/SpawnEntry.cpp
     engine/ecs/components/src/Spawner.cpp
     engine/ecs/components/src/Replicated.cpp
+    engine/ecs/components/src/AutoFire.cpp
+    engine/ecs/components/src/SpriteAnimation.cpp
+    engine/ecs/components/src/SoundCue.cpp
+    engine/ecs/components/src/Text.cpp
+    engine/ecs/components/src/Anchor.cpp
     engine/ecs/components/src/ComponentRegistration.cpp
     engine/ecs/systems/src/CollisionEvent.cpp
     engine/ecs/systems/src/DeathEvent.cpp
@@ -117,12 +121,17 @@ add_library(engine_ecs
     engine/ecs/systems/src/RenderSystem.cpp
     engine/ecs/systems/src/WeaponSystem.cpp
     engine/ecs/systems/src/SpawnerSystem.cpp
+    engine/ecs/systems/src/AutoFireSystem.cpp
+    engine/ecs/systems/src/SpriteAnimationSystem.cpp
+    engine/ecs/systems/src/AnchorSystem.cpp
+    engine/ecs/systems/src/AudioSystem.cpp
 )
 target_include_directories(engine_ecs PUBLIC
     engine/ecs/include
     engine/ecs/components/include
     engine/ecs/systems/include
-    engine/render/include)
+    engine/render/include
+    engine/audio/include)
 target_link_libraries(engine_ecs PUBLIC engine_core engine_physics)
 
 # --- engine_scene: JSON data, component factory, collision layers and prefabs (nlohmann-json hidden inside)
@@ -150,23 +159,22 @@ if(WIN32)
 endif()
 
 # --- engine_render: window, SFML renderer, textures, fonts, palettes (client only)
-# Planned: FontManager.cpp, Palette.cpp
+# Planned: Palette.cpp
 add_library(engine_render
     engine/render/src/SfmlRenderer.cpp
     engine/render/src/Window.cpp
     engine/render/src/TextureManager.cpp
+    engine/render/src/FontManager.cpp
 )
 target_include_directories(engine_render PUBLIC engine/render/include)
 target_link_libraries(engine_render PUBLIC engine_core SFML::Graphics)
 
 # --- engine_audio: sounds and music (client only)
-# add_library(engine_audio
-#     engine/audio/src/SfmlAudio.cpp
-#     engine/audio/src/SoundManager.cpp
-#     engine/audio/src/MusicPlayer.cpp
-# )
-# target_include_directories(engine_audio PUBLIC engine/audio/include)
-# target_link_libraries(engine_audio PUBLIC engine_core PRIVATE SFML::Audio)
+add_library(engine_audio
+    engine/audio/src/SfmlAudio.cpp
+)
+target_include_directories(engine_audio PUBLIC engine/audio/include)
+target_link_libraries(engine_audio PUBLIC engine_core SFML::Audio)
 
 # --- engine_input: actions, remappable key bindings (client only)
 add_library(engine_input
@@ -223,7 +231,9 @@ add_executable(r-type_client
     game/client/src/main.cpp
     game/client/src/Client.cpp
     game/client/src/NetworkClient.cpp
+    game/client/src/ClientSettings.cpp
+    game/client/src/Hud.cpp
 )
 target_include_directories(r-type_client PRIVATE game/client/include)
-target_link_libraries(r-type_client PRIVATE rtype_shared engine_scene engine_render engine_input)
+target_link_libraries(r-type_client PRIVATE rtype_shared engine_scene engine_render engine_input engine_audio)
 add_dependencies(r-type_client rtype_assets)

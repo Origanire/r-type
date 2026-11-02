@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 #include "RtypeProtocol.hpp"
 #include "UdpTransport.hpp"
@@ -17,6 +18,7 @@ public:
     void update(std::uint8_t buttons);
     void disconnect();
     std::optional<protocol::WorldSnapshot> takeSnapshot();
+    std::vector<protocol::Packet> takeEvents();
 
 private:
     using Time = std::chrono::steady_clock::time_point;
@@ -40,6 +42,7 @@ private:
     std::optional<std::uint32_t> m_lastTick;
     std::optional<std::uint32_t> m_serverSequence;
     std::optional<protocol::WorldSnapshot> m_snapshot;
+    std::vector<protocol::Packet> m_events;
 };
 
 } // namespace rtype::client

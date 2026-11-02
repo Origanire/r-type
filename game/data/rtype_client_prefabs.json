@@ -6,10 +6,22 @@
   },
   "player_missile": {
     "Transform": {},
-    "Sprite": { "texture": "player_missiles", "frame": [249, 90, 16, 4], "scale": 3 }
+    "Sprite": { "texture": "player_missiles", "frame": [249, 90, 16, 4], "scale": 3 },
+    "SoundCue": { "sound": "shot" }
+  },
+  "enemy_missile": {
+    "Transform": {},
+    "Sprite": { "texture": "enemy_missiles", "frame": [135, 5, 9, 8], "scale": 3 },
+    "SpriteAnimation": { "frame": [135, 5, 9, 8], "frameCount": 5, "stepX": 17, "framesPerSecond": 12, "loop": true }
   },
   "bydo": {
     "Transform": {},
     "Sprite": { "texture": "bydos", "frame": [0, 0, 33, 36], "scale": 2 }
+  },
+  "explosion": {
+    "Transform": {},
+    "Sprite": { "texture": "explosions", "frame": [1, 99, 64, 64], "scale": 1.5 },
+    "SpriteAnimation": { "frame": [1, 99, 64, 64], "frameCount": 10, "stepX": 65, "framesPerSecond": 20 },
+    "SoundCue": { "sound": "explosion" }
   }
 }

@@ -2,12 +2,15 @@
 
 #include <charconv>
 #include <cstddef>
-#include <memory>
 #include <random>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "Anchor.hpp"
+#include "AnchorSystem.hpp"
+#include "AudioSystem.hpp"
+#include "CleanupSystem.hpp"
 #include "Clock.hpp"
 #include "Color.hpp"
 #include "ComponentRegistration.hpp"
@@ -18,6 +21,8 @@
 #include "RectShape.hpp"
 #include "RenderSystem.hpp"
 #include "Sprite.hpp"
+#include "SpriteAnimationSystem.hpp"
+#include "Text.hpp"
 #include "TiltAnimation.hpp"
 #include "TiltAnimationSystem.hpp"
 #include "Transform.hpp"
@@ -64,30 +69,33 @@ float verticalDirection(float previousY, float nextY)
     return 0.f;
 }
 
-engine::scene::DataNode loadConfig(const std::filesystem::path &dataDir)
+engine::scene::DataNode loadData(const std::filesystem::path &dataDir, const std::string &file)
 {
-    return engine::scene::DataNode::fromFile(dataDir / "rtype_game.json");
+    return engine::scene::DataNode::fromFile(dataDir / file);
 }
 
 } // namespace
 
 Client::Client(const std::filesystem::path &assetsDir, const std::filesystem::path &dataDir, engine::net::Endpoint server)
-    : m_config(loadConfig(dataDir)),
+    : m_config(loadData(dataDir, "rtype_game.json")), m_settings(loadData(dataDir, "rtype_settings.json")),
       m_window(static_cast<unsigned int>(m_config.child("window").getInt("width")),
           static_cast<unsigned int>(m_config.child("window").getInt("height")),
           m_config.child("window").getString("title"),
           {m_config.child("world").getFloat("width"), m_config.child("world").getFloat("height")}),
-      m_renderer(m_window, m_textures), m_prefabs(m_registry, m_factory),
+      m_renderer(m_window, m_textures, m_fonts), m_prefabs(m_registry, m_factory),
       m_timestep(1.f / static_cast<float>(protocol::TICK_RATE)), m_network(std::move(server))
 {
     engine::ecs::registerEngineComponents(m_registry);
     m_layers.load(m_config.child("layers"));
     engine::scene::addEngineComponentLoaders(m_factory, m_layers);
-    m_prefabs.load(engine::scene::DataNode::fromFile(dataDir / "rtype_client_prefabs.json"));
-    loadTextures(assetsDir);
+    m_prefabs.load(loadData(dataDir, "rtype_client_prefabs.json"));
+    m_settings.applyControls(m_input);
+    loadResources(assetsDir);
     loadKinds();
     registerSystems();
     createStarfield();
+    m_hud = std::make_unique<Hud>(m_registry, m_config.child("hud"), m_settings.textScale());
+    m_audio.playMusic(m_config.getString("startMusic"));
 }
 
 void Client::run()
@@ -98,6 +106,8 @@ void Client::run()
         m_window.processEvents();
         m_input.update(m_window.hasFocus());
         m_network.update(m_input.toBits());
+        for (const protocol::Packet &event : m_network.takeEvents())
+            handleEvent(event);
         if (auto snapshot = m_network.takeSnapshot())
             applySnapshot(*snapshot);
         m_timestep.addTime(clock.restart());
@@ -105,14 +115,26 @@ void Client::run()
             m_logic.update(m_timestep.stepSeconds());
         m_render.update(0.f);
     }
+    m_audio.stopMusic();
     m_network.disconnect();
 }
 
-void Client::loadTextures(const std::filesystem::path &assetsDir)
+void Client::loadResources(const std::filesystem::path &assetsDir)
 {
     const engine::scene::DataNode textures = m_config.child("textures");
     for (const std::string &name : textures.keys())
         m_textures.load(name, (assetsDir / textures.getString(name)).string());
+    const engine::scene::DataNode fonts = m_config.child("fonts");
+    for (const std::string &name : fonts.keys())
+        m_fonts.load(name, (assetsDir / fonts.getString(name)).string());
+    const engine::scene::DataNode sounds = m_config.child("sounds");
+    for (const std::string &name : sounds.keys())
+        m_audio.loadSound(name, (assetsDir / sounds.getString(name)).string());
+    const engine::scene::DataNode music = m_config.child("music");
+    for (const std::string &name : music.keys())
+        m_audio.loadMusic(name, (assetsDir / music.getString(name)).string());
+    m_audio.setMusicVolume(m_settings.musicVolume());
+    m_audio.setSoundVolume(m_settings.soundVolume());
 }
 
 void Client::loadKinds()
@@ -124,12 +146,18 @@ void Client::loadKinds()
             throw GameError("Client: unknown prefab " + prefab + " for entity kind " + kind);
         m_kindPrefabs.insert_or_assign(parseKind(kind), prefab);
     }
+    if (!m_prefabs.has(m_config.getString("explosionPrefab")))
+        throw GameError("Client: unknown explosion prefab " + m_config.getString("explosionPrefab"));
 }
 
 void Client::registerSystems()
 {
     m_logic.add(std::make_unique<engine::ecs::ParallaxSystem>(m_registry));
     m_logic.add(std::make_unique<engine::ecs::TiltAnimationSystem>(m_registry));
+    m_logic.add(std::make_unique<engine::ecs::SpriteAnimationSystem>(m_registry));
+    m_logic.add(std::make_unique<engine::ecs::AnchorSystem>(m_registry));
+    m_logic.add(std::make_unique<engine::ecs::AudioSystem>(m_registry, m_audio));
+    m_logic.add(std::make_unique<engine::ecs::CleanupSystem>(m_registry));
     m_render.add(std::make_unique<engine::ecs::RenderSystem>(
         m_registry, m_renderer, readColor(m_config.child("background"))));
 }
@@ -153,6 +181,30 @@ void Client::createStarfield()
             m_registry.emplace<engine::ecs::Parallax>(star, layer.getFloat("speed"), worldWidth);
         }
     }
+}
+
+void Client::handleEvent(const protocol::Packet &event)
+{
+    if (event.type != protocol::MessageType::EntityDestroyed)
+        return;
+    const auto found = m_networkEntities.find(event.entityId);
+    if (found != m_networkEntities.end())
+        explodeAt(found->second);
+}
+
+void Client::explodeAt(const engine::ecs::Entity &entity)
+{
+    if (!m_registry.has<engine::ecs::Transform>(entity) || !m_registry.has<engine::ecs::Sprite>(entity))
+        return;
+    const engine::ecs::Transform &transform = m_registry.get<engine::ecs::Transform>(entity);
+    const engine::ecs::Sprite &sprite = m_registry.get<engine::ecs::Sprite>(entity);
+    const float centerX = transform.x() + static_cast<float>(sprite.source().width()) * sprite.scale() / 2.f;
+    const float centerY = transform.y() + static_cast<float>(sprite.source().height()) * sprite.scale() / 2.f;
+    const engine::ecs::Entity explosion = m_prefabs.spawn(m_config.getString("explosionPrefab"));
+    const engine::ecs::Sprite &blast = m_registry.get<engine::ecs::Sprite>(explosion);
+    const float halfWidth = static_cast<float>(blast.source().width()) * blast.scale() / 2.f;
+    const float halfHeight = static_cast<float>(blast.source().height()) * blast.scale() / 2.f;
+    m_registry.get<engine::ecs::Transform>(explosion).setPosition(centerX - halfWidth, centerY - halfHeight);
 }
 
 void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
@@ -184,6 +236,7 @@ void Client::applySnapshot(const protocol::WorldSnapshot &snapshot)
         m_registry.kill(it->second);
         it = m_networkEntities.erase(it);
     }
+    m_hud->update(snapshot);
 }
 
 engine::ecs::Entity Client::createRemote(const std::string &prefab, int row, float x, float y)
@@ -197,8 +250,22 @@ engine::ecs::Entity Client::createRemote(const std::string &prefab, int row, flo
         auto &animation = m_registry.get<engine::ecs::TiltAnimation>(entity);
         animation.setRow(row);
         m_registry.get<engine::ecs::Sprite>(entity).setSource(animation.currentFrame());
+        attachLabel(entity, row);
     }
     return entity;
+}
+
+void Client::attachLabel(const engine::ecs::Entity &ship, int row)
+{
+    if (!m_settings.showPlayerLabels())
+        return;
+    const engine::ecs::Transform &position = m_registry.get<engine::ecs::Transform>(ship);
+    const engine::ecs::Entity label = m_registry.spawn();
+    m_registry.emplace<engine::ecs::Transform>(
+        label, position.x() + m_hud->labelOffsetX(), position.y() + m_hud->labelOffsetY());
+    m_registry.emplace<engine::ecs::Text>(label, m_hud->font(), "P" + std::to_string(row + 1), m_hud->labelSize(),
+        m_hud->playerColor(static_cast<std::size_t>(row)));
+    m_registry.emplace<engine::ecs::Anchor>(label, ship, m_hud->labelOffsetX(), m_hud->labelOffsetY());
 }
 
 } // namespace rtype::client

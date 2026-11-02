@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "AutoFire.hpp"
 #include "Bounded.hpp"
 #include "Collider.hpp"
 #include "ContactDamage.hpp"
@@ -18,8 +19,11 @@
 #include "Replicated.hpp"
 #include "SceneError.hpp"
 #include "ScoreValue.hpp"
+#include "SoundCue.hpp"
 #include "Spawner.hpp"
 #include "Sprite.hpp"
+#include "SpriteAnimation.hpp"
+#include "Text.hpp"
 #include "TiltAnimation.hpp"
 #include "Transform.hpp"
 #include "Velocity.hpp"
@@ -138,6 +142,21 @@ void addEngineComponentLoaders(ComponentFactory &factory, const LayerTable &laye
     factory.add("TiltAnimation", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
         registry.emplace<ecs::TiltAnimation>(entity, readRect(data, "frame"), data.getInt("row", 0),
             data.getInt("flatColumn"), data.getInt("maxTilt"), data.getFloat("framesPerSecond"));
+    });
+    factory.add("AutoFire", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::AutoFire>(entity, data.getString("prefab"), data.getFloat("minInterval"),
+            data.getFloat("maxInterval"), data.getFloat("offsetX", 0.f), data.getFloat("offsetY", 0.f));
+    });
+    factory.add("SpriteAnimation", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::SpriteAnimation>(entity, readRect(data, "frame"), data.getInt("frameCount"),
+            data.getInt("stepX"), data.getFloat("framesPerSecond"), data.getBool("loop", false));
+    });
+    factory.add("SoundCue", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::SoundCue>(entity, data.getString("sound"));
+    });
+    factory.add("Text", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::Text>(entity, data.getString("font"), data.getString("content"),
+            static_cast<unsigned int>(data.getInt("size")), readColor(data, "color"));
     });
 }
 

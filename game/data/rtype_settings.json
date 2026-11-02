@@ -1,0 +1,14 @@
+{
+  "controls": {
+    "up": "Up",
+    "down": "Down",
+    "left": "Left",
+    "right": "Right",
+    "fire": "Space"
+  },
+  "toggleFire": false,
+  "showPlayerLabels": true,
+  "musicVolume": 40,
+  "soundVolume": 70,
+  "textScale": 1.0
+}

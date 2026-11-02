@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/Sprite.hpp>
+#include <SFML/Graphics/Text.hpp>
 
 namespace engine::render {
 
@@ -14,7 +15,8 @@ sf::Color toSfml(Color color)
 
 } // namespace
 
-SfmlRenderer::SfmlRenderer(Window &window, const TextureManager &textures) : m_window(window), m_textures(textures)
+SfmlRenderer::SfmlRenderer(Window &window, const TextureManager &textures, const FontManager &fonts)
+    : m_window(window), m_textures(textures), m_fonts(fonts)
 {
 }
 
@@ -38,6 +40,15 @@ void SfmlRenderer::drawTexture(const std::string &texture, IntRect source, Vecto
     sprite.setPosition({position.x(), position.y()});
     sprite.setScale({scale.x(), scale.y()});
     m_window.native().draw(sprite);
+}
+
+void SfmlRenderer::drawText(
+    const std::string &font, const std::string &text, unsigned int size, Vector2 position, Color color)
+{
+    sf::Text label(m_fonts.get(font), text, size);
+    label.setPosition({position.x(), position.y()});
+    label.setFillColor(toSfml(color));
+    m_window.native().draw(label);
 }
 
 void SfmlRenderer::display()

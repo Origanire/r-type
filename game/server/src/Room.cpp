@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 
+#include "AutoFireSystem.hpp"
 #include "BoundsSystem.hpp"
 #include "CollisionSystem.hpp"
 #include "ComponentRegistration.hpp"
@@ -125,6 +126,8 @@ void Room::registerSystems()
     m_systems.add(std::make_unique<engine::ecs::WeaponSystem>(
         m_registry, m_prefabs, [this] { return canSpawnReplicated(); }));
     m_systems.add(std::make_unique<engine::ecs::SpawnerSystem>(
+        m_registry, m_prefabs, [this] { return m_gameState == protocol::GAME_PLAYING && canSpawnReplicated(); }));
+    m_systems.add(std::make_unique<engine::ecs::AutoFireSystem>(
         m_registry, m_prefabs, [this] { return m_gameState == protocol::GAME_PLAYING && canSpawnReplicated(); }));
     m_systems.add(std::make_unique<engine::ecs::MovementPatternSystem>(m_registry));
     m_systems.add(std::make_unique<engine::ecs::InvulnerabilitySystem>(m_registry));

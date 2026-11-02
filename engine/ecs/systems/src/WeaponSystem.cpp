@@ -31,7 +31,8 @@ void WeaponSystem::update(float dt)
             m_registry.get<Transform>(projectile).setPosition(x, y);
         else
             m_registry.emplace<Transform>(projectile, x, y);
-        m_registry.emplace<Owner>(projectile, shooter);
+        const Entity owner = m_registry.has<Owner>(shooter) ? m_registry.get<Owner>(shooter).owner() : shooter;
+        m_registry.emplace<Owner>(projectile, owner);
     }
 }
 

@@ -13,7 +13,11 @@ void InputManager::update(bool windowFocused)
 {
     for (std::size_t i = 0; i < KeyBindings::ACTION_COUNT; ++i) {
         Action action = static_cast<Action>(i);
-        m_pressed[i] = windowFocused && sf::Keyboard::isKeyPressed(m_bindings.keyFor(action));
+        const bool down = windowFocused && sf::Keyboard::isKeyPressed(m_bindings.keyFor(action));
+        if (m_toggle[i] && down && !m_wasDown[i])
+            m_latched[i] = !m_latched[i];
+        m_pressed[i] = m_toggle[i] ? m_latched[i] : down;
+        m_wasDown[i] = down;
     }
 }
 
@@ -35,6 +39,13 @@ std::uint8_t InputManager::toBits() const
 KeyBindings &InputManager::bindings()
 {
     return m_bindings;
+}
+
+void InputManager::setToggle(Action action, bool toggle)
+{
+    const std::size_t index = static_cast<std::size_t>(action);
+    m_toggle[index] = toggle;
+    m_latched[index] = false;
 }
 
 } // namespace engine::input

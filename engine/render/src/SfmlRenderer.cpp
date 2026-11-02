@@ -16,8 +16,14 @@ sf::Color toSfml(Color color)
 } // namespace
 
 SfmlRenderer::SfmlRenderer(Window &window, const TextureManager &textures, const FontManager &fonts)
-    : m_window(window), m_textures(textures), m_fonts(fonts)
+    : m_window(window), m_textures(textures), m_fonts(fonts), m_textScale(1.f)
 {
+}
+
+void SfmlRenderer::setTextScale(float scale)
+{
+    if (scale > 0.f)
+        m_textScale = scale;
 }
 
 void SfmlRenderer::clear(Color color)
@@ -45,7 +51,7 @@ void SfmlRenderer::drawTexture(const std::string &texture, IntRect source, Vecto
 void SfmlRenderer::drawText(
     const std::string &font, const std::string &text, unsigned int size, Vector2 position, Color color)
 {
-    sf::Text label(m_fonts.get(font), text, size);
+    sf::Text label(m_fonts.get(font), text, static_cast<unsigned int>(static_cast<float>(size) * m_textScale));
     label.setPosition({position.x(), position.y()});
     label.setFillColor(toSfml(color));
     m_window.native().draw(label);

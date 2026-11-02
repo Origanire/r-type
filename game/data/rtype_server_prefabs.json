@@ -73,14 +73,13 @@
   },
   "bydo_spawner": {
     "Spawner": {
-      "x": 1920,
       "minInterval": 0.6,
       "maxInterval": 1.8,
       "entries": [
-        { "prefab": "bydo_straight", "minY": 0, "maxY": 1008, "weight": 2 },
-        { "prefab": "bydo_sine", "minY": 150, "maxY": 858, "weight": 2 },
-        { "prefab": "bydo_zigzag_up", "minY": 0, "maxY": 1008, "weight": 1 },
-        { "prefab": "bydo_zigzag_down", "minY": 0, "maxY": 1008, "weight": 1 }
+        { "prefab": "bydo_straight", "minX": 1920, "maxX": 1920, "minY": 0, "maxY": 1008, "weight": 2 },
+        { "prefab": "bydo_sine", "minX": 1920, "maxX": 1920, "minY": 150, "maxY": 858, "weight": 2 },
+        { "prefab": "bydo_zigzag_up", "minX": 1920, "maxX": 1920, "minY": 0, "maxY": 1008, "weight": 1 },
+        { "prefab": "bydo_zigzag_down", "minX": 1920, "maxX": 1920, "minY": 0, "maxY": 1008, "weight": 1 }
       ]
     }
   }

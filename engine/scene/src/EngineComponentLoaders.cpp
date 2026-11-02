@@ -1,28 +1,37 @@
 #include "EngineComponentLoaders.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include "AutoFire.hpp"
 #include "Bounded.hpp"
 #include "Collider.hpp"
 #include "ContactDamage.hpp"
+#include "DataReaders.hpp"
+#include "DeathEffect.hpp"
 #include "DespawnOffscreen.hpp"
 #include "Health.hpp"
 #include "Invulnerable.hpp"
+#include "Lives.hpp"
+#include "Match.hpp"
 #include "MovementPattern.hpp"
 #include "Parallax.hpp"
+#include "Persistent.hpp"
 #include "PlayerControl.hpp"
+#include "PlayerLabel.hpp"
 #include "RectShape.hpp"
-#include "Color.hpp"
-#include "IntRect.hpp"
 #include "Replicated.hpp"
+#include "Respawn.hpp"
 #include "SceneError.hpp"
+#include "Score.hpp"
 #include "ScoreValue.hpp"
 #include "SoundCue.hpp"
 #include "Spawner.hpp"
 #include "Sprite.hpp"
 #include "SpriteAnimation.hpp"
+#include "StatusText.hpp"
 #include "Text.hpp"
 #include "TiltAnimation.hpp"
 #include "Transform.hpp"
@@ -32,26 +41,6 @@
 namespace engine::scene {
 
 namespace {
-
-constexpr std::size_t RECT_VALUES = 4;
-constexpr std::size_t COLOR_VALUES = 4;
-
-IntRect readRect(const DataNode &node, const std::string &key)
-{
-    const std::vector<DataNode> values = node.child(key).items();
-    if (values.size() != RECT_VALUES)
-        throw SceneError("ComponentLoaders: " + node.path() + "." + key + " must be [x, y, width, height]");
-    return {values[0].asInt(), values[1].asInt(), values[2].asInt(), values[3].asInt()};
-}
-
-Color readColor(const DataNode &node, const std::string &key)
-{
-    const std::vector<DataNode> values = node.child(key).items();
-    if (values.size() != COLOR_VALUES)
-        throw SceneError("ComponentLoaders: " + node.path() + "." + key + " must be [r, g, b, a]");
-    return {static_cast<std::uint8_t>(values[0].asInt()), static_cast<std::uint8_t>(values[1].asInt()),
-        static_cast<std::uint8_t>(values[2].asInt()), static_cast<std::uint8_t>(values[3].asInt())};
-}
 
 ecs::MovementPattern::Kind readPatternKind(const DataNode &node)
 {
@@ -69,14 +58,36 @@ std::vector<ecs::SpawnEntry> readSpawnEntries(const DataNode &node)
 {
     std::vector<ecs::SpawnEntry> entries;
     for (const DataNode &entry : node.child("entries").items())
-        entries.emplace_back(entry.getString("prefab"), entry.getFloat("minY"), entry.getFloat("maxY"),
-            entry.getFloat("weight", 1.f));
+        entries.emplace_back(entry.getString("prefab"), entry.getFloat("minX"), entry.getFloat("maxX"),
+            entry.getFloat("minY"), entry.getFloat("maxY"), entry.getFloat("weight", 1.f));
     return entries;
 }
 
-} // namespace
+std::optional<ecs::Match::Phase> readPhase(const DataNode &node, const std::string &key)
+{
+    if (!node.has(key))
+        return std::nullopt;
+    const std::string phase = node.getString(key);
+    if (phase == "waiting")
+        return ecs::Match::Phase::Waiting;
+    if (phase == "playing")
+        return ecs::Match::Phase::Playing;
+    if (phase == "over")
+        return ecs::Match::Phase::Over;
+    throw SceneError("ComponentLoaders: unknown match phase " + phase + " in " + node.path());
+}
 
-void addEngineComponentLoaders(ComponentFactory &factory, const LayerTable &layers)
+std::optional<std::size_t> readSlot(const DataNode &node)
+{
+    if (!node.has("slot"))
+        return std::nullopt;
+    const int slot = node.getInt("slot");
+    if (slot < 0)
+        throw SceneError("ComponentLoaders: " + node.path() + ".slot must not be negative");
+    return static_cast<std::size_t>(slot);
+}
+
+void addGameplayLoaders(ComponentFactory &factory, const LayerTable &layers)
 {
     factory.add("Transform", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
         registry.emplace<ecs::Transform>(entity, data.getFloat("x", 0.f), data.getFloat("y", 0.f));
@@ -121,13 +132,42 @@ void addEngineComponentLoaders(ComponentFactory &factory, const LayerTable &laye
         registry.emplace<ecs::Weapon>(entity, data.getString("prefab"), data.getFloat("cooldown"),
             data.getFloat("offsetX", 0.f), data.getFloat("offsetY", 0.f));
     });
+    factory.add("AutoFire", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::AutoFire>(entity, data.getString("prefab"), data.getFloat("minInterval"),
+            data.getFloat("maxInterval"), data.getFloat("offsetX", 0.f), data.getFloat("offsetY", 0.f));
+    });
     factory.add("Spawner", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
-        registry.emplace<ecs::Spawner>(entity, readSpawnEntries(data), data.getFloat("minInterval"),
-            data.getFloat("maxInterval"), data.getFloat("x"));
+        registry.emplace<ecs::Spawner>(
+            entity, readSpawnEntries(data), data.getFloat("minInterval"), data.getFloat("maxInterval"));
     });
     factory.add("Replicated", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
         registry.emplace<ecs::Replicated>(entity, static_cast<std::uint8_t>(data.getInt("kind")));
     });
+}
+
+void addRuleLoaders(ComponentFactory &factory)
+{
+    factory.add("Lives", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::Lives>(entity, data.getInt("count"));
+    });
+    factory.add("Score", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &) {
+        registry.emplace<ecs::Score>(entity);
+    });
+    factory.add("Respawn", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::Respawn>(entity, data.getString("prefab"), data.getFloat("delay", 0.f),
+            data.getFloat("invulnerability", 0.f), data.getFloat("x"), data.getFloat("y"),
+            data.getFloat("spacingX", 0.f), data.getFloat("spacingY", 0.f));
+    });
+    factory.add("Match", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::Match>(entity, data.getFloat("restartDelay", 0.f));
+    });
+    factory.add("Persistent", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &) {
+        registry.emplace<ecs::Persistent>(entity);
+    });
+}
+
+void addPresentationLoaders(ComponentFactory &factory)
+{
     factory.add("Sprite", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
         registry.emplace<ecs::Sprite>(
             entity, data.getString("texture"), readRect(data, "frame"), data.getFloat("scale", 1.f));
@@ -143,10 +183,6 @@ void addEngineComponentLoaders(ComponentFactory &factory, const LayerTable &laye
         registry.emplace<ecs::TiltAnimation>(entity, readRect(data, "frame"), data.getInt("row", 0),
             data.getInt("flatColumn"), data.getInt("maxTilt"), data.getFloat("framesPerSecond"));
     });
-    factory.add("AutoFire", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
-        registry.emplace<ecs::AutoFire>(entity, data.getString("prefab"), data.getFloat("minInterval"),
-            data.getFloat("maxInterval"), data.getFloat("offsetX", 0.f), data.getFloat("offsetY", 0.f));
-    });
     factory.add("SpriteAnimation", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
         registry.emplace<ecs::SpriteAnimation>(entity, readRect(data, "frame"), data.getInt("frameCount"),
             data.getInt("stepX"), data.getFloat("framesPerSecond"), data.getBool("loop", false));
@@ -155,9 +191,31 @@ void addEngineComponentLoaders(ComponentFactory &factory, const LayerTable &laye
         registry.emplace<ecs::SoundCue>(entity, data.getString("sound"));
     });
     factory.add("Text", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
-        registry.emplace<ecs::Text>(entity, data.getString("font"), data.getString("content"),
+        const std::string content = data.has("content") ? data.getString("content") : std::string();
+        registry.emplace<ecs::Text>(entity, data.getString("font"), content,
             static_cast<unsigned int>(data.getInt("size")), readColor(data, "color"));
     });
+    factory.add("DeathEffect", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::DeathEffect>(entity, data.getString("prefab"));
+    });
+    factory.add("PlayerLabel", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::PlayerLabel>(entity, data.getString("font"), data.getString("format"),
+            static_cast<unsigned int>(data.getInt("size")), data.getFloat("offsetX", 0.f),
+            data.getFloat("offsetY", 0.f), readColors(data, "colors"));
+    });
+    factory.add("StatusText", [](ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data) {
+        registry.emplace<ecs::StatusText>(
+            entity, data.getString("format"), readSlot(data), readPhase(data, "visibleWhen"));
+    });
+}
+
+} // namespace
+
+void addEngineComponentLoaders(ComponentFactory &factory, const LayerTable &layers)
+{
+    addGameplayLoaders(factory, layers);
+    addRuleLoaders(factory);
+    addPresentationLoaders(factory);
 }
 
 } // namespace engine::scene

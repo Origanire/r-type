@@ -1,4 +1,19 @@
 {
+  "match": {
+    "Match": { "restartDelay": 5.0 }
+  },
+  "player": {
+    "Lives": { "count": 3 },
+    "Score": {},
+    "Respawn": {
+      "prefab": "player_ship",
+      "delay": 2.0,
+      "invulnerability": 2.0,
+      "x": 200,
+      "y": 200,
+      "spacingY": 160
+    }
+  },
   "player_ship": {
     "Transform": {},
     "Velocity": {},

@@ -6,7 +6,7 @@
 
 namespace engine::net {
 
-ByteReader::ByteReader(std::span<const std::uint8_t> bytes) : m_bytes(bytes)
+ByteReader::ByteReader(std::span<const std::uint8_t> bytes) : m_bytes(bytes), m_offset(0)
 {
 }
 

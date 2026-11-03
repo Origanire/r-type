@@ -22,7 +22,7 @@ private:
     std::uint32_t readBigEndian(std::size_t byteCount);
 
     std::span<const std::uint8_t> m_bytes;
-    std::size_t m_offset = 0;
+    std::size_t m_offset;
 };
 
 } // namespace engine::net

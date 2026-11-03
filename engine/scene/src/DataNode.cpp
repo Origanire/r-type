@@ -3,72 +3,10 @@
 #include <fstream>
 #include <utility>
 
-#include <nlohmann/json.hpp>
-
+#include "DataNodeImpl.hpp"
 #include "SceneError.hpp"
 
 namespace engine::scene {
-
-class DataNode::Impl
-{
-public:
-    Impl(std::shared_ptr<const nlohmann::json> root, const nlohmann::json *node, std::string path)
-        : m_root(std::move(root)), m_node(node), m_path(std::move(path))
-    {
-    }
-
-    const nlohmann::json &node() const
-    {
-        return *m_node;
-    }
-
-    const std::shared_ptr<const nlohmann::json> &root() const
-    {
-        return m_root;
-    }
-
-    const std::string &path() const
-    {
-        return m_path;
-    }
-
-private:
-    std::shared_ptr<const nlohmann::json> m_root;
-    const nlohmann::json *m_node;
-    std::string m_path;
-};
-
-namespace {
-
-const nlohmann::json &member(const nlohmann::json &node, const std::string &key, const std::string &path)
-{
-    if (!node.is_object() || !node.contains(key))
-        throw SceneError("DataNode: missing key " + path + "." + key);
-    return node.at(key);
-}
-
-float toFloat(const nlohmann::json &value, const std::string &path)
-{
-    if (!value.is_number())
-        throw SceneError("DataNode: " + path + " must be a number");
-    return value.get<float>();
-}
-
-int toInt(const nlohmann::json &value, const std::string &path)
-{
-    if (!value.is_number_integer())
-        throw SceneError("DataNode: " + path + " must be an integer");
-    return value.get<int>();
-}
-
-std::string toString(const nlohmann::json &value, const std::string &path)
-{
-    if (!value.is_string())
-        throw SceneError("DataNode: " + path + " must be a string");
-    return value.get<std::string>();
-}
-
-} // namespace
 
 DataNode::DataNode(std::shared_ptr<const Impl> impl) : m_impl(std::move(impl))
 {
@@ -111,8 +49,7 @@ bool DataNode::isString() const
 
 DataNode DataNode::child(const std::string &key) const
 {
-    const nlohmann::json &value = member(m_impl->node(), key, m_impl->path());
-    return DataNode(std::make_shared<const Impl>(m_impl->root(), &value, m_impl->path() + "." + key));
+    return DataNode(std::make_shared<const Impl>(m_impl->root(), &m_impl->member(key), m_impl->pathOf(key)));
 }
 
 std::vector<std::string> DataNode::keys() const
@@ -140,7 +77,7 @@ std::vector<DataNode> DataNode::items() const
 
 float DataNode::getFloat(const std::string &key) const
 {
-    return toFloat(member(m_impl->node(), key, m_impl->path()), m_impl->path() + "." + key);
+    return Impl::toFloat(m_impl->member(key), m_impl->pathOf(key));
 }
 
 float DataNode::getFloat(const std::string &key, float fallback) const
@@ -150,7 +87,7 @@ float DataNode::getFloat(const std::string &key, float fallback) const
 
 int DataNode::getInt(const std::string &key) const
 {
-    return toInt(member(m_impl->node(), key, m_impl->path()), m_impl->path() + "." + key);
+    return Impl::toInt(m_impl->member(key), m_impl->pathOf(key));
 }
 
 int DataNode::getInt(const std::string &key, int fallback) const
@@ -160,32 +97,27 @@ int DataNode::getInt(const std::string &key, int fallback) const
 
 bool DataNode::getBool(const std::string &key, bool fallback) const
 {
-    if (!has(key))
-        return fallback;
-    const nlohmann::json &value = m_impl->node().at(key);
-    if (!value.is_boolean())
-        throw SceneError("DataNode: " + m_impl->path() + "." + key + " must be a boolean");
-    return value.get<bool>();
+    return has(key) ? Impl::toBool(m_impl->member(key), m_impl->pathOf(key)) : fallback;
 }
 
 std::string DataNode::getString(const std::string &key) const
 {
-    return toString(member(m_impl->node(), key, m_impl->path()), m_impl->path() + "." + key);
+    return Impl::toString(m_impl->member(key), m_impl->pathOf(key));
 }
 
 float DataNode::asFloat() const
 {
-    return toFloat(m_impl->node(), m_impl->path());
+    return Impl::toFloat(m_impl->node(), m_impl->path());
 }
 
 int DataNode::asInt() const
 {
-    return toInt(m_impl->node(), m_impl->path());
+    return Impl::toInt(m_impl->node(), m_impl->path());
 }
 
 std::string DataNode::asString() const
 {
-    return toString(m_impl->node(), m_impl->path());
+    return Impl::toString(m_impl->node(), m_impl->path());
 }
 
 const std::string &DataNode::path() const

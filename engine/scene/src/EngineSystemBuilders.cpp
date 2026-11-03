@@ -1,13 +1,12 @@
 #include "EngineSystemBuilders.hpp"
 
-#include <memory>
-
 #include "AnchorSystem.hpp"
 #include "AudioSystem.hpp"
 #include "AutoFireSystem.hpp"
 #include "BoundsSystem.hpp"
 #include "CleanupSystem.hpp"
 #include "CollisionSystem.hpp"
+#include "Color.hpp"
 #include "DamageSystem.hpp"
 #include "DataReaders.hpp"
 #include "DeathEffectSystem.hpp"
@@ -31,76 +30,84 @@
 
 namespace engine::scene {
 
-namespace {
-
-template <class System>
-void addSimple(SystemFactory &factory, const std::string &name)
+void EngineSystemBuilders::registerAll(SystemFactory &factory)
 {
-    factory.add(name, [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<System>(context.registry());
-    });
+    registerSimulation(factory);
+    registerRules(factory);
+    registerPresentation(factory);
 }
 
-template <class System>
-void addSpawning(SystemFactory &factory, const std::string &name)
+void EngineSystemBuilders::registerSimulation(SystemFactory &factory)
 {
-    factory.add(name, [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<System>(context.registry(), context.factory(), context.canSpawn());
-    });
+    factory.add("PlayerControl", &EngineSystemBuilders::buildSimple<ecs::PlayerControlSystem>);
+    factory.add("MovementPattern", &EngineSystemBuilders::buildSimple<ecs::MovementPatternSystem>);
+    factory.add("Invulnerability", &EngineSystemBuilders::buildSimple<ecs::InvulnerabilitySystem>);
+    factory.add("Movement", &EngineSystemBuilders::buildSimple<ecs::MovementSystem>);
+    factory.add("Bounds", &EngineSystemBuilders::buildSimple<ecs::BoundsSystem>);
+    factory.add("Offscreen", &EngineSystemBuilders::buildSimple<ecs::OffscreenSystem>);
+    factory.add("Cleanup", &EngineSystemBuilders::buildSimple<ecs::CleanupSystem>);
+    factory.add("Weapon", &EngineSystemBuilders::buildSpawning<ecs::WeaponSystem>);
+    factory.add("Spawner", &EngineSystemBuilders::buildSpawning<ecs::SpawnerSystem>);
+    factory.add("AutoFire", &EngineSystemBuilders::buildSpawning<ecs::AutoFireSystem>);
+    factory.add("Collision", &EngineSystemBuilders::buildCollision);
+    factory.add("Damage", &EngineSystemBuilders::buildDamage);
 }
 
-template <class System>
-void addDeathListener(SystemFactory &factory, const std::string &name)
+void EngineSystemBuilders::registerRules(SystemFactory &factory)
 {
-    factory.add(name, [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<System>(context.registry(), context.deaths());
-    });
+    factory.add("Match", &EngineSystemBuilders::buildSimple<ecs::MatchSystem>);
+    factory.add("Lives", &EngineSystemBuilders::buildDeathListener<ecs::LivesSystem>);
+    factory.add("Score", &EngineSystemBuilders::buildDeathListener<ecs::ScoreSystem>);
+    factory.add("Respawn", &EngineSystemBuilders::buildRespawn);
 }
 
-} // namespace
-
-void addEngineSystemBuilders(SystemFactory &factory)
+void EngineSystemBuilders::registerPresentation(SystemFactory &factory)
 {
-    addSimple<ecs::PlayerControlSystem>(factory, "PlayerControl");
-    addSimple<ecs::MovementPatternSystem>(factory, "MovementPattern");
-    addSimple<ecs::InvulnerabilitySystem>(factory, "Invulnerability");
-    addSimple<ecs::MovementSystem>(factory, "Movement");
-    addSimple<ecs::BoundsSystem>(factory, "Bounds");
-    addSimple<ecs::OffscreenSystem>(factory, "Offscreen");
-    addSimple<ecs::CleanupSystem>(factory, "Cleanup");
-    addSimple<ecs::ParallaxSystem>(factory, "Parallax");
-    addSimple<ecs::TiltAnimationSystem>(factory, "TiltAnimation");
-    addSimple<ecs::SpriteAnimationSystem>(factory, "SpriteAnimation");
-    addSimple<ecs::AnchorSystem>(factory, "Anchor");
-    addSimple<ecs::MatchSystem>(factory, "Match");
-    addSimple<ecs::StatusTextSystem>(factory, "StatusText");
-    addSpawning<ecs::WeaponSystem>(factory, "Weapon");
-    addSpawning<ecs::SpawnerSystem>(factory, "Spawner");
-    addSpawning<ecs::AutoFireSystem>(factory, "AutoFire");
-    addDeathListener<ecs::LivesSystem>(factory, "Lives");
-    addDeathListener<ecs::ScoreSystem>(factory, "Score");
-    factory.add("Collision", [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<ecs::CollisionSystem>(context.registry(), context.collisions());
-    });
-    factory.add("Damage", [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<ecs::DamageSystem>(context.registry(), context.collisions(), context.deaths());
-    });
-    factory.add("Respawn", [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<ecs::RespawnSystem>(context.registry(), context.factory());
-    });
-    factory.add("DeathEffect", [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<ecs::DeathEffectSystem>(context.registry(), context.factory(), context.deaths());
-    });
-    factory.add("PlayerLabel", [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<ecs::PlayerLabelSystem>(context.registry(), context.flag("showPlayerLabels", true));
-    });
-    factory.add("Audio", [](SystemContext &context, const DataNode &) -> std::unique_ptr<ecs::ISystem> {
-        return std::make_unique<ecs::AudioSystem>(context.registry(), context.audio());
-    });
-    factory.add("Render", [](SystemContext &context, const DataNode &entry) -> std::unique_ptr<ecs::ISystem> {
-        const Color background = entry.isString() ? Color(0, 0, 0) : readColor(entry, "background");
-        return std::make_unique<ecs::RenderSystem>(context.registry(), context.renderer(), background);
-    });
+    factory.add("Parallax", &EngineSystemBuilders::buildSimple<ecs::ParallaxSystem>);
+    factory.add("TiltAnimation", &EngineSystemBuilders::buildSimple<ecs::TiltAnimationSystem>);
+    factory.add("SpriteAnimation", &EngineSystemBuilders::buildSimple<ecs::SpriteAnimationSystem>);
+    factory.add("Anchor", &EngineSystemBuilders::buildSimple<ecs::AnchorSystem>);
+    factory.add("StatusText", &EngineSystemBuilders::buildSimple<ecs::StatusTextSystem>);
+    factory.add("DeathEffect", &EngineSystemBuilders::buildDeathEffect);
+    factory.add("PlayerLabel", &EngineSystemBuilders::buildPlayerLabel);
+    factory.add("Audio", &EngineSystemBuilders::buildAudio);
+    factory.add("Render", &EngineSystemBuilders::buildRender);
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildCollision(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::CollisionSystem>(context.registry(), context.collisions());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildDamage(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::DamageSystem>(context.registry(), context.collisions(), context.deaths());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildRespawn(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::RespawnSystem>(context.registry(), context.factory());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildDeathEffect(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::DeathEffectSystem>(context.registry(), context.factory(), context.deaths());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildPlayerLabel(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::PlayerLabelSystem>(context.registry(), context.flag("showPlayerLabels", true));
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildAudio(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::AudioSystem>(context.registry(), context.audio());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildRender(SystemContext &context, const DataNode &entry)
+{
+    const Color background = entry.isString() ? Color(0, 0, 0) : DataReaders::readColor(entry, "background");
+    return std::make_unique<ecs::RenderSystem>(context.registry(), context.renderer(), background);
 }
 
 } // namespace engine::scene

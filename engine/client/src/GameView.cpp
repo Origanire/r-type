@@ -68,8 +68,8 @@ GameView::GameView(const std::filesystem::path &assetsDirectory, const std::file
 {
     ecs::registerEngineComponents(m_registry);
     m_layers.load(m_game.child("layers"));
-    scene::addEngineComponentLoaders(m_components, m_layers);
-    scene::addEngineSystemBuilders(m_systemFactory);
+    scene::EngineComponentLoaders::registerAll(m_components, m_layers);
+    scene::EngineSystemBuilders::registerAll(m_systemFactory);
     m_prefabs.load(loadLinked(dataDirectory, m_game, "clientPrefabs"));
     m_settings.applyControls(m_input);
     m_renderer.setTextScale(m_settings.textScale());

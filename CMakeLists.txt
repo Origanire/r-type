@@ -59,6 +59,9 @@ add_library(engine_core
     engine/core/src/Vector2.cpp
     engine/core/src/IntRect.cpp
     engine/core/src/TextFormat.cpp
+    engine/core/src/CommandLine.cpp
+    engine/core/src/AssetPath.cpp
+    engine/core/src/PortOption.cpp
 )
 target_include_directories(engine_core PUBLIC engine/core/include)
 # Uncomment once Config.cpp exists
@@ -167,18 +170,50 @@ add_library(engine_scene
 )
 target_include_directories(engine_scene PUBLIC engine/scene/include PRIVATE engine/scene/internal)
 target_link_libraries(engine_scene PUBLIC engine_core engine_ecs PRIVATE nlohmann_json::nlohmann_json)
+
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
 add_library(engine_net
     engine/net/src/ByteReader.cpp
     engine/net/src/ByteWriter.cpp
+    engine/net/src/Endpoint.cpp
+    engine/net/src/Datagram.cpp
     engine/net/src/UdpTransport.cpp
+    engine/net/src/UdpTransportImpl.cpp
 )
-target_include_directories(engine_net PUBLIC engine/net/include)
+target_include_directories(engine_net PUBLIC engine/net/include PRIVATE engine/net/internal)
 target_link_libraries(engine_net PUBLIC engine_core PRIVATE asio::asio Threads::Threads)
 target_compile_definitions(engine_net PRIVATE ASIO_STANDALONE)
 if(WIN32)
     target_compile_definitions(engine_net PRIVATE _WIN32_WINNT=0x0A00)
 endif()
+
+# --- engine_network: generic game protocol, game server and client connection on top of engine_net
+add_library(engine_network
+    engine/network/src/NetworkSettings.cpp
+    engine/network/src/Codec.cpp
+    engine/network/src/Packet.cpp
+    engine/network/src/PlayerStatus.cpp
+    engine/network/src/EntityState.cpp
+    engine/network/src/ConnectMessage.cpp
+    engine/network/src/InputMessage.cpp
+    engine/network/src/HeartbeatMessage.cpp
+    engine/network/src/DisconnectMessage.cpp
+    engine/network/src/AcceptMessage.cpp
+    engine/network/src/RejectMessage.cpp
+    engine/network/src/SnapshotMessage.cpp
+    engine/network/src/HeartbeatAckMessage.cpp
+    engine/network/src/EntityDestroyedMessage.cpp
+    engine/network/src/PlayerJoinedMessage.cpp
+    engine/network/src/PlayerKilledMessage.cpp
+    engine/network/src/PlayerLeftMessage.cpp
+    engine/network/src/ServerShutdownMessage.cpp
+    engine/network/src/ClientSession.cpp
+    engine/network/src/GameServer.cpp
+    engine/network/src/ServerRunner.cpp
+    engine/network/src/ClientConnection.cpp
+)
+target_include_directories(engine_network PUBLIC engine/network/include)
+target_link_libraries(engine_network PUBLIC engine_core engine_net engine_scene)
 
 # --- engine_render: window, SFML renderer, textures, fonts, palettes (client only)
 # Planned: Palette.cpp
@@ -210,9 +245,10 @@ target_link_libraries(engine_input PUBLIC engine_core SFML::Window)
 add_library(engine_client
     engine/client/src/GameView.cpp
     engine/client/src/PlayerSettings.cpp
+    engine/client/src/OnlineClient.cpp
 )
 target_include_directories(engine_client PUBLIC engine/client/include)
-target_link_libraries(engine_client PUBLIC engine_scene engine_render engine_audio engine_input)
+target_link_libraries(engine_client PUBLIC engine_scene engine_network engine_render engine_audio engine_input)
 
 # --- engine_ui: widgets for menus and settings (client only)
 # add_library(engine_ui
@@ -224,19 +260,16 @@ target_link_libraries(engine_client PUBLIC engine_scene engine_render engine_aud
 # target_include_directories(engine_ui PUBLIC engine/ui/include)
 # target_link_libraries(engine_ui PUBLIC engine_render engine_input)
 
-# ---------------------------------------------------------------------------
-# Game: R-Type, built on the engine.
-# ---------------------------------------------------------------------------
-
-# --- rtype_shared: protocol, codec and helpers shared by the client and the server
-add_library(rtype_shared
-    game/shared/src/protocol/Codec.cpp
-    game/shared/src/PortOption.cpp
-    game/shared/src/AssetPath.cpp
-    game/shared/src/CommandLine.cpp
+# --- engine_simulation: authoritative game world built from a game JSON file (no rendering)
+add_library(engine_simulation
+    engine/simulation/src/Simulation.cpp
 )
-target_include_directories(rtype_shared PUBLIC game/shared/include)
-target_link_libraries(rtype_shared PUBLIC engine_core engine_ecs engine_net)
+target_include_directories(engine_simulation PUBLIC engine/simulation/include)
+target_link_libraries(engine_simulation PUBLIC engine_scene engine_network)
+
+# ---------------------------------------------------------------------------
+# Game: R-Type, described only by the JSON files of game/data.
+# ---------------------------------------------------------------------------
 
 # --- rtype_assets: copies assets/ (sprites) and game/data/ (R-Type JSON files) next to the executables
 add_custom_target(rtype_assets ALL
@@ -246,23 +279,13 @@ add_custom_target(rtype_assets ALL
 # --- r-type_server [p.1][p.9]: authoritative server (never links render, audio, input or ui)
 add_executable(r-type_server
     game/server/src/main.cpp
-    game/server/src/Server.cpp
-    game/server/src/Room.cpp
-    game/server/src/GameRules.cpp
-    game/server/src/PlayerSlot.cpp
-    game/server/src/GameEvents.cpp
-    game/server/src/Snapshot.cpp
 )
-target_include_directories(r-type_server PRIVATE game/server/include)
-target_link_libraries(r-type_server PRIVATE rtype_shared engine_scene)
+target_link_libraries(r-type_server PRIVATE engine_simulation)
 add_dependencies(r-type_server rtype_assets)
 
 # --- r-type_client [p.1][p.10]: display, input, sound
 add_executable(r-type_client
     game/client/src/main.cpp
-    game/client/src/Client.cpp
-    game/client/src/NetworkClient.cpp
 )
-target_include_directories(r-type_client PRIVATE game/client/include)
-target_link_libraries(r-type_client PRIVATE rtype_shared engine_client)
+target_link_libraries(r-type_client PRIVATE engine_client)
 add_dependencies(r-type_client rtype_assets)

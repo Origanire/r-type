@@ -154,6 +154,7 @@ target_link_libraries(engine_ecs PUBLIC engine_core engine_physics)
 # --- engine_scene: JSON data, component and system factories, prefabs and scenes (nlohmann-json hidden inside)
 add_library(engine_scene
     engine/scene/src/DataNode.cpp
+    engine/scene/src/DataNodeImpl.cpp
     engine/scene/src/DataReaders.cpp
     engine/scene/src/LayerTable.cpp
     engine/scene/src/ComponentFactory.cpp
@@ -164,7 +165,7 @@ add_library(engine_scene
     engine/scene/src/EngineSystemBuilders.cpp
     engine/scene/src/SceneBuilder.cpp
 )
-target_include_directories(engine_scene PUBLIC engine/scene/include)
+target_include_directories(engine_scene PUBLIC engine/scene/include PRIVATE engine/scene/internal)
 target_link_libraries(engine_scene PUBLIC engine_core engine_ecs PRIVATE nlohmann_json::nlohmann_json)
 # --- engine_net: serialization, UDP client/server (Asio hidden inside) [p.9][p.11]
 add_library(engine_net

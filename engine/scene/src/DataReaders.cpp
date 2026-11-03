@@ -1,20 +1,12 @@
 #include "DataReaders.hpp"
 
-#include <cstddef>
 #include <cstdint>
 
 #include "SceneError.hpp"
 
 namespace engine::scene {
 
-namespace {
-
-constexpr std::size_t RECT_VALUES = 4;
-constexpr std::size_t COLOR_VALUES = 4;
-
-} // namespace
-
-IntRect readRect(const DataNode &node, const std::string &key)
+IntRect DataReaders::readRect(const DataNode &node, const std::string &key)
 {
     const std::vector<DataNode> values = node.child(key).items();
     if (values.size() != RECT_VALUES)
@@ -22,7 +14,7 @@ IntRect readRect(const DataNode &node, const std::string &key)
     return {values[0].asInt(), values[1].asInt(), values[2].asInt(), values[3].asInt()};
 }
 
-Color readColor(const DataNode &values)
+Color DataReaders::readColor(const DataNode &values)
 {
     const std::vector<DataNode> channels = values.items();
     if (channels.size() != COLOR_VALUES)
@@ -31,12 +23,12 @@ Color readColor(const DataNode &values)
         static_cast<std::uint8_t>(channels[2].asInt()), static_cast<std::uint8_t>(channels[3].asInt())};
 }
 
-Color readColor(const DataNode &node, const std::string &key)
+Color DataReaders::readColor(const DataNode &node, const std::string &key)
 {
     return readColor(node.child(key));
 }
 
-std::vector<Color> readColors(const DataNode &node, const std::string &key)
+std::vector<Color> DataReaders::readColors(const DataNode &node, const std::string &key)
 {
     std::vector<Color> colors;
     for (const DataNode &color : node.child(key).items())

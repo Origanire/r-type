@@ -34,6 +34,8 @@ public:
     bool flag(const std::string &name, bool fallback) const;
 
 private:
+    static bool alwaysAllowSpawn();
+
     ecs::Registry &m_registry;
     ecs::IEntityFactory &m_factory;
     EventQueue<ecs::CollisionEvent> m_collisions;

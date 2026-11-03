@@ -35,7 +35,7 @@ Room::Room(const std::filesystem::path &dataDirectory)
 {
     engine::ecs::registerEngineComponents(m_registry);
     m_layers.load(m_config.child("layers"));
-    engine::scene::addEngineComponentLoaders(m_factory, m_layers);
+    engine::scene::EngineComponentLoaders::registerAll(m_factory, m_layers);
     m_prefabs.load(engine::scene::DataNode::fromFile(dataDirectory / "rtype_server_prefabs.json"));
     registerSystems();
     m_prefabs.spawn(m_rules.spawnerPrefab());

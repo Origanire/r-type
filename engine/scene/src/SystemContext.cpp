@@ -7,9 +7,14 @@
 namespace engine::scene {
 
 SystemContext::SystemContext(ecs::Registry &registry, ecs::IEntityFactory &factory)
-    : m_registry(registry), m_factory(factory), m_canSpawn([] { return true; }), m_renderer(nullptr),
+    : m_registry(registry), m_factory(factory), m_canSpawn(&SystemContext::alwaysAllowSpawn), m_renderer(nullptr),
       m_audio(nullptr)
 {
+}
+
+bool SystemContext::alwaysAllowSpawn()
+{
+    return true;
 }
 
 ecs::Registry &SystemContext::registry() const

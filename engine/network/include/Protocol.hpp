@@ -1,0 +1,60 @@
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+
+namespace engine::network {
+
+enum class MessageType : std::uint8_t
+{
+    Connect = 0x01,
+    Input = 0x02,
+    Heartbeat = 0x03,
+    Disconnect = 0x04,
+    Accept = 0x81,
+    Reject = 0x82,
+    Snapshot = 0x83,
+    HeartbeatAck = 0x84,
+    EntityDestroyed = 0x85,
+    PlayerJoined = 0x86,
+    PlayerKilled = 0x87,
+    PlayerLeft = 0x88,
+    ServerShutdown = 0x89
+};
+
+enum class Receiver
+{
+    Server,
+    Client
+};
+
+class Protocol
+{
+public:
+    static constexpr std::uint16_t MAGIC = 0x454E;
+    static constexpr std::uint8_t VERSION = 3;
+    static constexpr std::size_t HEADER_SIZE = 10;
+    static constexpr std::size_t MAX_PACKET_BYTES = 1200;
+
+    static constexpr std::uint8_t BUTTON_UP = 0x01;
+    static constexpr std::uint8_t BUTTON_DOWN = 0x02;
+    static constexpr std::uint8_t BUTTON_LEFT = 0x04;
+    static constexpr std::uint8_t BUTTON_RIGHT = 0x08;
+    static constexpr std::uint8_t BUTTON_FIRE = 0x10;
+    static constexpr std::uint8_t RESERVED_BUTTONS = 0xE0;
+
+    static constexpr std::uint8_t REJECT_SERVER_FULL = 1;
+    static constexpr std::uint8_t REJECT_VERSION_MISMATCH = 2;
+    static constexpr std::uint8_t LEFT_QUIT = 1;
+    static constexpr std::uint8_t LEFT_TIMEOUT = 2;
+
+    static constexpr std::uint8_t SLOT_EMPTY = 0;
+    static constexpr std::uint8_t SLOT_ALIVE = 1;
+    static constexpr std::uint8_t SLOT_DEAD = 2;
+
+    static constexpr std::uint8_t GAME_WAITING = 0;
+    static constexpr std::uint8_t GAME_PLAYING = 1;
+    static constexpr std::uint8_t GAME_OVER = 2;
+};
+
+} // namespace engine::network

@@ -6,21 +6,10 @@
 #include <string>
 #include <vector>
 
+#include "Datagram.hpp"
+#include "Endpoint.hpp"
+
 namespace engine::net {
-
-struct Endpoint
-{
-    std::string address;
-    std::uint16_t port = 0;
-
-    bool operator==(const Endpoint &) const = default;
-};
-
-struct Datagram
-{
-    Endpoint sender;
-    std::vector<std::uint8_t> bytes;
-};
 
 class UdpTransport
 {
@@ -38,7 +27,8 @@ public:
     static Endpoint numericEndpoint(const std::string &address, std::uint16_t port);
 
 private:
-    struct Impl;
+    class Impl;
+
     std::unique_ptr<Impl> m_impl;
 };
 

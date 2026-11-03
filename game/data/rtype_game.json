@@ -2,22 +2,46 @@
   "world": { "width": 1920, "height": 1080 },
   "window": { "width": 1280, "height": 720, "title": "R-Type" },
   "tickRate": 60,
+  "network": {
+    "defaultPort": 4242,
+    "maxPlayers": 4,
+    "maxEntities": 150,
+    "snapshotEveryTicks": 3,
+    "inputIntervalMs": 33,
+    "inputReleaseDelayMs": 500,
+    "heartbeatIntervalMs": 1000,
+    "connectRetryIntervalMs": 1000,
+    "connectAttempts": 5,
+    "sessionTimeoutMs": 5000
+  },
   "files": {
+    "serverPrefabs": "rtype_server_prefabs.json",
     "clientPrefabs": "rtype_client_prefabs.json",
     "settings": "rtype_settings.json"
   },
   "layers": ["player", "enemy", "player_missile", "enemy_missile"],
-  "rules": {
-    "startLives": 3,
-    "respawnDelay": 2.0,
-    "invulnerability": 2.0,
-    "gameOverDelay": 5.0,
-    "spawnX": 200,
-    "spawnY": 200,
-    "spawnSpacing": 160,
-    "playerPrefab": "player_ship",
-    "spawnerPrefab": "bydo_spawner"
-  },
+  "playerPrefab": "player",
+  "serverScene": [
+    { "prefab": "match" },
+    { "prefab": "bydo_spawner" }
+  ],
+  "serverSystems": [
+    "PlayerControl",
+    "Weapon",
+    "Spawner",
+    "AutoFire",
+    "MovementPattern",
+    "Invulnerability",
+    "Movement",
+    "Bounds",
+    "Collision",
+    "Damage",
+    "Lives",
+    "Score",
+    "Offscreen",
+    "Match",
+    "Respawn"
+  ],
   "textures": {
     "player_ships": "sprites/players/r-typesheet42.gif",
     "player_missiles": "sprites/projectiles/r-typesheet1.gif",

@@ -6,8 +6,33 @@ namespace engine::network {
 
 ClientSession::ClientSession(net::Endpoint peer, std::uint32_t token, Time now)
     : m_peer(std::move(peer)), m_token(token), m_confirmed(false), m_lastSeen(now), m_lastInput(now), m_lastAccept(),
-      m_inputSequence(), m_heartbeatSequence()
+      m_inputSequence(), m_heartbeatSequence(), m_roomId(), m_failedJoins(0)
 {
+}
+
+std::optional<std::uint16_t> ClientSession::roomId() const
+{
+    return m_roomId;
+}
+
+void ClientSession::enterRoom(std::uint16_t roomId)
+{
+    m_roomId = roomId;
+}
+
+void ClientSession::leaveRoom()
+{
+    m_roomId.reset();
+}
+
+unsigned ClientSession::failedJoins() const
+{
+    return m_failedJoins;
+}
+
+void ClientSession::addFailedJoin()
+{
+    ++m_failedJoins;
 }
 
 const net::Endpoint &ClientSession::peer() const

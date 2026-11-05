@@ -88,6 +88,36 @@ bool Codec::isValid(const Packet &packet) const
         return packet.as<PlayerLeftMessage>().isValid(m_settings);
     case MessageType::ServerShutdown:
         return packet.as<ServerShutdownMessage>().isValid(m_settings);
+    case MessageType::ListRooms:
+        return packet.as<ListRoomsMessage>().isValid(m_settings);
+    case MessageType::CreateRoom:
+        return packet.as<CreateRoomMessage>().isValid(m_settings);
+    case MessageType::JoinRoom:
+        return packet.as<JoinRoomMessage>().isValid(m_settings);
+    case MessageType::LeaveRoom:
+        return packet.as<LeaveRoomMessage>().isValid(m_settings);
+    case MessageType::StartGame:
+        return packet.as<StartGameMessage>().isValid(m_settings);
+    case MessageType::KickPlayer:
+        return packet.as<KickPlayerMessage>().isValid(m_settings);
+    case MessageType::DeleteRoom:
+        return packet.as<DeleteRoomMessage>().isValid(m_settings);
+    case MessageType::RoomList:
+        return packet.as<RoomListMessage>().isValid(m_settings);
+    case MessageType::RoomJoined:
+        return packet.as<RoomJoinedMessage>().isValid(m_settings);
+    case MessageType::RoomRejected:
+        return packet.as<RoomRejectedMessage>().isValid(m_settings);
+    case MessageType::RoomUpdate:
+        return packet.as<RoomUpdateMessage>().isValid(m_settings);
+    case MessageType::GameStarted:
+        return packet.as<GameStartedMessage>().isValid(m_settings);
+    case MessageType::Kicked:
+        return packet.as<KickedMessage>().isValid(m_settings);
+    case MessageType::RoomClosed:
+        return packet.as<RoomClosedMessage>().isValid(m_settings);
+    case MessageType::PlaySound:
+        return packet.as<PlaySoundMessage>().isValid(m_settings);
     }
     return false;
 }
@@ -121,6 +151,36 @@ void Codec::writeBody(net::ByteWriter &writer, const Packet &packet)
         return packet.as<PlayerLeftMessage>().write(writer);
     case MessageType::ServerShutdown:
         return packet.as<ServerShutdownMessage>().write(writer);
+    case MessageType::ListRooms:
+        return packet.as<ListRoomsMessage>().write(writer);
+    case MessageType::CreateRoom:
+        return packet.as<CreateRoomMessage>().write(writer);
+    case MessageType::JoinRoom:
+        return packet.as<JoinRoomMessage>().write(writer);
+    case MessageType::LeaveRoom:
+        return packet.as<LeaveRoomMessage>().write(writer);
+    case MessageType::StartGame:
+        return packet.as<StartGameMessage>().write(writer);
+    case MessageType::KickPlayer:
+        return packet.as<KickPlayerMessage>().write(writer);
+    case MessageType::DeleteRoom:
+        return packet.as<DeleteRoomMessage>().write(writer);
+    case MessageType::RoomList:
+        return packet.as<RoomListMessage>().write(writer);
+    case MessageType::RoomJoined:
+        return packet.as<RoomJoinedMessage>().write(writer);
+    case MessageType::RoomRejected:
+        return packet.as<RoomRejectedMessage>().write(writer);
+    case MessageType::RoomUpdate:
+        return packet.as<RoomUpdateMessage>().write(writer);
+    case MessageType::GameStarted:
+        return packet.as<GameStartedMessage>().write(writer);
+    case MessageType::Kicked:
+        return packet.as<KickedMessage>().write(writer);
+    case MessageType::RoomClosed:
+        return packet.as<RoomClosedMessage>().write(writer);
+    case MessageType::PlaySound:
+        return packet.as<PlaySoundMessage>().write(writer);
     }
 }
 
@@ -154,6 +214,36 @@ Packet Codec::readBody(
         return readAs<PlayerLeftMessage>(reader, sequence, version);
     case MessageType::ServerShutdown:
         return readAs<ServerShutdownMessage>(reader, sequence, version);
+    case MessageType::ListRooms:
+        return readAs<ListRoomsMessage>(reader, sequence, version);
+    case MessageType::CreateRoom:
+        return readAs<CreateRoomMessage>(reader, sequence, version);
+    case MessageType::JoinRoom:
+        return readAs<JoinRoomMessage>(reader, sequence, version);
+    case MessageType::LeaveRoom:
+        return readAs<LeaveRoomMessage>(reader, sequence, version);
+    case MessageType::StartGame:
+        return readAs<StartGameMessage>(reader, sequence, version);
+    case MessageType::KickPlayer:
+        return readAs<KickPlayerMessage>(reader, sequence, version);
+    case MessageType::DeleteRoom:
+        return readAs<DeleteRoomMessage>(reader, sequence, version);
+    case MessageType::RoomList:
+        return readAs<RoomListMessage>(reader, sequence, version);
+    case MessageType::RoomJoined:
+        return readAs<RoomJoinedMessage>(reader, sequence, version);
+    case MessageType::RoomRejected:
+        return readAs<RoomRejectedMessage>(reader, sequence, version);
+    case MessageType::RoomUpdate:
+        return readAs<RoomUpdateMessage>(reader, sequence, version);
+    case MessageType::GameStarted:
+        return readAs<GameStartedMessage>(reader, sequence, version);
+    case MessageType::Kicked:
+        return readAs<KickedMessage>(reader, sequence, version);
+    case MessageType::RoomClosed:
+        return readAs<RoomClosedMessage>(reader, sequence, version);
+    case MessageType::PlaySound:
+        return readAs<PlaySoundMessage>(reader, sequence, version);
     }
     throw net::NetError("Codec: unknown message type");
 }

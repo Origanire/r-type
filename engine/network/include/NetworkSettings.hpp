@@ -16,6 +16,9 @@ public:
     static constexpr int MAX_PLAYER_LIMIT = 255;
     static constexpr int MAX_ENTITY_LIMIT = 255;
     static constexpr int MAX_COUNT = 1000000;
+    static constexpr int MAX_CLIENT_LIMIT = 255;
+    static constexpr int MAX_ROOM_LIMIT = 255;
+    static constexpr int MAX_TEXT_LIMIT = 32;
 
     static NetworkSettings fromGame(const scene::DataNode &game);
 
@@ -30,6 +33,15 @@ public:
     std::chrono::milliseconds connectRetryInterval() const;
     unsigned connectAttempts() const;
     std::chrono::milliseconds sessionTimeout() const;
+    std::size_t maxClients() const;
+    std::size_t maxRooms() const;
+    std::size_t roomNameMaxLength() const;
+    std::size_t roomCodeMaxLength() const;
+    unsigned maxJoinAttempts() const;
+    std::size_t worldValueCount() const;
+    std::size_t playerValueCount() const;
+    std::size_t ruleCount() const;
+    std::size_t eventSoundCount() const;
 
 private:
     NetworkSettings(const scene::DataNode &game, const scene::DataNode &network);
@@ -49,6 +61,15 @@ private:
     std::chrono::milliseconds m_connectRetryInterval;
     unsigned m_connectAttempts;
     std::chrono::milliseconds m_sessionTimeout;
+    std::size_t m_maxClients;
+    std::size_t m_maxRooms;
+    std::size_t m_roomNameMaxLength;
+    std::size_t m_roomCodeMaxLength;
+    unsigned m_maxJoinAttempts;
+    std::size_t m_worldValueCount;
+    std::size_t m_playerValueCount;
+    std::size_t m_ruleCount;
+    std::size_t m_eventSoundCount;
 };
 
 } // namespace engine::network

@@ -18,7 +18,7 @@ std::uint8_t AcceptMessage::playerId() const
 
 bool AcceptMessage::isValid(const NetworkSettings &settings) const
 {
-    return m_token != 0 && m_playerId < settings.maxPlayers();
+    return m_token != 0 && m_playerId < settings.maxClients();
 }
 
 void AcceptMessage::write(engine::net::ByteWriter &writer) const

@@ -2,8 +2,8 @@
 
 namespace engine::network {
 
-EntityState::EntityState(std::uint16_t id, std::uint8_t kind, std::int16_t x, std::int16_t y)
-    : m_id(id), m_kind(kind), m_x(x), m_y(y)
+EntityState::EntityState(std::uint16_t id, std::uint8_t kind, std::int16_t x, std::int16_t y, std::uint8_t visual)
+    : m_id(id), m_kind(kind), m_x(x), m_y(y), m_visual(visual)
 {
 }
 
@@ -27,12 +27,18 @@ std::int16_t EntityState::y() const
     return m_y;
 }
 
+std::uint8_t EntityState::visual() const
+{
+    return m_visual;
+}
+
 void EntityState::write(engine::net::ByteWriter &writer) const
 {
     writer.writeU16(m_id);
     writer.writeU8(m_kind);
     writer.writeI16(m_x);
     writer.writeI16(m_y);
+    writer.writeU8(m_visual);
 }
 
 EntityState EntityState::read(engine::net::ByteReader &reader)
@@ -41,7 +47,8 @@ EntityState EntityState::read(engine::net::ByteReader &reader)
     const std::uint8_t kind = reader.readU8();
     const std::int16_t x = reader.readI16();
     const std::int16_t y = reader.readI16();
-    return EntityState(id, kind, x, y);
+    const std::uint8_t visual = reader.readU8();
+    return EntityState(id, kind, x, y, visual);
 }
 
 } // namespace engine::network

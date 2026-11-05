@@ -11,6 +11,12 @@
 #include "Destroyed.hpp"
 #include "EngineComponentLoaders.hpp"
 #include "EngineSystemBuilders.hpp"
+#include "Health.hpp"
+#include "HitFlash.hpp"
+#include "PlaySoundMessage.hpp"
+#include "PlayerValues.hpp"
+#include "Rotation.hpp"
+#include "SoundEvent.hpp"
 #include "Lives.hpp"
 #include "MatchSystem.hpp"
 #include "Player.hpp"
@@ -24,10 +30,15 @@
 
 namespace engine::simulation {
 
-Simulation::Simulation(
-    const std::filesystem::path &dataDirectory, const std::string &game, const network::NetworkSettings &settings)
+Simulation::Simulation(const std::filesystem::path &dataDirectory, const std::string &game,
+    const network::NetworkSettings &settings, scripting::ScriptEngine &scripts,
+    const std::vector<std::uint8_t> &rules)
     : m_settings(settings), m_game(scene::DataNode::fromFile(dataDirectory / (game + "_game.json"))),
-      m_prefabs(m_registry, m_components), m_context(m_registry, m_prefabs), m_cleanup(m_registry),
+      m_prefabs(m_registry, m_components), m_context(m_registry, m_prefabs),
+      m_worldTable(readTable(m_game, "worldValues")), m_playerTable(readTable(m_game, "playerValues")),
+      m_ruleTable(readTable(m_game, "rules")), m_soundTable(readTable(m_game, "eventSounds")),
+      m_worldValues(m_worldTable.size()),
+      m_scriptBuilder(scripts, scriptDirectory(dataDirectory, m_game)), m_cleanup(m_registry),
       m_playerPrefab(m_game.getString("playerPrefab")), m_events(), m_reportedPhase(ecs::Match::Phase::Waiting),
       m_nextNetworkId(1), m_tick(0)
 {
@@ -39,6 +50,11 @@ Simulation::Simulation(
     if (!m_prefabs.has(m_playerPrefab))
         throw SimulationError("Simulation: unknown player prefab " + m_playerPrefab);
     m_context.setCanSpawn(std::bind_front(&Simulation::canSpawn, this));
+    m_context.setWorldValues(m_worldValues, m_worldTable);
+    m_context.setPlayerTable(m_playerTable);
+    m_context.setRules(m_ruleTable, rules);
+    m_context.setArea({m_game.child("world").getFloat("width"), m_game.child("world").getFloat("height")});
+    m_scriptBuilder.registerInto(m_systemFactory);
     m_systemFactory.build(m_context, m_game.child("serverSystems"), m_systems);
     const scene::DataNode world = m_game.child("world");
     scene::SceneBuilder(m_registry, m_prefabs, m_components, {world.getFloat("width"), world.getFloat("height")})
@@ -51,6 +67,7 @@ void Simulation::addPlayer(std::size_t slot)
         throw SimulationError("Simulation: player slot " + std::to_string(slot) + " is invalid or already used");
     const ecs::Entity player = m_prefabs.spawn(m_playerPrefab);
     m_registry.emplace<ecs::Player>(player, slot);
+    m_registry.emplace<ecs::PlayerValues>(player, m_playerTable.size());
 }
 
 void Simulation::removePlayer(std::size_t slot)
@@ -72,6 +89,7 @@ void Simulation::setInput(std::size_t slot, std::uint8_t buttons)
     control.setDirection(buttons & network::Protocol::BUTTON_UP, buttons & network::Protocol::BUTTON_DOWN,
         buttons & network::Protocol::BUTTON_LEFT, buttons & network::Protocol::BUTTON_RIGHT);
     control.setFiring(buttons & network::Protocol::BUTTON_FIRE);
+    control.setAction(buttons & network::Protocol::BUTTON_ACTION);
 }
 
 void Simulation::update(float dt)
@@ -79,6 +97,7 @@ void Simulation::update(float dt)
     m_systems.update(dt);
     assignNetworkIds();
     collectDeaths();
+    sendSounds();
     m_context.deaths().clear();
     m_context.collisions().clear();
     m_cleanup.update(dt);
@@ -97,7 +116,8 @@ network::SnapshotMessage Simulation::snapshot() const
     players.reserve(m_settings.maxPlayers());
     for (std::size_t slot = 0; slot < m_settings.maxPlayers(); ++slot)
         players.push_back(statusOf(slot));
-    return network::SnapshotMessage(m_tick, phaseCode(phase()), std::move(players), collectEntities());
+    return network::SnapshotMessage(
+        m_tick, phaseCode(phase()), m_worldValues.values(), std::move(players), collectEntities());
 }
 
 std::vector<network::Packet> Simulation::takeEvents()
@@ -185,14 +205,35 @@ network::PlayerStatus Simulation::statusOf(std::size_t slot) const
 {
     const auto player = playerEntity(slot);
     if (!player)
-        return network::PlayerStatus();
+        return network::PlayerStatus(
+            network::Protocol::SLOT_EMPTY, 0, 0, 0, 0, std::vector<std::uint16_t>(m_playerTable.size(), 0));
     const int lives = m_registry.has<ecs::Lives>(*player) ? m_registry.get<ecs::Lives>(*player).count() : 0;
     const std::uint32_t score = m_registry.has<ecs::Score>(*player) ? m_registry.get<ecs::Score>(*player).points() : 0;
     const auto avatar = avatarOf(slot);
     const std::uint16_t avatarId = avatar ? networkIdOf(*avatar) : 0;
     const std::uint8_t state = avatarId != 0 ? network::Protocol::SLOT_ALIVE : network::Protocol::SLOT_DEAD;
-    return network::PlayerStatus(
-        state, static_cast<std::uint8_t>(std::clamp(lives, 0, MAX_REPORTED_LIVES)), score, avatarId);
+    const std::uint8_t health = avatar ? healthPercent(*avatar) : 0;
+    std::vector<std::uint16_t> values(m_playerTable.size(), 0);
+    if (m_registry.has<ecs::PlayerValues>(*player))
+        values = m_registry.get<ecs::PlayerValues>(*player).values();
+    return network::PlayerStatus(state, static_cast<std::uint8_t>(std::clamp(lives, 0, MAX_REPORTED_LIVES)), health,
+        score, avatarId, std::move(values));
+}
+
+std::uint8_t Simulation::healthPercent(const ecs::Entity &entity) const
+{
+    if (!m_registry.has<ecs::Health>(entity))
+        return 0;
+    const ecs::Health &health = m_registry.get<ecs::Health>(entity);
+    if (health.maximum() <= 0)
+        return 0;
+    return percent(static_cast<float>(health.points()) / static_cast<float>(health.maximum()));
+}
+
+std::uint8_t Simulation::percent(float ratio)
+{
+    const float clamped = std::clamp(ratio, 0.f, 1.f);
+    return static_cast<std::uint8_t>(std::lround(clamped * network::Protocol::MAX_PERCENT));
 }
 
 std::vector<network::EntityState> Simulation::collectEntities() const
@@ -228,7 +269,8 @@ std::optional<network::EntityState> Simulation::describe(const ecs::Entity &enti
         return std::nullopt;
     const ecs::Transform &transform = m_registry.get<ecs::Transform>(entity);
     return network::EntityState(identity.networkId(), identity.kind(),
-        static_cast<std::int16_t>(std::lround(transform.x())), static_cast<std::int16_t>(std::lround(transform.y())));
+        static_cast<std::int16_t>(std::lround(transform.x())), static_cast<std::int16_t>(std::lround(transform.y())),
+        visualOf(entity));
 }
 
 std::uint16_t Simulation::networkIdOf(const ecs::Entity &entity) const
@@ -262,6 +304,44 @@ std::uint8_t Simulation::phaseCode(ecs::Match::Phase phase)
     if (phase == ecs::Match::Phase::Over)
         return network::Protocol::GAME_OVER;
     return network::Protocol::GAME_WAITING;
+}
+
+scene::WorldValueTable Simulation::readTable(const scene::DataNode &game, const std::string &key)
+{
+    scene::WorldValueTable table;
+    if (game.has(key))
+        table.load(game.child(key));
+    return table;
+}
+
+void Simulation::sendSounds()
+{
+    for (const ecs::SoundEvent &sound : m_context.sounds().take()) {
+        if (const auto index = m_soundTable.index(sound.name()))
+            m_events.emplace_back(network::PlaySoundMessage(static_cast<std::uint8_t>(*index)));
+    }
+}
+
+std::uint8_t Simulation::visualOf(const ecs::Entity &entity) const
+{
+    std::uint8_t visual = 0;
+    if (m_registry.has<ecs::HitFlash>(entity))
+        visual |= network::Protocol::VISUAL_FLASH;
+    if (m_registry.has<ecs::Rotation>(entity)) {
+        const float degrees = std::fmod(std::fmod(m_registry.get<ecs::Rotation>(entity).degrees(), 360.f) + 360.f, 360.f);
+        const auto step = static_cast<int>(std::lround(degrees / 360.f * network::Protocol::VISUAL_ANGLE_STEPS));
+        visual |= static_cast<std::uint8_t>(step) & network::Protocol::VISUAL_ANGLE_MASK;
+    }
+    return visual;
+}
+
+std::filesystem::path Simulation::scriptDirectory(
+    const std::filesystem::path &dataDirectory, const scene::DataNode &game)
+{
+    const scene::DataNode files = game.child("files");
+    if (files.has("scripts"))
+        return dataDirectory / files.getString("scripts");
+    return dataDirectory / DEFAULT_SCRIPT_DIRECTORY;
 }
 
 } // namespace engine::simulation

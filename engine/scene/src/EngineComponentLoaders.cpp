@@ -2,36 +2,56 @@
 
 #include <cstdint>
 #include <functional>
+#include <utility>
 
-#include "AutoFire.hpp"
+#include "BoundText.hpp"
 #include "Bounded.hpp"
+#include "Button.hpp"
 #include "Collider.hpp"
 #include "ContactDamage.hpp"
 #include "DataReaders.hpp"
 #include "DeathEffect.hpp"
 #include "DespawnOffscreen.hpp"
+#include "FadeWhen.hpp"
+#include "Focusable.hpp"
+#include "Foreground.hpp"
 #include "Health.hpp"
+#include "Hidden.hpp"
 #include "Invulnerable.hpp"
+#include "ListView.hpp"
 #include "Lives.hpp"
 #include "Parallax.hpp"
 #include "Persistent.hpp"
 #include "PlayerControl.hpp"
 #include "PlayerLabel.hpp"
+#include "ProgressBar.hpp"
 #include "RectShape.hpp"
 #include "Replicated.hpp"
 #include "Respawn.hpp"
 #include "SceneError.hpp"
 #include "Score.hpp"
+#include "Script.hpp"
+#include "Bounce.hpp"
+#include "Choice.hpp"
+#include "Gravity.hpp"
+#include "Lifetime.hpp"
+#include "MusicWhen.hpp"
+#include "ParticleEmitter.hpp"
+#include "Pushable.hpp"
+#include "Rotation.hpp"
+#include "Solid.hpp"
+#include "Tilemap.hpp"
 #include "ScoreValue.hpp"
 #include "SoundCue.hpp"
-#include "Spawner.hpp"
 #include "Sprite.hpp"
 #include "SpriteAnimation.hpp"
 #include "StatusText.hpp"
 #include "Text.hpp"
+#include "TextField.hpp"
 #include "TiltAnimation.hpp"
 #include "Transform.hpp"
 #include "Velocity.hpp"
+#include "VisibleWhen.hpp"
 #include "Weapon.hpp"
 
 namespace engine::scene {
@@ -41,6 +61,97 @@ void EngineComponentLoaders::registerAll(ComponentFactory &factory, const LayerT
     registerGameplay(factory, layers);
     registerRules(factory);
     registerPresentation(factory);
+    registerInterface(factory);
+}
+
+void EngineComponentLoaders::registerInterface(ComponentFactory &factory)
+{
+    factory.add("Button", &EngineComponentLoaders::loadButton);
+    factory.add("Focusable", &EngineComponentLoaders::loadFocusable);
+    factory.add("TextField", &EngineComponentLoaders::loadTextField);
+    factory.add("VisibleWhen", &EngineComponentLoaders::loadVisibleWhen);
+    factory.add("BoundText", &EngineComponentLoaders::loadBoundText);
+    factory.add("ListView", &EngineComponentLoaders::loadListView);
+    factory.add("Hidden", &EngineComponentLoaders::loadHidden);
+    factory.add("Foreground", &EngineComponentLoaders::loadForeground);
+    factory.add("ProgressBar", &EngineComponentLoaders::loadProgressBar);
+    factory.add("FadeWhen", &EngineComponentLoaders::loadFadeWhen);
+}
+
+void EngineComponentLoaders::loadButton(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    ecs::Button &button =
+        registry.emplace<ecs::Button>(entity, data.getString("action"), data.getFloat("width"), data.getFloat("height"));
+    if (data.has("normal"))
+        button.setColors(DataReaders::readColor(data, "normal"), DataReaders::readColor(data, "hover"),
+            DataReaders::readColor(data, "pressed"));
+    if (data.has("normalFrame"))
+        button.setFrames(DataReaders::readRect(data, "normalFrame"), DataReaders::readRect(data, "hoverFrame"),
+            DataReaders::readRect(data, "pressedFrame"));
+    button.setSounds(readOptionalString(data, "hoverSound"), readOptionalString(data, "clickSound"));
+}
+
+void EngineComponentLoaders::loadFocusable(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::Focusable>(entity, data.getInt("order"));
+}
+
+void EngineComponentLoaders::loadTextField(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    const int maxLength = data.getInt("maxLength");
+    if (maxLength <= 0)
+        throw SceneError("EngineComponentLoaders: " + data.path() + ".maxLength must be positive");
+    registry.emplace<ecs::TextField>(entity, data.getString("name"), static_cast<std::size_t>(maxLength),
+        data.getBool("masked", false), readOptionalString(data, "placeholder"), data.getFloat("width"),
+        data.getFloat("height"));
+}
+
+void EngineComponentLoaders::loadVisibleWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::VisibleWhen>(entity, data.getString("key"), data.getString("value"));
+}
+
+void EngineComponentLoaders::loadBoundText(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::BoundText>(entity, data.getString("format"));
+}
+
+void EngineComponentLoaders::loadListView(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    std::vector<ecs::ListRowPart> parts;
+    for (const DataNode &part : data.child("parts").items())
+        parts.emplace_back(part.getString("prefab"), part.getFloat("offsetX", 0.f), part.getFloat("offsetY", 0.f));
+    const int maxRows = data.getInt("maxRows");
+    if (maxRows <= 0)
+        throw SceneError("EngineComponentLoaders: " + data.path() + ".maxRows must be positive");
+    registry.emplace<ecs::ListView>(
+        entity, data.getString("source"), data.getFloat("spacing"), static_cast<std::size_t>(maxRows), std::move(parts));
+}
+
+void EngineComponentLoaders::loadHidden(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &)
+{
+    registry.emplace<ecs::Hidden>(entity);
+}
+
+void EngineComponentLoaders::loadForeground(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &)
+{
+    registry.emplace<ecs::Foreground>(entity);
+}
+
+void EngineComponentLoaders::loadProgressBar(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::ProgressBar>(
+        entity, data.getString("key"), data.getFloat("width"), data.getFloat("max", 1.f), data.getBool("vertical", false));
+}
+
+void EngineComponentLoaders::loadFadeWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::FadeWhen>(entity, data.getString("key"), data.getString("value"), data.getFloat("seconds", 0.f));
+}
+
+std::string EngineComponentLoaders::readOptionalString(const DataNode &data, const std::string &key)
+{
+    return data.has(key) ? data.getString(key) : std::string();
 }
 
 void EngineComponentLoaders::registerGameplay(ComponentFactory &factory, const LayerTable &layers)
@@ -52,14 +163,22 @@ void EngineComponentLoaders::registerGameplay(ComponentFactory &factory, const L
     factory.add("Health", &EngineComponentLoaders::loadHealth);
     factory.add("ContactDamage", &EngineComponentLoaders::loadContactDamage);
     factory.add("Invulnerable", &EngineComponentLoaders::loadInvulnerable);
-    factory.add("MovementPattern", &EngineComponentLoaders::loadMovementPattern);
     factory.add("DespawnOffscreen", &EngineComponentLoaders::loadDespawnOffscreen);
     factory.add("PlayerControl", &EngineComponentLoaders::loadPlayerControl);
     factory.add("ScoreValue", &EngineComponentLoaders::loadScoreValue);
     factory.add("Weapon", &EngineComponentLoaders::loadWeapon);
-    factory.add("AutoFire", &EngineComponentLoaders::loadAutoFire);
-    factory.add("Spawner", &EngineComponentLoaders::loadSpawner);
     factory.add("Replicated", &EngineComponentLoaders::loadReplicated);
+    factory.add("Script", &EngineComponentLoaders::loadScript);
+    factory.add("Solid", &EngineComponentLoaders::loadSolid);
+    factory.add("Gravity", &EngineComponentLoaders::loadGravity);
+    factory.add("Bounce", &EngineComponentLoaders::loadBounce);
+    factory.add("Pushable", &EngineComponentLoaders::loadPushable);
+    factory.add("Tilemap", &EngineComponentLoaders::loadTilemap);
+    factory.add("ParticleEmitter", &EngineComponentLoaders::loadParticleEmitter);
+    factory.add("Lifetime", &EngineComponentLoaders::loadLifetime);
+    factory.add("MusicWhen", &EngineComponentLoaders::loadMusicWhen);
+    factory.add("Choice", &EngineComponentLoaders::loadChoice);
+    factory.add("Rotation", &EngineComponentLoaders::loadRotation);
 }
 
 void EngineComponentLoaders::registerRules(ComponentFactory &factory)
@@ -125,14 +244,6 @@ void EngineComponentLoaders::loadInvulnerable(ecs::Registry &registry, const ecs
     registry.emplace<ecs::Invulnerable>(entity, data.getFloat("seconds"));
 }
 
-void EngineComponentLoaders::loadMovementPattern(
-    ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
-{
-    registry.emplace<ecs::MovementPattern>(entity, readPatternKind(data), data.getFloat("amplitude", 0.f),
-        data.getFloat("frequency", 0.f), data.getFloat("verticalSpeed", 0.f), data.getFloat("minY", 0.f),
-        data.getFloat("maxY", 0.f));
-}
-
 void EngineComponentLoaders::loadDespawnOffscreen(
     ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
 {
@@ -154,19 +265,91 @@ void EngineComponentLoaders::loadScoreValue(ecs::Registry &registry, const ecs::
 void EngineComponentLoaders::loadWeapon(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
 {
     registry.emplace<ecs::Weapon>(entity, data.getString("prefab"), data.getFloat("cooldown"),
-        data.getFloat("offsetX", 0.f), data.getFloat("offsetY", 0.f));
+        data.getFloat("offsetX", 0.f), data.getFloat("offsetY", 0.f), data.getInt("count", 1),
+        data.getFloat("spread", 0.f));
 }
 
-void EngineComponentLoaders::loadAutoFire(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+void EngineComponentLoaders::loadScript(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
 {
-    registry.emplace<ecs::AutoFire>(entity, data.getString("prefab"), data.getFloat("minInterval"),
-        data.getFloat("maxInterval"), data.getFloat("offsetX", 0.f), data.getFloat("offsetY", 0.f));
+    ecs::Script::Numbers numbers;
+    ecs::Script::Texts texts;
+    if (data.has("params")) {
+        const DataNode params = data.child("params");
+        for (const std::string &name : params.keys()) {
+            const DataNode value = params.child(name);
+            if (value.isString())
+                texts.emplace(name, value.asString());
+            else
+                numbers.emplace(name, value.asFloat());
+        }
+    }
+    registry.emplace<ecs::Script>(entity, data.getString("file"), std::move(numbers), std::move(texts));
 }
 
-void EngineComponentLoaders::loadSpawner(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+void EngineComponentLoaders::loadSolid(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &)
 {
-    registry.emplace<ecs::Spawner>(
-        entity, readSpawnEntries(data), data.getFloat("minInterval"), data.getFloat("maxInterval"));
+    registry.emplace<ecs::Solid>(entity);
+}
+
+void EngineComponentLoaders::loadGravity(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::Gravity>(entity, data.getFloat("force"));
+}
+
+void EngineComponentLoaders::loadBounce(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::Bounce>(entity, data.getFloat("restitution", 1.f));
+}
+
+void EngineComponentLoaders::loadPushable(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &)
+{
+    registry.emplace<ecs::Pushable>(entity);
+}
+
+void EngineComponentLoaders::loadTilemap(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    std::vector<std::string> rows;
+    for (const DataNode &row : data.child("rows").items())
+        rows.push_back(row.asString());
+    ecs::Tilemap::Legend legend;
+    const DataNode tiles = data.child("legend");
+    for (const std::string &symbol : tiles.keys()) {
+        if (symbol.size() != 1)
+            throw SceneError("Tilemap: legend keys must be single characters, got " + symbol);
+        legend.emplace(symbol[0], tiles.getString(symbol));
+    }
+    registry.emplace<ecs::Tilemap>(
+        entity, std::move(rows), std::move(legend), data.getFloat("tileSize"), data.getFloat("speed"));
+}
+
+void EngineComponentLoaders::loadParticleEmitter(
+    ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::ParticleEmitter>(entity, data.getInt("count"), data.getFloat("speed"),
+        data.getFloat("lifetime"), data.getFloat("size", 4.f), DataReaders::readColor(data, "color"));
+}
+
+void EngineComponentLoaders::loadLifetime(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::Lifetime>(entity, data.getFloat("seconds"));
+}
+
+void EngineComponentLoaders::loadMusicWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::MusicWhen>(entity, data.getString("key"), data.getString("value"), data.getString("music"));
+}
+
+void EngineComponentLoaders::loadChoice(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    std::vector<std::string> options;
+    for (const DataNode &option : data.child("options").items())
+        options.push_back(option.asString());
+    registry.emplace<ecs::Choice>(entity, data.getString("name"), std::move(options));
+}
+
+void EngineComponentLoaders::loadRotation(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    registry.emplace<ecs::Rotation>(entity, data.getFloat("degrees", 0.f));
 }
 
 void EngineComponentLoaders::loadReplicated(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
@@ -239,9 +422,9 @@ void EngineComponentLoaders::loadSoundCue(ecs::Registry &registry, const ecs::En
 
 void EngineComponentLoaders::loadText(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
 {
-    const std::string content = data.has("content") ? data.getString("content") : std::string();
-    registry.emplace<ecs::Text>(entity, data.getString("font"), content,
+    ecs::Text &text = registry.emplace<ecs::Text>(entity, data.getString("font"), readOptionalString(data, "content"),
         static_cast<unsigned int>(data.getInt("size")), DataReaders::readColor(data, "color"));
+    text.setOffset(data.getFloat("offsetX", 0.f), data.getFloat("offsetY", 0.f));
 }
 
 void EngineComponentLoaders::loadDeathEffect(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
@@ -259,27 +442,6 @@ void EngineComponentLoaders::loadPlayerLabel(ecs::Registry &registry, const ecs:
 void EngineComponentLoaders::loadStatusText(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
 {
     registry.emplace<ecs::StatusText>(entity, data.getString("format"), readSlot(data), readPhase(data, "visibleWhen"));
-}
-
-ecs::MovementPattern::Kind EngineComponentLoaders::readPatternKind(const DataNode &data)
-{
-    const std::string kind = data.getString("kind");
-    if (kind == "straight")
-        return ecs::MovementPattern::Kind::Straight;
-    if (kind == "sine")
-        return ecs::MovementPattern::Kind::Sine;
-    if (kind == "zigzag")
-        return ecs::MovementPattern::Kind::Zigzag;
-    throw SceneError("EngineComponentLoaders: unknown movement pattern " + kind + " in " + data.path());
-}
-
-std::vector<ecs::SpawnEntry> EngineComponentLoaders::readSpawnEntries(const DataNode &data)
-{
-    std::vector<ecs::SpawnEntry> entries;
-    for (const DataNode &entry : data.child("entries").items())
-        entries.emplace_back(entry.getString("prefab"), entry.getFloat("minX"), entry.getFloat("maxX"),
-            entry.getFloat("minY"), entry.getFloat("maxY"), entry.getFloat("weight", 1.f));
-    return entries;
 }
 
 std::optional<ecs::Match::Phase> EngineComponentLoaders::readPhase(const DataNode &data, const std::string &key)

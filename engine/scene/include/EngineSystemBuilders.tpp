@@ -22,4 +22,16 @@ std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildDeathListener(SystemCon
     return std::make_unique<System>(context.registry(), context.deaths());
 }
 
+template <class System>
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildUiActions(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<System>(context.registry(), context.uiInput(), context.uiActions());
+}
+
+template <class System>
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildStoreReader(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<System>(context.registry(), context.uiStore());
+}
+
 } // namespace engine::scene

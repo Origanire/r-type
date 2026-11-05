@@ -2,30 +2,37 @@
 
 #include "AnchorSystem.hpp"
 #include "AudioSystem.hpp"
-#include "AutoFireSystem.hpp"
+#include "BoundTextSystem.hpp"
 #include "BoundsSystem.hpp"
+#include "ButtonStyleSystem.hpp"
 #include "CleanupSystem.hpp"
 #include "CollisionSystem.hpp"
 #include "Color.hpp"
 #include "DamageSystem.hpp"
 #include "DataReaders.hpp"
 #include "DeathEffectSystem.hpp"
+#include "FocusNavigationSystem.hpp"
 #include "InvulnerabilitySystem.hpp"
+#include "ListViewSystem.hpp"
 #include "LivesSystem.hpp"
 #include "MatchSystem.hpp"
-#include "MovementPatternSystem.hpp"
 #include "MovementSystem.hpp"
 #include "OffscreenSystem.hpp"
 #include "ParallaxSystem.hpp"
 #include "PlayerControlSystem.hpp"
 #include "PlayerLabelSystem.hpp"
+#include "PointerSystem.hpp"
 #include "RenderSystem.hpp"
+#include "FadeSystem.hpp"
+#include "GameplaySystems.hpp"
+#include "ProgressBarSystem.hpp"
 #include "RespawnSystem.hpp"
 #include "ScoreSystem.hpp"
-#include "SpawnerSystem.hpp"
 #include "SpriteAnimationSystem.hpp"
 #include "StatusTextSystem.hpp"
+#include "TextFieldSystem.hpp"
 #include "TiltAnimationSystem.hpp"
+#include "VisibilitySystem.hpp"
 #include "WeaponSystem.hpp"
 
 namespace engine::scene {
@@ -35,20 +42,53 @@ void EngineSystemBuilders::registerAll(SystemFactory &factory)
     registerSimulation(factory);
     registerRules(factory);
     registerPresentation(factory);
+    registerInterface(factory);
+}
+
+void EngineSystemBuilders::registerInterface(SystemFactory &factory)
+{
+    factory.add("Pointer", &EngineSystemBuilders::buildUiActions<ecs::PointerSystem>);
+    factory.add("FocusNavigation", &EngineSystemBuilders::buildUiActions<ecs::FocusNavigationSystem>);
+    factory.add("BoundText", &EngineSystemBuilders::buildStoreReader<ecs::BoundTextSystem>);
+    factory.add("Visibility", &EngineSystemBuilders::buildStoreReader<ecs::VisibilitySystem>);
+    factory.add("ButtonStyle", &EngineSystemBuilders::buildButtonStyle);
+    factory.add("TextField", &EngineSystemBuilders::buildTextField);
+    factory.add("ListView", &EngineSystemBuilders::buildListView);
+    factory.add("ProgressBar", &EngineSystemBuilders::buildStoreReader<ecs::ProgressBarSystem>);
+    factory.add("Fade", &EngineSystemBuilders::buildStoreReader<ecs::FadeSystem>);
+    factory.add("Choice", &EngineSystemBuilders::buildChoice);
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildButtonStyle(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::ButtonStyleSystem>(context.registry(), context.uiInput());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildTextField(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::TextFieldSystem>(context.registry(), context.uiInput(), context.uiStore());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildListView(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::ListViewSystem>(context.registry(), context.factory(), context.uiStore());
 }
 
 void EngineSystemBuilders::registerSimulation(SystemFactory &factory)
 {
     factory.add("PlayerControl", &EngineSystemBuilders::buildSimple<ecs::PlayerControlSystem>);
-    factory.add("MovementPattern", &EngineSystemBuilders::buildSimple<ecs::MovementPatternSystem>);
     factory.add("Invulnerability", &EngineSystemBuilders::buildSimple<ecs::InvulnerabilitySystem>);
     factory.add("Movement", &EngineSystemBuilders::buildSimple<ecs::MovementSystem>);
     factory.add("Bounds", &EngineSystemBuilders::buildSimple<ecs::BoundsSystem>);
     factory.add("Offscreen", &EngineSystemBuilders::buildSimple<ecs::OffscreenSystem>);
     factory.add("Cleanup", &EngineSystemBuilders::buildSimple<ecs::CleanupSystem>);
     factory.add("Weapon", &EngineSystemBuilders::buildSpawning<ecs::WeaponSystem>);
-    factory.add("Spawner", &EngineSystemBuilders::buildSpawning<ecs::SpawnerSystem>);
-    factory.add("AutoFire", &EngineSystemBuilders::buildSpawning<ecs::AutoFireSystem>);
+    factory.add("Attachment", &EngineSystemBuilders::buildSimple<ecs::AttachmentSystem>);
+    factory.add("HitFlash", &EngineSystemBuilders::buildSimple<ecs::HitFlashSystem>);
+    factory.add("Solid", &EngineSystemBuilders::buildSimple<ecs::SolidSystem>);
+    factory.add("Gravity", &EngineSystemBuilders::buildSimple<ecs::GravitySystem>);
+    factory.add("Bounce", &EngineSystemBuilders::buildSimple<ecs::BounceSystem>);
+    factory.add("Tilemap", &EngineSystemBuilders::buildTilemap);
     factory.add("Collision", &EngineSystemBuilders::buildCollision);
     factory.add("Damage", &EngineSystemBuilders::buildDamage);
 }
@@ -72,6 +112,10 @@ void EngineSystemBuilders::registerPresentation(SystemFactory &factory)
     factory.add("PlayerLabel", &EngineSystemBuilders::buildPlayerLabel);
     factory.add("Audio", &EngineSystemBuilders::buildAudio);
     factory.add("Render", &EngineSystemBuilders::buildRender);
+    factory.add("Particles", &EngineSystemBuilders::buildSimple<ecs::ParticleSystem>);
+    factory.add("Lifetime", &EngineSystemBuilders::buildSimple<ecs::LifetimeSystem>);
+    factory.add("Music", &EngineSystemBuilders::buildMusic);
+    factory.add("Shake", &EngineSystemBuilders::buildShake);
 }
 
 std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildCollision(SystemContext &context, const DataNode &)
@@ -108,6 +152,28 @@ std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildRender(SystemContext &c
 {
     const Color background = entry.isString() ? Color(0, 0, 0) : DataReaders::readColor(entry, "background");
     return std::make_unique<ecs::RenderSystem>(context.registry(), context.renderer(), background);
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildTilemap(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::TilemapSystem>(
+        context.registry(), context.factory(), context.canSpawn(), context.area());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildMusic(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::MusicSystem>(context.registry(), context.uiStore(), context.audio());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildShake(SystemContext &context, const DataNode &entry)
+{
+    return std::make_unique<ecs::ShakeSystem>(
+        context.uiStore(), context.renderer(), entry.getString("key"), entry.getFloat("strength", 1.f));
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildChoice(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::ChoiceSystem>(context.registry(), context.uiInput(), context.uiStore());
 }
 
 } // namespace engine::scene

@@ -1,41 +1,66 @@
 # Add an enemy
 
-Two cases: a new **movement pattern** for the existing Bydo, or a new **kind** of enemy with its own
-sprite.
+No C++ and no recompilation: an enemy is a prefab (JSON) plus a behaviour script (Python).
+See the [scripting reference](scripting.md) for every available command.
 
-## A new movement pattern
+## 1. Write the behaviour
 
-1. Add a value to `EnemyPattern` in `game/server/include/components/Enemy.hpp` and increase
-   `ENEMY_PATTERN_COUNT`.
-2. Handle it in the `switch` of `EnemyMovementSystem::update`: set the entity's velocity from its
-   `Enemy` data (`age`, `baseY`) and its position.
-3. If the pattern needs a specific starting velocity, set it in `createBydo`.
+Create `game/scripts/diver.py`:
 
-`SpawnSystem` picks patterns at random among `ENEMY_PATTERN_COUNT`, so the new pattern appears
-without further changes.
+```python
+import common
 
-## A new kind of enemy
 
-### Server
+def on_spawn(e):
+    common.start_moving(e, -200.0)
+    e.diving = False
 
-1. Add its constants (size, speed, health, score) in `game/shared/include/GameConstants.hpp`.
-2. Add a kind value in `game/shared/include/RtypeProtocol.hpp`, using the values reserved by the
-   [protocol](../protocol.md) when they fit, and document it there.
-3. Write a factory function next to `createBydo` in `EntityFactory.cpp`. Give it `Position`,
-   `Velocity`, `Hitbox`, `Enemy`, `Health` and `Replicated` with the new kind. Any entity with `Enemy`
-   is already handled by collisions, scoring and offscreen removal.
-4. Call it from `SpawnSystem`, or from a new spawning system.
 
-### Client
+def on_update(e, dt):
+    if not e.diving and e.x() < 1300.0:
+        e.diving = True
+        e.set_velocity(-650.0, 300.0)
+    if common.cooldown(e, "shot", 1.5, 2.5):
+        e.fire_at_player("enemy_bullet", 500.0)
+```
 
-1. Add a `SpriteSheet` constant in `game/client/include/SpriteSheet.hpp` pointing to the image in
-   `assets/sprites/enemies/`.
-2. Load its texture in the `Client` constructor.
-3. Add a `create<Enemy>()` function and handle the new kind in `Client::applySnapshot`.
+`common.py` holds shared helpers (`start_moving`, `sine`, `bounce`, `follow_player_y`, `cooldown`,
+`ring`...).
 
-Unknown kinds are ignored by older clients, so they keep working.
+## 2. Declare the server prefab
 
-### Example: an enemy that also shoots
+In `game/data/rtype_server_prefabs.json`:
 
-Add `Shooter` to the enemy in its factory, then write an `EnemyShootingSystem` that spawns enemy
-missiles with a new kind. A collision rule in `Room::onCollision` makes those missiles damage ships.
+```json
+"diver": {
+  "Transform": {}, "Velocity": { "x": 0, "y": 0 },
+  "Collider": { "width": 80, "height": 72, "layer": "enemy", "hits": ["player"] },
+  "Health": { "points": 2 },
+  "ContactDamage": { "amount": 25, "destroyOnHit": true },
+  "ScoreValue": { "points": 150 },
+  "Script": { "file": "diver.py" },
+  "DespawnOffscreen": { "minX": -500, "minY": -400, "maxX": 2500, "maxY": 1480 },
+  "Replicated": { "kind": 20 }
+}
+```
+
+`kind` is the number sent on the network to tell the client which sprite to draw.
+
+## 3. Declare how the client draws it
+
+In `game/data/rtype_game.json`, map the kind to a client prefab (`"kinds": { "20": "diver" }`) and
+register the sprite sheet in `textures`. In `game/data/rtype_client_prefabs.json`:
+
+```json
+"diver": {
+  "Transform": {},
+  "Sprite": { "texture": "chasers", "frame": [1, 3, 32, 29], "scale": 2.5 },
+  "SpriteAnimation": { "frame": [1, 3, 32, 29], "frameCount": 8, "stepX": 33, "framesPerSecond": 10, "loop": true },
+  "DeathEffect": { "prefab": "explosion" }
+}
+```
+
+## 4. Make it appear
+
+Add it to a stage script (`game/scripts/stage2.py`), either in `WAVES` or in the `RANDOM` table.
+See [Add a level](add-a-level.md).

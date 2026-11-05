@@ -57,3 +57,17 @@ The server never links a rendering, input or audio module. After the client is b
 | `CMAKE_TOOLCHAIN_FILE does not exist` | Install vcpkg or fix `VCPKG_ROOT`, then delete `build/CMakeCache.txt` |
 | Changing vcpkg installation has no effect | Delete `build/CMakeCache.txt` and `build/CMakeFiles` |
 | SFML fails to configure on Linux | Install the system packages listed in [Installation](installation.md) |
+
+## Build options (engine modularity)
+
+| Option | Default | Effect |
+|---|---|---|
+| `ENGINE_BUILD_CLIENT` | `ON` | builds render, audio, input, client modules and `r-type_client` (needs SFML) |
+| `ENGINE_BUILD_SERVER` | `ON` | builds scripting, simulation modules and `r-type_server` (needs Python) |
+
+Example, a server-only build for a dedicated machine:
+
+```sh
+cmake -S . -B build-server -DENGINE_BUILD_CLIENT=OFF
+cmake --build build-server
+```

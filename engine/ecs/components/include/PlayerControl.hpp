@@ -15,12 +15,23 @@ public:
     float vertical() const;
     void setFiring(bool firing);
     bool firing() const;
+    void setAction(bool action);
+    bool action() const;
+    bool actionPressed() const;
+    float fireHeld() const;
+    float fireReleased() const;
+    void advance(float dt);
 
 private:
     float m_speed;
     float m_horizontal;
     float m_vertical;
     bool m_firing;
+    bool m_action;
+    bool m_previousAction;
+    bool m_actionPressed;
+    float m_fireHeld;
+    float m_fireReleased;
 };
 
 } // namespace engine::ecs

@@ -5,8 +5,9 @@
 
 namespace engine::ecs {
 
-Weapon::Weapon(std::string prefab, float cooldown, float offsetX, float offsetY)
-    : m_prefab(std::move(prefab)), m_cooldown(cooldown), m_offsetX(offsetX), m_offsetY(offsetY), m_remaining(0.f)
+Weapon::Weapon(std::string prefab, float cooldown, float offsetX, float offsetY, int count, float spread)
+    : m_prefab(std::move(prefab)), m_cooldown(cooldown), m_offsetX(offsetX), m_offsetY(offsetY), m_count(count),
+      m_spread(spread), m_remaining(0.f)
 {
 }
 
@@ -38,6 +39,29 @@ bool Weapon::ready() const
 void Weapon::trigger()
 {
     m_remaining = m_cooldown;
+}
+
+int Weapon::count() const
+{
+    return m_count;
+}
+
+float Weapon::spread() const
+{
+    return m_spread;
+}
+
+float Weapon::cooldown() const
+{
+    return m_cooldown;
+}
+
+void Weapon::configure(std::string prefab, float cooldown, int count, float spread)
+{
+    m_prefab = std::move(prefab);
+    m_cooldown = cooldown;
+    m_count = count;
+    m_spread = spread;
 }
 
 } // namespace engine::ecs

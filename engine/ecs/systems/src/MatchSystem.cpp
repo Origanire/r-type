@@ -4,6 +4,7 @@
 #include "Lives.hpp"
 #include "Persistent.hpp"
 #include "Player.hpp"
+#include "PlayerValues.hpp"
 #include "Respawn.hpp"
 #include "Score.hpp"
 #include "Transform.hpp"
@@ -84,6 +85,8 @@ void MatchSystem::resetPlayers()
             m_registry.get<Lives>(owner).reset();
         if (m_registry.has<Score>(owner))
             m_registry.get<Score>(owner).reset();
+        if (m_registry.has<PlayerValues>(owner))
+            m_registry.get<PlayerValues>(owner).reset();
         if (m_registry.has<Respawn>(owner))
             m_registry.get<Respawn>(owner).reset();
         m_registry.get<Player>(owner).clearAvatar();

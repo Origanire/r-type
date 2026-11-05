@@ -13,6 +13,9 @@ public:
     float width() const;
     float height() const;
     Color color() const;
+    void setColor(Color color);
+    void setWidth(float width);
+    void setHeight(float height);
 
 private:
     float m_width;

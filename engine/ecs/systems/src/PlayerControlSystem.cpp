@@ -9,9 +9,11 @@ PlayerControlSystem::PlayerControlSystem(Registry &registry) : m_registry(regist
 {
 }
 
-void PlayerControlSystem::update(float)
+void PlayerControlSystem::update(float dt)
 {
-    const auto &controls = m_registry.getComponents<PlayerControl>();
+    auto &controls = m_registry.getComponents<PlayerControl>();
+    for (std::size_t i : m_registry.view<PlayerControl>())
+        controls.at(i).advance(dt);
     auto &velocities = m_registry.getComponents<Velocity>();
     for (std::size_t i : m_registry.view<PlayerControl, Velocity>()) {
         const PlayerControl &control = controls.at(i);

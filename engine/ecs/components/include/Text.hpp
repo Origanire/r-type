@@ -18,12 +18,17 @@ public:
     unsigned int size() const;
     Color color() const;
     void setColor(Color color);
+    float offsetX() const;
+    float offsetY() const;
+    void setOffset(float offsetX, float offsetY);
 
 private:
     std::string m_font;
     std::string m_content;
     unsigned int m_size;
     Color m_color;
+    float m_offsetX;
+    float m_offsetY;
 };
 
 } // namespace engine::ecs

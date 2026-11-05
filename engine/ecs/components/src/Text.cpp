@@ -5,8 +5,25 @@
 namespace engine::ecs {
 
 Text::Text(std::string font, std::string content, unsigned int size, Color color)
-    : m_font(std::move(font)), m_content(std::move(content)), m_size(size), m_color(color)
+    : m_font(std::move(font)), m_content(std::move(content)), m_size(size), m_color(color), m_offsetX(0.f),
+      m_offsetY(0.f)
 {
+}
+
+float Text::offsetX() const
+{
+    return m_offsetX;
+}
+
+float Text::offsetY() const
+{
+    return m_offsetY;
+}
+
+void Text::setOffset(float offsetX, float offsetY)
+{
+    m_offsetX = offsetX;
+    m_offsetY = offsetY;
 }
 
 const std::string &Text::font() const

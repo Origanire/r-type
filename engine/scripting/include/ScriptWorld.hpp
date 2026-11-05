@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -48,6 +49,10 @@ public:
     std::string rule(const std::string &name) const;
     void playSound(const std::string &name);
     void setPlayerValue(const ecs::Entity &avatar, const std::string &name, int value);
+    std::vector<ecs::ConsoleEvent> takeCommands();
+    void reply(std::size_t slot, const std::string &text);
+    const std::string &consoleScript() const;
+    std::optional<ScriptEntity> playerShip(std::size_t slot);
 
     ecs::Registry &registry() const;
     ecs::IEntityFactory &factory() const;

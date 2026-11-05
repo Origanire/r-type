@@ -410,4 +410,31 @@ void GameView::preload(const std::string &name)
         throw ClientError("GameView: cannot preload unknown resource " + name);
 }
 
+bool GameView::consolePressed() const
+{
+    return m_uiInput.keyPressed(UiKey::Console);
+}
+
+bool GameView::enterPressed() const
+{
+    return m_uiInput.keyPressed(UiKey::Enter);
+}
+
+void GameView::focusField(const std::string &field)
+{
+    auto &fields = m_registry.getComponents<ecs::TextField>();
+    for (std::size_t i : m_registry.view<ecs::TextField>())
+        fields.at(i).setActive(!field.empty() && fields.at(i).name() == field);
+}
+
+void GameView::setMusicVolume(float volume)
+{
+    m_audio.setMusicVolume(volume);
+}
+
+void GameView::setSoundVolume(float volume)
+{
+    m_audio.setSoundVolume(volume);
+}
+
 } // namespace engine::client

@@ -9,7 +9,7 @@ namespace engine::scene {
 SystemContext::SystemContext(ecs::Registry &registry, ecs::IEntityFactory &factory)
     : m_registry(registry), m_factory(factory), m_collisions(), m_deaths(), m_uiActions(),
       m_canSpawn(&SystemContext::alwaysAllowSpawn), m_renderer(nullptr), m_audio(nullptr), m_uiInput(nullptr),
-      m_uiStore(nullptr), m_worldValues(nullptr), m_worldTable(nullptr), m_area(), m_sounds(),
+      m_uiStore(nullptr), m_worldValues(nullptr), m_worldTable(nullptr), m_area(), m_sounds(), m_commands(), m_replies(), m_consoleScript(),
       m_emptyTable(), m_playerTable(nullptr), m_ruleTable(nullptr), m_ruleValues(), m_flags()
 {
 }
@@ -174,6 +174,26 @@ const WorldValueTable &SystemContext::ruleTable() const
 const std::vector<std::uint8_t> &SystemContext::ruleValues() const
 {
     return m_ruleValues;
+}
+
+EventQueue<ecs::ConsoleEvent> &SystemContext::commands()
+{
+    return m_commands;
+}
+
+EventQueue<ecs::ConsoleEvent> &SystemContext::replies()
+{
+    return m_replies;
+}
+
+void SystemContext::setConsoleScript(std::string file)
+{
+    m_consoleScript = std::move(file);
+}
+
+const std::string &SystemContext::consoleScript() const
+{
+    return m_consoleScript;
 }
 
 } // namespace engine::scene

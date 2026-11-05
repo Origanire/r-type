@@ -23,7 +23,7 @@ public:
 
 private:
     void drawLayer(bool foreground);
-    void drawTexts();
+    void drawTexts(bool foreground);
     bool isHidden(std::size_t index) const;
     bool isForeground(std::size_t index) const;
     float rotationOf(std::size_t index) const;

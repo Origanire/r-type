@@ -27,6 +27,7 @@ public:
     void update(float dt);
 
 private:
+    void runCommands();
     void notifyDeaths();
     void notifyContacts();
     void notifyContact(const ecs::Entity &entity, const ecs::Entity &other);

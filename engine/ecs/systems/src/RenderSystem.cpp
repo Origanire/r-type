@@ -22,8 +22,9 @@ void RenderSystem::update(float)
     const Vector2 shake = m_renderer.offset();
     drawLayer(false);
     m_renderer.setOffset({0.f, 0.f});
+    drawTexts(false);
     drawLayer(true);
-    drawTexts();
+    drawTexts(true);
     m_renderer.setOffset(shake);
     m_renderer.display();
 }
@@ -50,13 +51,13 @@ void RenderSystem::drawLayer(bool foreground)
     }
 }
 
-void RenderSystem::drawTexts()
+void RenderSystem::drawTexts(bool foreground)
 {
     const auto &transforms = m_registry.getComponents<Transform>();
     const auto &texts = m_registry.getComponents<Text>();
     for (std::size_t i : m_registry.view<Transform, Text>()) {
         const Text &text = texts.at(i);
-        if (isHidden(i) || text.content().empty())
+        if (isHidden(i) || text.content().empty() || isForeground(i) != foreground)
             continue;
         const Transform &transform = transforms.at(i);
         m_renderer.drawText(text.font(), text.content(), text.size(),

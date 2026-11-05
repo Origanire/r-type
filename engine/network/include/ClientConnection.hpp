@@ -33,6 +33,7 @@ public:
     void startGame();
     void kickPlayer(std::uint8_t slot);
     void deleteRoom();
+    void sendCommand(const std::string &text);
 
     std::uint64_t bytesReceived() const;
     std::uint64_t bytesSent() const;

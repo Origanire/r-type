@@ -9,7 +9,7 @@ namespace engine::network {
 GameRoom::GameRoom(std::uint16_t id, std::string name, std::string code, std::size_t capacity,
     std::unique_ptr<IGameSession> session)
     : m_id(id), m_name(std::move(name)), m_code(std::move(code)), m_playing(false), m_session(std::move(session)),
-      m_seats(capacity)
+      m_seats(capacity), m_commands()
 {
     if (!m_session)
         throw net::NetError("GameRoom: a room needs a game session");
@@ -117,6 +117,16 @@ std::vector<std::size_t> GameRoom::clients() const
 std::size_t GameRoom::owner() const
 {
     return OWNER_SLOT;
+}
+
+void GameRoom::queueCommand(std::size_t slot, std::string text)
+{
+    m_commands.emplace_back(slot, std::move(text));
+}
+
+std::vector<std::pair<std::size_t, std::string>> GameRoom::takeCommands()
+{
+    return std::exchange(m_commands, {});
 }
 
 } // namespace engine::network

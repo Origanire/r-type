@@ -10,6 +10,7 @@
 #include "CleanupSystem.hpp"
 #include "ComponentFactory.hpp"
 #include "DataNode.hpp"
+#include "ConsoleEvent.hpp"
 #include "Entity.hpp"
 #include "EntityState.hpp"
 #include "IGameSession.hpp"
@@ -45,6 +46,7 @@ public:
     void addPlayer(std::size_t slot) override;
     void removePlayer(std::size_t slot) override;
     void setInput(std::size_t slot, std::uint8_t buttons) override;
+    void command(std::size_t slot, const std::string &text) override;
     void update(float dt) override;
     std::uint32_t tick() const override;
     network::SnapshotMessage snapshot() const override;
@@ -71,6 +73,8 @@ private:
     static std::uint8_t phaseCode(ecs::Match::Phase phase);
     static scene::WorldValueTable readTable(const scene::DataNode &game, const std::string &key);
     void sendSounds();
+    void sendReplies();
+    void releaseCommands();
     std::uint8_t visualOf(const ecs::Entity &entity) const;
     static std::filesystem::path scriptDirectory(
         const std::filesystem::path &dataDirectory, const scene::DataNode &game);
@@ -96,6 +100,7 @@ private:
     ecs::Match::Phase m_reportedPhase;
     std::uint16_t m_nextNetworkId;
     std::uint32_t m_tick;
+    std::vector<ecs::ConsoleEvent> m_waitingCommands;
 };
 
 } // namespace engine::simulation

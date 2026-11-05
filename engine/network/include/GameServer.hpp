@@ -47,6 +47,7 @@ private:
     void handleJoinRoom(std::size_t client, const JoinRoomMessage &request);
     void handleStartGame(std::size_t client);
     void handleKick(std::size_t client, const KickPlayerMessage &request);
+    void handleConsole(std::size_t client, const ConsoleCommandMessage &request);
     void handleDeleteRoom(std::size_t client);
     void confirm(std::size_t client);
     void remove(std::size_t client, std::uint8_t reason);

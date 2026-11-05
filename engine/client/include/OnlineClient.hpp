@@ -11,6 +11,7 @@
 
 #include "ClientConnection.hpp"
 #include "DebugMetrics.hpp"
+#include "DevConsole.hpp"
 #include "GameView.hpp"
 #include "Match.hpp"
 #include "NetworkSettings.hpp"
@@ -44,6 +45,7 @@ private:
 
     void updateNetwork(Time now);
     void handleActions();
+    void handleConsole();
     void handleAction(const std::string &action);
     void handleEvent(const network::Packet &event, Time now);
     void handleRejection(std::uint8_t reason);
@@ -78,6 +80,7 @@ private:
     Time m_lastRoomList;
     Time m_lastRoomUpdate;
     DebugMetrics m_metrics;
+    DevConsole m_console;
 };
 
 } // namespace engine::client

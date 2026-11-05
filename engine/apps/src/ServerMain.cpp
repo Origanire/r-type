@@ -15,8 +15,8 @@
 
 int main(int argc, char **argv)
 {
-    constexpr std::string_view usage = "Usage: r-type_server [-p port] [-g game]";
-    constexpr std::string_view game = "rtype";
+    constexpr std::string_view usage = "Usage: " ENGINE_PROGRAM_NAME " [-p port] [-g game]";
+    constexpr std::string_view game = ENGINE_DEFAULT_GAME;
 
     if (argc == 2 && std::string_view(argv[1]) == "--help") {
         std::cout << usage << std::endl;
@@ -32,10 +32,10 @@ int main(int argc, char **argv)
         engine::network::GameServer server(options.port().value_or(settings.defaultPort()), settings, factory);
         engine::network::ServerRunner::run(server, settings.tickRate());
     } catch (const engine::EngineError &error) {
-        std::cerr << "r-type_server: " << error.what() << std::endl;
+        std::cerr << ENGINE_PROGRAM_NAME ": " << error.what() << std::endl;
         return 84;
     } catch (const std::exception &error) {
-        std::cerr << "r-type_server: unexpected error: " << error.what() << std::endl;
+        std::cerr << ENGINE_PROGRAM_NAME ": unexpected error: " << error.what() << std::endl;
         return 84;
     }
     return 0;

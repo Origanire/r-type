@@ -18,6 +18,7 @@ enum class MessageType : std::uint8_t
     StartGame = 0x09,
     KickPlayer = 0x0A,
     DeleteRoom = 0x0B,
+    ConsoleCommand = 0x0C,
     Accept = 0x81,
     Reject = 0x82,
     Snapshot = 0x83,
@@ -34,7 +35,8 @@ enum class MessageType : std::uint8_t
     GameStarted = 0x8E,
     Kicked = 0x8F,
     RoomClosed = 0x90,
-    PlaySound = 0x91
+    PlaySound = 0x91,
+    ConsoleText = 0x92
 };
 
 enum class Receiver

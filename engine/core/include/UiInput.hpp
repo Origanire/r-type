@@ -12,7 +12,7 @@ namespace engine {
 class UiInput
 {
 public:
-    static constexpr std::size_t KEY_COUNT = static_cast<std::size_t>(UiKey::Debug) + 1;
+    static constexpr std::size_t KEY_COUNT = static_cast<std::size_t>(UiKey::Console) + 1;
     static constexpr char FIRST_PRINTABLE = ' ';
     static constexpr char LAST_PRINTABLE = '~';
 

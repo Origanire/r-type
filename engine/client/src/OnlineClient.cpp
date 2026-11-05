@@ -16,7 +16,7 @@ namespace engine::client {
 OnlineClient::OnlineClient(const std::filesystem::path &assetsDirectory, const std::filesystem::path &dataDirectory,
     const std::string &game, const network::NetworkSettings &settings, std::optional<std::string> address)
     : m_view(assetsDirectory, dataDirectory, game), m_settings(settings), m_network(),
-      m_address(address.value_or(m_view.settings().serverAddress())), m_slot(), m_lockedRooms(), m_pendingRoom(0), m_lastRoomList(), m_lastRoomUpdate(), m_metrics()
+      m_address(address.value_or(m_view.settings().serverAddress())), m_slot(), m_lockedRooms(), m_pendingRoom(0), m_lastRoomList(), m_lastRoomUpdate(), m_metrics(), m_console(m_view)
 {
     enterScene(m_view.currentScene());
 }
@@ -32,6 +32,7 @@ void OnlineClient::run()
             enterScene(m_view.currentScene());
         if (m_view.debugPressed())
             DebugMetrics::toggle(m_view.uiStore());
+        handleConsole();
         m_metrics.frame(m_view.uiStore(), m_view.entityCount(), m_network ? m_network->bytesReceived() : 0,
             m_network ? m_network->bytesSent() : 0, m_network ? m_network->pingMs() : 0);
         handleActions();
@@ -70,7 +71,10 @@ void OnlineClient::updateNetwork(Time now)
 void OnlineClient::handleActions()
 {
     std::vector<std::string> actions;
-    for (const ecs::UiActionEvent &event : m_view.takeUiActions())
+    const std::vector<ecs::UiActionEvent> events = m_view.takeUiActions();
+    if (m_console.open())
+        return;
+    for (const ecs::UiActionEvent &event : events)
         actions.push_back(event.action());
     if (m_view.escapePressed() && popupOpen())
         actions.push_back("close_popup");
@@ -139,6 +143,8 @@ void OnlineClient::handleEvent(const network::Packet &event, Time now)
         m_slot.reset();
         enterScene(LOBBY_SCENE);
         store.setValue("lobby.error", m_view.message(event.holds<network::KickedMessage>() ? "kicked" : "roomClosed"));
+    } else if (event.holds<network::ConsoleTextMessage>()) {
+        m_console.print(event.as<network::ConsoleTextMessage>().text());
     } else if (event.holds<network::PlaySoundMessage>() && m_view.currentScene() == GAME_SCENE) {
         m_view.playEventSound(event.as<network::PlaySoundMessage>().sound());
     } else if (event.holds<network::EntityDestroyedMessage>() && m_view.currentScene() == GAME_SCENE) {
@@ -227,6 +233,8 @@ void OnlineClient::enterScene(const std::string &scene)
 {
     if (scene != m_view.currentScene())
         m_view.switchScene(scene);
+    if (m_console.open() && scene != ROOM_SCENE && scene != GAME_SCENE)
+        m_console.toggle();
     ecs::UiStore &store = m_view.uiStore();
     store.setValue("menu.error", {});
     store.setValue("lobby.error", {});
@@ -337,7 +345,7 @@ std::uint8_t OnlineClient::buttons() const
 {
     using input::Action;
 
-    if (m_view.currentScene() != GAME_SCENE)
+    if (m_view.currentScene() != GAME_SCENE || m_console.open())
         return 0;
     std::uint8_t bits = 0;
     if (m_view.isPressed(Action::Up))
@@ -383,6 +391,22 @@ std::vector<std::uint8_t> OnlineClient::ruleValues()
         values.push_back(static_cast<std::uint8_t>(value.value_or(0)));
     }
     return values;
+}
+
+void OnlineClient::handleConsole()
+{
+    const bool consoleScene = m_view.currentScene() == ROOM_SCENE || m_view.currentScene() == GAME_SCENE;
+    if (m_view.consolePressed() && (consoleScene || m_console.open()))
+        m_console.toggle();
+    if (!m_console.open() || !m_view.enterPressed())
+        return;
+    const auto command = m_console.submit();
+    if (!command)
+        return;
+    if (m_network && m_network->connected())
+        m_network->sendCommand(*command);
+    else
+        m_console.print("not connected to a server");
 }
 
 } // namespace engine::client

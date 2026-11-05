@@ -28,6 +28,7 @@ ScriptSystemImpl::~ScriptSystemImpl()
 void ScriptSystemImpl::update(float dt)
 {
     m_world.advance(dt);
+    runCommands();
     notifyDeaths();
     ecs::Registry &registry = m_world.registry();
     for (std::size_t i : registry.view<ecs::Script>()) {
@@ -37,6 +38,29 @@ void ScriptSystemImpl::update(float dt)
     }
     notifyContacts();
     forgetDeadEntities();
+}
+
+void ScriptSystemImpl::runCommands()
+{
+    for (const ecs::ConsoleEvent &command : m_world.takeCommands()) {
+        const std::string prefix = "[P" + std::to_string(command.slot() + 1) + "] ";
+        if (m_world.consoleScript().empty()) {
+            m_world.reply(command.slot(), prefix + "this game has no console script");
+            continue;
+        }
+        try {
+            py::module_ module = m_engine.load(m_directory, m_world.consoleScript());
+            py::object ship = py::none();
+            if (const auto found = m_world.playerShip(command.slot()))
+                ship = py::cast(*found);
+            const py::object result = module.attr("run")(
+                py::cast(&m_world, py::return_value_policy::reference), ship, command.text());
+            m_world.reply(command.slot(), prefix + py::str(result).cast<std::string>());
+        } catch (const std::exception &error) {
+            m_world.reply(command.slot(), prefix + "command failed");
+            ScriptEngineImpl::report(m_world.consoleScript(), "run", error);
+        }
+    }
 }
 
 void ScriptSystemImpl::notifyDeaths()

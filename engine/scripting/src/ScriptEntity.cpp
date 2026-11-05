@@ -230,8 +230,11 @@ void ScriptEntity::setInvulnerable(float seconds)
     ecs::Registry &registry = m_world->registry();
     if (!alive())
         return;
-    if (registry.has<ecs::Invulnerable>(m_entity))
+    if (registry.has<ecs::Invulnerable>(m_entity)) {
+        if (registry.get<ecs::Invulnerable>(m_entity).remaining() >= seconds)
+            return;
         registry.remove<ecs::Invulnerable>(m_entity);
+    }
     registry.emplace<ecs::Invulnerable>(m_entity, seconds);
 }
 

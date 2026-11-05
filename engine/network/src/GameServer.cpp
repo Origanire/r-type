@@ -122,6 +122,8 @@ void GameServer::handleSessionPacket(std::size_t client, const Packet &packet, T
         handleKick(client, packet.as<KickPlayerMessage>());
     else if (packet.holds<DeleteRoomMessage>())
         handleDeleteRoom(client);
+    else if (packet.holds<ConsoleCommandMessage>())
+        handleConsole(client, packet.as<ConsoleCommandMessage>());
 }
 
 void GameServer::handleDisconnect(std::size_t client, const Packet &packet)
@@ -214,6 +216,8 @@ void GameServer::handleStartGame(std::size_t client)
         if (room->clientAt(slot))
             room->session().addPlayer(slot);
     }
+    for (const auto &[slot, text] : room->takeCommands())
+        room->session().command(slot, text);
     broadcastRoom(*room, Packet(GameStartedMessage()));
     std::cout << "Room " << room->id() << " started" << std::endl;
 }
@@ -229,6 +233,22 @@ void GameServer::handleKick(std::size_t client, const KickPlayerMessage &request
         return;
     sendTo(*target, Packet(KickedMessage()));
     leaveRoom(*target);
+}
+
+void GameServer::handleConsole(std::size_t client, const ConsoleCommandMessage &request)
+{
+    GameRoom *room = roomOf(client);
+    const auto slot = room ? room->slotOf(client) : std::nullopt;
+    if (!slot || *slot != room->owner()) {
+        sendTo(client, Packet(ConsoleTextMessage("server commands are reserved to the room owner")));
+        return;
+    }
+    if (!room->playing()) {
+        room->queueCommand(*slot, request.text());
+        sendTo(client, Packet(ConsoleTextMessage("queued: runs when the game starts")));
+        return;
+    }
+    room->session().command(*slot, request.text());
 }
 
 void GameServer::handleDeleteRoom(std::size_t client)
@@ -447,6 +467,8 @@ std::optional<std::uint32_t> GameServer::tokenOf(const Packet &packet)
         return packet.as<KickPlayerMessage>().token();
     if (packet.holds<DeleteRoomMessage>())
         return packet.as<DeleteRoomMessage>().token();
+    if (packet.holds<ConsoleCommandMessage>())
+        return packet.as<ConsoleCommandMessage>().token();
     return std::nullopt;
 }
 

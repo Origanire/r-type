@@ -207,4 +207,10 @@ std::uint32_t ClientConnection::nowMs(Time now)
         std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count());
 }
 
+void ClientConnection::sendCommand(const std::string &text)
+{
+    if (connected())
+        send(Packet(ConsoleCommandMessage(m_token, text)));
+}
+
 } // namespace engine::network

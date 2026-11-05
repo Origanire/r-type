@@ -15,6 +15,7 @@
 #include "Registry.hpp"
 #include "UiActionEvent.hpp"
 #include "UiInput.hpp"
+#include "ConsoleEvent.hpp"
 #include "SoundEvent.hpp"
 #include "UiStore.hpp"
 #include "Vector2.hpp"
@@ -50,6 +51,10 @@ public:
     ecs::WorldValues &worldValues() const;
     const WorldValueTable &worldTable() const;
     EventQueue<ecs::SoundEvent> &sounds();
+    EventQueue<ecs::ConsoleEvent> &commands();
+    EventQueue<ecs::ConsoleEvent> &replies();
+    void setConsoleScript(std::string file);
+    const std::string &consoleScript() const;
     void setPlayerTable(const WorldValueTable &table);
     const WorldValueTable &playerTable() const;
     void setRules(const WorldValueTable &table, std::vector<std::uint8_t> values);
@@ -75,6 +80,9 @@ private:
     const WorldValueTable *m_worldTable;
     Vector2 m_area;
     EventQueue<ecs::SoundEvent> m_sounds;
+    EventQueue<ecs::ConsoleEvent> m_commands;
+    EventQueue<ecs::ConsoleEvent> m_replies;
+    std::string m_consoleScript;
     WorldValueTable m_emptyTable;
     const WorldValueTable *m_playerTable;
     const WorldValueTable *m_ruleTable;

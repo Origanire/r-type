@@ -13,6 +13,7 @@
 #include "EngineSystemBuilders.hpp"
 #include "Health.hpp"
 #include "HitFlash.hpp"
+#include "ConsoleTextMessage.hpp"
 #include "PlaySoundMessage.hpp"
 #include "PlayerValues.hpp"
 #include "Rotation.hpp"
@@ -40,7 +41,7 @@ Simulation::Simulation(const std::filesystem::path &dataDirectory, const std::st
       m_worldValues(m_worldTable.size()),
       m_scriptBuilder(scripts, scriptDirectory(dataDirectory, m_game)), m_cleanup(m_registry),
       m_playerPrefab(m_game.getString("playerPrefab")), m_events(), m_reportedPhase(ecs::Match::Phase::Waiting),
-      m_nextNetworkId(1), m_tick(0)
+      m_nextNetworkId(1), m_tick(0), m_waitingCommands()
 {
     ecs::registerEngineComponents(m_registry);
     m_layers.load(m_game.child("layers"));
@@ -53,6 +54,8 @@ Simulation::Simulation(const std::filesystem::path &dataDirectory, const std::st
     m_context.setWorldValues(m_worldValues, m_worldTable);
     m_context.setPlayerTable(m_playerTable);
     m_context.setRules(m_ruleTable, rules);
+    if (m_game.child("files").has("console"))
+        m_context.setConsoleScript(m_game.child("files").getString("console"));
     m_context.setArea({m_game.child("world").getFloat("width"), m_game.child("world").getFloat("height")});
     m_scriptBuilder.registerInto(m_systemFactory);
     m_systemFactory.build(m_context, m_game.child("serverSystems"), m_systems);
@@ -94,10 +97,12 @@ void Simulation::setInput(std::size_t slot, std::uint8_t buttons)
 
 void Simulation::update(float dt)
 {
+    releaseCommands();
     m_systems.update(dt);
     assignNetworkIds();
     collectDeaths();
     sendSounds();
+    sendReplies();
     m_context.deaths().clear();
     m_context.collisions().clear();
     m_cleanup.update(dt);
@@ -312,6 +317,29 @@ scene::WorldValueTable Simulation::readTable(const scene::DataNode &game, const 
     if (game.has(key))
         table.load(game.child(key));
     return table;
+}
+
+void Simulation::command(std::size_t slot, const std::string &text)
+{
+    m_waitingCommands.emplace_back(slot, text);
+}
+
+void Simulation::releaseCommands()
+{
+    std::vector<ecs::ConsoleEvent> waiting;
+    for (ecs::ConsoleEvent &command : m_waitingCommands) {
+        if (avatarOf(command.slot()) || !playerEntity(command.slot()))
+            m_context.commands().push(std::move(command));
+        else
+            waiting.push_back(std::move(command));
+    }
+    m_waitingCommands = std::move(waiting);
+}
+
+void Simulation::sendReplies()
+{
+    for (const ecs::ConsoleEvent &reply : m_context.replies().take())
+        m_events.emplace_back(network::ConsoleTextMessage(reply.text()));
 }
 
 void Simulation::sendSounds()

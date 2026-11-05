@@ -13,8 +13,8 @@
 
 int main(int argc, char **argv)
 {
-    constexpr std::string_view usage = "Usage: r-type_client [-h host] [-p port] [-g game]";
-    constexpr std::string_view game = "rtype";
+    constexpr std::string_view usage = "Usage: " ENGINE_PROGRAM_NAME " [-h host] [-p port] [-g game]";
+    constexpr std::string_view game = ENGINE_DEFAULT_GAME;
 
     if (argc == 2 && std::string_view(argv[1]) == "--help") {
         std::cout << usage << std::endl;
@@ -32,10 +32,10 @@ int main(int argc, char **argv)
             engine::AssetPath::findAssets(argv[0]), data, options.game(), settings, address);
         client.run();
     } catch (const engine::EngineError &error) {
-        std::cerr << "r-type_client: " << error.what() << std::endl;
+        std::cerr << ENGINE_PROGRAM_NAME ": " << error.what() << std::endl;
         return 84;
     } catch (const std::exception &error) {
-        std::cerr << "r-type_client: unexpected error: " << error.what() << std::endl;
+        std::cerr << ENGINE_PROGRAM_NAME ": unexpected error: " << error.what() << std::endl;
         return 84;
     }
     return 0;

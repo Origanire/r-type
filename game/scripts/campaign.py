@@ -43,6 +43,9 @@ def on_update(d, dt):
         start_stage(d, 0)
     d.timer += dt
     decay_shake(d.world)
+    if d.world.get("skip") > 0:
+        d.world.set("skip", 0)
+        skip(d)
     STATES[d.state](d, dt)
 
 
@@ -123,6 +126,13 @@ def clear(d, dt):
 
 def victory(d, dt):
     pass
+
+
+def skip(d):
+    if d.state == "running":
+        start_boss(d)
+    elif d.state == "boss" and d.boss is not None:
+        d.boss.kill()
 
 
 def decay_shake(world):

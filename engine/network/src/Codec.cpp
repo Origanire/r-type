@@ -118,6 +118,10 @@ bool Codec::isValid(const Packet &packet) const
         return packet.as<RoomClosedMessage>().isValid(m_settings);
     case MessageType::PlaySound:
         return packet.as<PlaySoundMessage>().isValid(m_settings);
+    case MessageType::ConsoleCommand:
+        return packet.as<ConsoleCommandMessage>().isValid(m_settings);
+    case MessageType::ConsoleText:
+        return packet.as<ConsoleTextMessage>().isValid(m_settings);
     }
     return false;
 }
@@ -181,6 +185,10 @@ void Codec::writeBody(net::ByteWriter &writer, const Packet &packet)
         return packet.as<RoomClosedMessage>().write(writer);
     case MessageType::PlaySound:
         return packet.as<PlaySoundMessage>().write(writer);
+    case MessageType::ConsoleCommand:
+        return packet.as<ConsoleCommandMessage>().write(writer);
+    case MessageType::ConsoleText:
+        return packet.as<ConsoleTextMessage>().write(writer);
     }
 }
 
@@ -244,6 +252,10 @@ Packet Codec::readBody(
         return readAs<RoomClosedMessage>(reader, sequence, version);
     case MessageType::PlaySound:
         return readAs<PlaySoundMessage>(reader, sequence, version);
+    case MessageType::ConsoleCommand:
+        return readAs<ConsoleCommandMessage>(reader, sequence, version);
+    case MessageType::ConsoleText:
+        return readAs<ConsoleTextMessage>(reader, sequence, version);
     }
     throw net::NetError("Codec: unknown message type");
 }

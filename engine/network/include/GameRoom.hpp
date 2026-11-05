@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "IGameSession.hpp"
@@ -25,6 +26,8 @@ public:
     bool acceptsCode(const std::string &code) const;
     bool playing() const;
     void setPlaying(bool playing);
+    void queueCommand(std::size_t slot, std::string text);
+    std::vector<std::pair<std::size_t, std::string>> takeCommands();
     IGameSession &session();
 
     std::size_t capacity() const;
@@ -46,6 +49,7 @@ private:
     bool m_playing;
     std::unique_ptr<IGameSession> m_session;
     std::vector<std::optional<std::size_t>> m_seats;
+    std::vector<std::pair<std::size_t, std::string>> m_commands;
 };
 
 } // namespace engine::network

@@ -13,7 +13,8 @@ enum class UiKey : std::uint8_t
     Tab,
     Up,
     Down,
-    Debug
+    Debug,
+    Console
 };
 
 } // namespace engine

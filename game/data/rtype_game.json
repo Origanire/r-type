@@ -23,7 +23,8 @@
     "serverPrefabs": "rtype_server_prefabs.json",
     "clientPrefabs": "rtype_client_prefabs.json",
     "settings": "rtype_settings.json",
-    "scripts": "../scripts"
+    "scripts": "../scripts",
+    "console": "console.py"
   },
   "layers": ["player", "enemy", "player_missile", "enemy_missile", "pickup", "force", "terrain"],
   "worldValues": [
@@ -31,7 +32,8 @@
     {"name": "phase", "labels": ["intro", "running", "boss", "clear", "victory", "defeat"]},
     {"name": "progress"},
     {"name": "bossHealth"},
-    {"name": "shake"}
+    {"name": "shake"},
+    {"name": "skip"}
   ],
   "playerValues": [
     {"name": "weapon", "labels": ["SINGLE", "DOUBLE", "SPREAD"]},
@@ -40,7 +42,8 @@
   ],
   "rules": [
     {"name": "difficulty", "labels": ["NORMAL", "HARD", "EASY"]},
-    {"name": "friendlyFire", "labels": ["OFF", "ON"]}
+    {"name": "friendlyFire", "labels": ["OFF", "ON"]},
+    {"name": "cheats", "labels": ["OFF", "ON"]}
   ],
   "eventSounds": ["warning", "powerup", "bossDeath"],
   "playerPrefab": "player",
@@ -732,7 +735,7 @@
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 600},
+            "Transform": {"x": 1100, "y": 690},
             "RectShape": {"width": 700, "height": 80, "color": [20, 30, 70, 230]},
             "Text": {
               "font": "hud",
@@ -759,7 +762,7 @@
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 710},
+            "Transform": {"x": 1100, "y": 800},
             "RectShape": {"width": 700, "height": 80, "color": [20, 30, 70, 230]},
             "Text": {
               "font": "hud",
@@ -786,7 +789,7 @@
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 820},
+            "Transform": {"x": 1100, "y": 910},
             "RectShape": {"width": 700, "height": 80, "color": [20, 30, 70, 230]},
             "Text": {
               "font": "hud",
@@ -1308,6 +1311,28 @@
             "Foreground": {},
             "VisibleWhen": {"key": "debug.visible", "value": "yes"}
           }
+        },
+        {
+          "prefab": "ui_element",
+          "components": {
+            "Transform": {"x": 1100, "y": 590},
+            "RectShape": {"width": 700, "height": 70, "color": [20, 30, 70, 230]},
+            "Text": {"font": "hud", "size": 32, "color": [255, 255, 255, 255], "offsetX": 20, "offsetY": 16},
+            "BoundText": {"format": "CHEATS  < {field.rule.cheats} >"},
+            "Button": {
+              "action": "",
+              "width": 700,
+              "height": 70,
+              "normal": [20, 30, 70, 230],
+              "hover": [40, 80, 170, 240],
+              "pressed": [80, 200, 255, 255],
+              "hoverSound": "hover",
+              "clickSound": "click"
+            },
+            "Choice": {"name": "rule.cheats", "options": ["OFF", "ON"]},
+            "Focusable": {"order": 2},
+            "VisibleWhen": {"key": "lobby.popup", "value": "no"}
+          }
         }
       ]
     },
@@ -1803,6 +1828,135 @@
             "Foreground": {},
             "VisibleWhen": {"key": "debug.visible", "value": "yes"}
           }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 0, "y": 0},
+            "RectShape": {"width": 1920, "height": 440, "color": [6, 10, 30, 245]},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 0, "y": 440},
+            "RectShape": {"width": 1920, "height": 4, "color": [80, 200, 255, 255]},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 14},
+            "Text": {
+              "font": "hud",
+              "size": 22,
+              "color": [80, 200, 255, 255],
+              "content": "CONSOLE   -   F1 TO CLOSE   -   TYPE help"
+            },
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 52},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line0}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 90},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line1}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 128},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line2}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 166},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line3}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 204},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line4}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 242},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line5}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 280},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line6}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 318},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line7}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 30, "y": 368},
+            "RectShape": {"width": 1860, "height": 58, "color": [20, 30, 70, 255]},
+            "Text": {"font": "hud", "size": 28, "color": [255, 255, 255, 255], "offsetX": 16, "offsetY": 13},
+            "TextField": {
+              "name": "console",
+              "maxLength": 120,
+              "placeholder": "> COMMAND",
+              "width": 1860,
+              "height": 58
+            },
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
         }
       ]
     },
@@ -1816,6 +1970,7 @@
         "PlayerLabel",
         "Anchor",
         "StatusText",
+        "TextField",
         "BoundText",
         "Visibility",
         "ProgressBar",
@@ -2477,6 +2632,135 @@
             "ProgressBar": {"key": "debug.ping29", "width": 100, "max": 200, "vertical": true},
             "Foreground": {},
             "VisibleWhen": {"key": "debug.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 0, "y": 0},
+            "RectShape": {"width": 1920, "height": 440, "color": [6, 10, 30, 245]},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 0, "y": 440},
+            "RectShape": {"width": 1920, "height": 4, "color": [80, 200, 255, 255]},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 14},
+            "Text": {
+              "font": "hud",
+              "size": 22,
+              "color": [80, 200, 255, 255],
+              "content": "CONSOLE   -   F1 TO CLOSE   -   TYPE help"
+            },
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 52},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line0}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 90},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line1}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 128},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line2}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 166},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line3}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 204},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line4}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 242},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line5}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 280},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line6}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 40, "y": 318},
+            "Text": {"font": "hud", "size": 26, "color": [210, 225, 255, 255]},
+            "BoundText": {"format": "{console.line7}"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 30, "y": 368},
+            "RectShape": {"width": 1860, "height": 58, "color": [20, 30, 70, 255]},
+            "Text": {"font": "hud", "size": 28, "color": [255, 255, 255, 255], "offsetX": 16, "offsetY": 13},
+            "TextField": {
+              "name": "console",
+              "maxLength": 120,
+              "placeholder": "> COMMAND",
+              "width": 1860,
+              "height": 58
+            },
+            "Foreground": {},
+            "VisibleWhen": {"key": "console.visible", "value": "yes"}
           }
         }
       ]

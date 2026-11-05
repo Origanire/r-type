@@ -78,6 +78,11 @@ public:
     void frame();
     bool takeLoadingFinished();
     bool debugPressed() const;
+    bool consolePressed() const;
+    bool enterPressed() const;
+    void focusField(const std::string &field);
+    void setMusicVolume(float volume);
+    void setSoundVolume(float volume);
     std::size_t entityCount() const;
     void close();
 

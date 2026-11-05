@@ -219,4 +219,28 @@ void ScriptWorld::setPlayerValue(const ecs::Entity &avatar, const std::string &n
         m_registry.get<ecs::PlayerValues>(owner).set(*index, value);
 }
 
+std::vector<ecs::ConsoleEvent> ScriptWorld::takeCommands()
+{
+    return m_context.commands().take();
+}
+
+void ScriptWorld::reply(std::size_t slot, const std::string &text)
+{
+    m_context.replies().push(ecs::ConsoleEvent(slot, text));
+}
+
+const std::string &ScriptWorld::consoleScript() const
+{
+    return m_context.consoleScript();
+}
+
+std::optional<ScriptEntity> ScriptWorld::playerShip(std::size_t slot)
+{
+    for (ScriptEntity &ship : players()) {
+        if (ship.playerSlot() == static_cast<int>(slot))
+            return ship;
+    }
+    return std::nullopt;
+}
+
 } // namespace engine::scripting

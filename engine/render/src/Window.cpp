@@ -88,6 +88,8 @@ std::optional<UiKey> Window::uiKeyOf(sf::Keyboard::Key key)
         return UiKey::Down;
     case sf::Keyboard::Key::F3:
         return UiKey::Debug;
+    case sf::Keyboard::Key::F1:
+        return UiKey::Console;
     default:
         return std::nullopt;
     }

@@ -30,6 +30,18 @@ std::int16_t ByteReader::readI16()
     return std::bit_cast<std::int16_t>(readU16());
 }
 
+std::string ByteReader::readString()
+{
+    const std::size_t length = readU8();
+    if (length > remaining())
+        throw NetError("ByteReader: truncated text");
+    std::string text;
+    text.reserve(length);
+    for (std::size_t i = 0; i < length; ++i)
+        text.push_back(static_cast<char>(m_bytes[m_offset++]));
+    return text;
+}
+
 std::size_t ByteReader::remaining() const
 {
     return m_bytes.size() - m_offset;

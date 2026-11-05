@@ -6,20 +6,34 @@
 
 namespace engine::render {
 
-void TextureManager::load(const std::string &name, const std::string &path)
+void TextureManager::declare(const std::string &name, const std::string &path)
 {
-    sf::Texture texture;
-    if (!texture.loadFromFile(path))
-        throw RenderError("TextureManager: cannot load " + path);
-    m_textures.insert_or_assign(name, std::move(texture));
+    m_paths.insert_or_assign(name, path);
+    m_textures.erase(name);
+}
+
+bool TextureManager::declared(const std::string &name) const
+{
+    return m_paths.contains(name);
+}
+
+void TextureManager::preload(const std::string &name) const
+{
+    get(name);
 }
 
 const sf::Texture &TextureManager::get(const std::string &name) const
 {
-    auto it = m_textures.find(name);
-    if (it == m_textures.end())
+    const auto loaded = m_textures.find(name);
+    if (loaded != m_textures.end())
+        return loaded->second;
+    const auto path = m_paths.find(name);
+    if (path == m_paths.end())
         throw RenderError("TextureManager: unknown texture " + name);
-    return it->second;
+    sf::Texture texture;
+    if (!texture.loadFromFile(path->second))
+        throw RenderError("TextureManager: cannot load " + path->second);
+    return m_textures.insert_or_assign(name, std::move(texture)).first->second;
 }
 
 } // namespace engine::render

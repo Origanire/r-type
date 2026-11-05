@@ -10,7 +10,8 @@ enum class Action : std::uint8_t
     Down,
     Left,
     Right,
-    Fire
+    Fire,
+    Special
 };
 
 } // namespace engine::input

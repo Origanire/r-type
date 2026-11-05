@@ -18,7 +18,7 @@ constexpr std::size_t DECODE_CHUNK_SAMPLES = 4096;
 
 } // namespace
 
-void SfmlAudio::loadSound(const std::string &name, const std::string &path)
+void SfmlAudio::decode(const std::string &name, const std::string &path)
 {
     sf::InputSoundFile input;
     if (!input.openFromFile(path))
@@ -36,19 +36,36 @@ void SfmlAudio::loadSound(const std::string &name, const std::string &path)
     m_buffers.insert_or_assign(name, std::move(buffer));
 }
 
-void SfmlAudio::loadMusic(const std::string &name, const std::string &path)
+void SfmlAudio::declareSound(const std::string &name, const std::string &path)
 {
-    sf::Music probe;
-    if (!probe.openFromFile(path))
-        throw AudioError("SfmlAudio: cannot open music " + path);
+    m_soundPaths.insert_or_assign(name, path);
+    m_buffers.erase(name);
+}
+
+void SfmlAudio::declareMusic(const std::string &name, const std::string &path)
+{
     m_musicPaths.insert_or_assign(name, path);
+}
+
+bool SfmlAudio::hasSound(const std::string &name) const
+{
+    return m_soundPaths.contains(name);
+}
+
+void SfmlAudio::preloadSound(const std::string &name)
+{
+    if (m_buffers.contains(name))
+        return;
+    const auto path = m_soundPaths.find(name);
+    if (path == m_soundPaths.end())
+        throw AudioError("SfmlAudio: unknown sound " + name);
+    decode(name, path->second);
 }
 
 void SfmlAudio::playSound(const std::string &name)
 {
+    preloadSound(name);
     const auto found = m_buffers.find(name);
-    if (found == m_buffers.end())
-        throw AudioError("SfmlAudio: unknown sound " + name);
     m_playing.remove_if([](const sf::Sound &sound) { return sound.getStatus() == sf::Sound::Status::Stopped; });
     if (m_playing.size() >= MAX_PLAYING_SOUNDS)
         return;

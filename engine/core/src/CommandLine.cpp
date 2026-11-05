@@ -7,7 +7,7 @@ namespace engine {
 
 CommandLine::CommandLine(
     int argc, char **argv, std::string_view usage, bool acceptsHost, std::string_view defaultGame)
-    : m_host(DEFAULT_HOST), m_port(), m_game(defaultGame)
+    : m_host(), m_port(), m_game(defaultGame)
 {
     for (int i = 1; i < argc; ++i) {
         const std::string_view option(argv[i]);
@@ -26,7 +26,7 @@ CommandLine::CommandLine(
         throw CoreError("CommandLine: invalid game name " + m_game);
 }
 
-const std::string &CommandLine::host() const
+const std::optional<std::string> &CommandLine::host() const
 {
     return m_host;
 }

@@ -6,20 +6,24 @@
 
 namespace engine::render {
 
-void FontManager::load(const std::string &name, const std::string &path)
+void FontManager::declare(const std::string &name, const std::string &path)
 {
-    sf::Font font;
-    if (!font.openFromFile(path))
-        throw RenderError("FontManager: cannot load " + path);
-    m_fonts.insert_or_assign(name, std::move(font));
+    m_paths.insert_or_assign(name, path);
+    m_fonts.erase(name);
 }
 
 const sf::Font &FontManager::get(const std::string &name) const
 {
-    const auto found = m_fonts.find(name);
-    if (found == m_fonts.end())
+    const auto loaded = m_fonts.find(name);
+    if (loaded != m_fonts.end())
+        return loaded->second;
+    const auto path = m_paths.find(name);
+    if (path == m_paths.end())
         throw RenderError("FontManager: unknown font " + name);
-    return found->second;
+    sf::Font font;
+    if (!font.openFromFile(path->second))
+        throw RenderError("FontManager: cannot load " + path->second);
+    return m_fonts.insert_or_assign(name, std::move(font)).first->second;
 }
 
 } // namespace engine::render

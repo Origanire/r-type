@@ -20,8 +20,10 @@ public:
     static constexpr std::size_t MAX_PLAYING_SOUNDS = 32;
     static constexpr float MAX_VOLUME = 100.f;
 
-    void loadSound(const std::string &name, const std::string &path);
-    void loadMusic(const std::string &name, const std::string &path);
+    void declareSound(const std::string &name, const std::string &path);
+    void declareMusic(const std::string &name, const std::string &path);
+    bool hasSound(const std::string &name) const;
+    void preloadSound(const std::string &name);
 
     void playSound(const std::string &name) override;
     void playMusic(const std::string &name) override;
@@ -30,7 +32,10 @@ public:
     void setMusicVolume(float volume) override;
 
 private:
+    void decode(const std::string &name, const std::string &path);
+
     std::unordered_map<std::string, sf::SoundBuffer> m_buffers;
+    std::unordered_map<std::string, std::string> m_soundPaths;
     std::unordered_map<std::string, std::string> m_musicPaths;
     std::list<sf::Sound> m_playing;
     std::unique_ptr<sf::Music> m_music;

@@ -21,6 +21,10 @@ public:
     void setToggle(Action action, bool toggle);
 
 private:
+    static constexpr unsigned int GAMEPAD = 0;
+
+    bool gamepadDown(Action action) const;
+
     KeyBindings m_bindings;
     std::array<bool, KeyBindings::ACTION_COUNT> m_pressed{};
     std::array<bool, KeyBindings::ACTION_COUNT> m_toggle{};

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <span>
 
 namespace engine::net {
@@ -15,6 +16,7 @@ public:
     std::uint16_t readU16();
     std::uint32_t readU32();
     std::int16_t readI16();
+    std::string readString();
 
     std::size_t remaining() const;
 

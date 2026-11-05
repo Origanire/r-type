@@ -9,8 +9,9 @@
 #include "EngineError.hpp"
 #include "GameServer.hpp"
 #include "NetworkSettings.hpp"
+#include "ScriptEngine.hpp"
 #include "ServerRunner.hpp"
-#include "Simulation.hpp"
+#include "SimulationFactory.hpp"
 
 int main(int argc, char **argv)
 {
@@ -26,8 +27,9 @@ int main(int argc, char **argv)
         const std::filesystem::path data = engine::AssetPath::findData(argv[0]);
         const auto settings = engine::network::NetworkSettings::fromGame(
             engine::scene::DataNode::fromFile(data / (options.game() + "_game.json")));
-        engine::simulation::Simulation simulation(data, options.game(), settings);
-        engine::network::GameServer server(options.port().value_or(settings.defaultPort()), settings, simulation);
+        engine::scripting::ScriptEngine scripts(std::filesystem::path(argv[0]).parent_path() / "python");
+        engine::simulation::SimulationFactory factory(data, options.game(), settings, scripts);
+        engine::network::GameServer server(options.port().value_or(settings.defaultPort()), settings, factory);
         engine::network::ServerRunner::run(server, settings.tickRate());
     } catch (const engine::EngineError &error) {
         std::cerr << "r-type_server: " << error.what() << std::endl;

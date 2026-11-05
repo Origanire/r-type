@@ -7,9 +7,40 @@
 namespace engine::scene {
 
 SystemContext::SystemContext(ecs::Registry &registry, ecs::IEntityFactory &factory)
-    : m_registry(registry), m_factory(factory), m_canSpawn(&SystemContext::alwaysAllowSpawn), m_renderer(nullptr),
-      m_audio(nullptr)
+    : m_registry(registry), m_factory(factory), m_collisions(), m_deaths(), m_uiActions(),
+      m_canSpawn(&SystemContext::alwaysAllowSpawn), m_renderer(nullptr), m_audio(nullptr), m_uiInput(nullptr),
+      m_uiStore(nullptr), m_worldValues(nullptr), m_worldTable(nullptr), m_area(), m_sounds(),
+      m_emptyTable(), m_playerTable(nullptr), m_ruleTable(nullptr), m_ruleValues(), m_flags()
 {
+}
+
+void SystemContext::setUiInput(const UiInput &input)
+{
+    m_uiInput = &input;
+}
+
+const UiInput &SystemContext::uiInput() const
+{
+    if (!m_uiInput)
+        throw SceneError("SystemContext: this program has no user interface input");
+    return *m_uiInput;
+}
+
+void SystemContext::setUiStore(ecs::UiStore &store)
+{
+    m_uiStore = &store;
+}
+
+ecs::UiStore &SystemContext::uiStore() const
+{
+    if (!m_uiStore)
+        throw SceneError("SystemContext: this program has no user interface data");
+    return *m_uiStore;
+}
+
+EventQueue<ecs::UiActionEvent> &SystemContext::uiActions()
+{
+    return m_uiActions;
 }
 
 bool SystemContext::alwaysAllowSpawn()
@@ -82,6 +113,67 @@ bool SystemContext::flag(const std::string &name, bool fallback) const
 {
     const auto found = m_flags.find(name);
     return found == m_flags.end() ? fallback : found->second;
+}
+
+void SystemContext::setWorldValues(ecs::WorldValues &values, const WorldValueTable &table)
+{
+    m_worldValues = &values;
+    m_worldTable = &table;
+}
+
+ecs::WorldValues &SystemContext::worldValues() const
+{
+    if (!m_worldValues)
+        throw SceneError("SystemContext: this program has no world values");
+    return *m_worldValues;
+}
+
+const WorldValueTable &SystemContext::worldTable() const
+{
+    if (!m_worldTable)
+        throw SceneError("SystemContext: this program has no world values");
+    return *m_worldTable;
+}
+
+void SystemContext::setArea(Vector2 area)
+{
+    m_area = area;
+}
+
+Vector2 SystemContext::area() const
+{
+    return m_area;
+}
+
+EventQueue<ecs::SoundEvent> &SystemContext::sounds()
+{
+    return m_sounds;
+}
+
+void SystemContext::setPlayerTable(const WorldValueTable &table)
+{
+    m_playerTable = &table;
+}
+
+const WorldValueTable &SystemContext::playerTable() const
+{
+    return m_playerTable ? *m_playerTable : m_emptyTable;
+}
+
+void SystemContext::setRules(const WorldValueTable &table, std::vector<std::uint8_t> values)
+{
+    m_ruleTable = &table;
+    m_ruleValues = std::move(values);
+}
+
+const WorldValueTable &SystemContext::ruleTable() const
+{
+    return m_ruleTable ? *m_ruleTable : m_emptyTable;
+}
+
+const std::vector<std::uint8_t> &SystemContext::ruleValues() const
+{
+    return m_ruleValues;
 }
 
 } // namespace engine::scene

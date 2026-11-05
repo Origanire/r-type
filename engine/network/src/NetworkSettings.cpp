@@ -2,6 +2,7 @@
 
 #include "NetError.hpp"
 #include "Protocol.hpp"
+#include "RoomInfo.hpp"
 #include "SnapshotMessage.hpp"
 
 namespace engine::network {
@@ -24,8 +25,62 @@ NetworkSettings::NetworkSettings(const scene::DataNode &game, const scene::DataN
       m_heartbeatInterval(readDuration(network, "heartbeatIntervalMs")),
       m_connectRetryInterval(readDuration(network, "connectRetryIntervalMs")),
       m_connectAttempts(static_cast<unsigned>(readBounded(network, "connectAttempts", MAX_COUNT))),
-      m_sessionTimeout(readDuration(network, "sessionTimeoutMs"))
+      m_sessionTimeout(readDuration(network, "sessionTimeoutMs")),
+      m_maxClients(static_cast<std::size_t>(readBounded(network, "maxClients", MAX_CLIENT_LIMIT))),
+      m_maxRooms(static_cast<std::size_t>(readBounded(network, "maxRooms", MAX_ROOM_LIMIT))),
+      m_roomNameMaxLength(static_cast<std::size_t>(readBounded(network, "roomNameMaxLength", MAX_TEXT_LIMIT))),
+      m_roomCodeMaxLength(static_cast<std::size_t>(readBounded(network, "roomCodeMaxLength", MAX_TEXT_LIMIT))),
+      m_maxJoinAttempts(static_cast<unsigned>(readBounded(network, "maxJoinAttempts", MAX_COUNT))),
+      m_worldValueCount(game.has("worldValues") ? game.child("worldValues").items().size() : 0),
+      m_playerValueCount(game.has("playerValues") ? game.child("playerValues").items().size() : 0),
+      m_ruleCount(game.has("rules") ? game.child("rules").items().size() : 0),
+      m_eventSoundCount(game.has("eventSounds") ? game.child("eventSounds").items().size() : 0)
 {
+}
+
+std::size_t NetworkSettings::maxClients() const
+{
+    return m_maxClients;
+}
+
+std::size_t NetworkSettings::maxRooms() const
+{
+    return m_maxRooms;
+}
+
+std::size_t NetworkSettings::roomNameMaxLength() const
+{
+    return m_roomNameMaxLength;
+}
+
+std::size_t NetworkSettings::roomCodeMaxLength() const
+{
+    return m_roomCodeMaxLength;
+}
+
+std::size_t NetworkSettings::playerValueCount() const
+{
+    return m_playerValueCount;
+}
+
+std::size_t NetworkSettings::ruleCount() const
+{
+    return m_ruleCount;
+}
+
+std::size_t NetworkSettings::eventSoundCount() const
+{
+    return m_eventSoundCount;
+}
+
+std::size_t NetworkSettings::worldValueCount() const
+{
+    return m_worldValueCount;
+}
+
+unsigned NetworkSettings::maxJoinAttempts() const
+{
+    return m_maxJoinAttempts;
 }
 
 std::uint16_t NetworkSettings::defaultPort() const
@@ -85,8 +140,11 @@ std::chrono::milliseconds NetworkSettings::sessionTimeout() const
 
 void NetworkSettings::checkPacketFits(const std::string &source) const
 {
-    if (Protocol::HEADER_SIZE + SnapshotMessage::sizeFor(m_maxPlayers, m_maxEntities) > Protocol::MAX_PACKET_BYTES)
+    if (Protocol::HEADER_SIZE + SnapshotMessage::sizeFor(m_maxPlayers, m_maxEntities, m_worldValueCount, m_playerValueCount) > Protocol::MAX_PACKET_BYTES)
         throw net::NetError("NetworkSettings: " + source + ": maxPlayers and maxEntities do not fit in one packet");
+    const std::size_t roomList = 1 + m_maxRooms * RoomInfo::sizeFor(m_roomNameMaxLength);
+    if (Protocol::HEADER_SIZE + roomList > Protocol::MAX_PACKET_BYTES)
+        throw net::NetError("NetworkSettings: " + source + ": maxRooms and roomNameMaxLength do not fit in one packet");
 }
 
 int NetworkSettings::readBounded(const scene::DataNode &node, const std::string &key, int maximum)

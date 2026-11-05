@@ -21,4 +21,19 @@ Color RectShape::color() const
     return m_color;
 }
 
+void RectShape::setColor(Color color)
+{
+    m_color = color;
+}
+
+void RectShape::setWidth(float width)
+{
+    m_width = width;
+}
+
+void RectShape::setHeight(float height)
+{
+    m_height = height;
+}
+
 } // namespace engine::ecs

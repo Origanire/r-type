@@ -5,18 +5,34 @@
 
 #include "AcceptMessage.hpp"
 #include "ConnectMessage.hpp"
+#include "CreateRoomMessage.hpp"
+#include "DeleteRoomMessage.hpp"
 #include "DisconnectMessage.hpp"
 #include "EntityDestroyedMessage.hpp"
+#include "GameStartedMessage.hpp"
 #include "HeartbeatAckMessage.hpp"
 #include "HeartbeatMessage.hpp"
 #include "InputMessage.hpp"
+#include "JoinRoomMessage.hpp"
+#include "KickPlayerMessage.hpp"
+#include "KickedMessage.hpp"
+#include "LeaveRoomMessage.hpp"
+#include "ListRoomsMessage.hpp"
 #include "PlayerJoinedMessage.hpp"
+#include "PlaySoundMessage.hpp"
+#include "PlaySoundMessage.hpp"
 #include "PlayerKilledMessage.hpp"
 #include "PlayerLeftMessage.hpp"
-#include "RejectMessage.hpp"
 #include "Protocol.hpp"
+#include "RejectMessage.hpp"
+#include "RoomClosedMessage.hpp"
+#include "RoomJoinedMessage.hpp"
+#include "RoomListMessage.hpp"
+#include "RoomRejectedMessage.hpp"
+#include "RoomUpdateMessage.hpp"
 #include "ServerShutdownMessage.hpp"
 #include "SnapshotMessage.hpp"
+#include "StartGameMessage.hpp"
 
 namespace engine::network {
 
@@ -25,7 +41,10 @@ class Packet
 public:
     using Body = std::variant<ConnectMessage, InputMessage, HeartbeatMessage, DisconnectMessage, AcceptMessage,
         RejectMessage, SnapshotMessage, HeartbeatAckMessage, EntityDestroyedMessage, PlayerJoinedMessage,
-        PlayerKilledMessage, PlayerLeftMessage, ServerShutdownMessage>;
+        PlayerKilledMessage, PlayerLeftMessage, ServerShutdownMessage, ListRoomsMessage, CreateRoomMessage,
+        JoinRoomMessage, LeaveRoomMessage, StartGameMessage, KickPlayerMessage, DeleteRoomMessage, RoomListMessage,
+        RoomJoinedMessage, RoomRejectedMessage, RoomUpdateMessage, GameStartedMessage, KickedMessage, RoomClosedMessage,
+        PlaySoundMessage>;
 
     template <class Message>
     explicit Packet(Message message, std::uint32_t sequence = 0, std::uint8_t version = Protocol::VERSION);

@@ -41,7 +41,9 @@ nav:
   - Guides:
       - Add a component: guides/add-a-component.md
       - Add a system: guides/add-a-system.md
+      - Scripting reference: guides/scripting.md
       - Add an enemy: guides/add-an-enemy.md
+      - Add a level or a boss: guides/add-a-level.md
   - Contributing:
       - Onboarding: contributing/onboarding.md
       - Coding conventions: contributing/conventions.md

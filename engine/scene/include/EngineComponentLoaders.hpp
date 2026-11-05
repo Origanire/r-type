@@ -10,9 +10,7 @@
 #include "Entity.hpp"
 #include "LayerTable.hpp"
 #include "Match.hpp"
-#include "MovementPattern.hpp"
 #include "Registry.hpp"
-#include "SpawnEntry.hpp"
 
 namespace engine::scene {
 
@@ -25,6 +23,7 @@ private:
     static void registerGameplay(ComponentFactory &factory, const LayerTable &layers);
     static void registerRules(ComponentFactory &factory);
     static void registerPresentation(ComponentFactory &factory);
+    static void registerInterface(ComponentFactory &factory);
 
     static void loadTransform(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadVelocity(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
@@ -34,14 +33,22 @@ private:
     static void loadHealth(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadContactDamage(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadInvulnerable(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
-    static void loadMovementPattern(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadDespawnOffscreen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadPlayerControl(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadScoreValue(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadWeapon(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
-    static void loadAutoFire(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
-    static void loadSpawner(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadReplicated(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadScript(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadSolid(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadGravity(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadBounce(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadPushable(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadTilemap(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadParticleEmitter(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadLifetime(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadMusicWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadChoice(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadRotation(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
 
     static void loadLives(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadScore(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
@@ -60,8 +67,18 @@ private:
     static void loadPlayerLabel(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadStatusText(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
 
-    static ecs::MovementPattern::Kind readPatternKind(const DataNode &data);
-    static std::vector<ecs::SpawnEntry> readSpawnEntries(const DataNode &data);
+    static void loadButton(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadFocusable(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadTextField(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadVisibleWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadBoundText(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadListView(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadHidden(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadForeground(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadProgressBar(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadFadeWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static std::string readOptionalString(const DataNode &data, const std::string &key);
+
     static std::optional<ecs::Match::Phase> readPhase(const DataNode &data, const std::string &key);
     static std::optional<std::size_t> readSlot(const DataNode &data);
 };

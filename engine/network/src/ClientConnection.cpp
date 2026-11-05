@@ -11,7 +11,7 @@ namespace engine::network {
 ClientConnection::ClientConnection(net::Endpoint server, const NetworkSettings &settings)
     : m_settings(settings), m_codec(settings), m_server(std::move(server)), m_sequence(0), m_token(0),
       m_attempts(0), m_lastConnect(), m_lastInput(), m_lastHeartbeat(), m_lastReceive(), m_lastTick(),
-      m_serverSequence(), m_snapshot(), m_events()
+      m_serverSequence(), m_snapshot(), m_events(), m_bytesReceived(0), m_bytesSent(0), m_ping(0)
 {
 }
 
@@ -21,6 +21,7 @@ void ClientConnection::update(std::uint8_t buttons)
     for (const net::Datagram &datagram : m_transport.poll()) {
         if (datagram.sender() != m_server)
             continue;
+        m_bytesReceived += datagram.bytes().size();
         const auto packet = m_codec.decode(datagram.bytes(), Receiver::Client);
         if (packet && handlePacket(*packet))
             m_lastReceive = now;
@@ -75,11 +76,58 @@ bool ClientConnection::handlePacket(const Packet &packet)
     }
     if (packet.type() == MessageType::ServerShutdown)
         throw net::NetError("ClientConnection: server stopped");
-    if (packet.type() == MessageType::EntityDestroyed || packet.type() == MessageType::PlayerKilled)
+    if (packet.holds<HeartbeatAckMessage>())
+        m_ping = nowMs(std::chrono::steady_clock::now()) - packet.as<HeartbeatAckMessage>().timestamp();
+    if (packet.holds<RoomJoinedMessage>() || packet.holds<GameStartedMessage>())
+        m_lastTick.reset();
+    if (!packet.holds<SnapshotMessage>() && !packet.holds<HeartbeatAckMessage>())
         m_events.push_back(packet);
     if (!m_serverSequence || Codec::isNewer(packet.sequence(), *m_serverSequence))
         m_serverSequence = packet.sequence();
     return true;
+}
+
+void ClientConnection::listRooms()
+{
+    if (connected())
+        send(Packet(ListRoomsMessage(m_token)));
+}
+
+void ClientConnection::createRoom(
+    const std::string &name, const std::string &code, const std::vector<std::uint8_t> &rules)
+{
+    if (connected())
+        send(Packet(CreateRoomMessage(m_token, name, code, rules)));
+}
+
+void ClientConnection::joinRoom(std::uint16_t roomId, const std::string &code)
+{
+    if (connected())
+        send(Packet(JoinRoomMessage(m_token, roomId, code)));
+}
+
+void ClientConnection::leaveRoom()
+{
+    if (connected())
+        send(Packet(LeaveRoomMessage(m_token)));
+}
+
+void ClientConnection::startGame()
+{
+    if (connected())
+        send(Packet(StartGameMessage(m_token)));
+}
+
+void ClientConnection::kickPlayer(std::uint8_t slot)
+{
+    if (connected())
+        send(Packet(KickPlayerMessage(m_token, slot)));
+}
+
+void ClientConnection::deleteRoom()
+{
+    if (connected())
+        send(Packet(DeleteRoomMessage(m_token)));
 }
 
 bool ClientConnection::handleSnapshot(const SnapshotMessage &snapshot)
@@ -125,8 +173,7 @@ void ClientConnection::sendPeriodic(std::uint8_t buttons, Time now)
         m_lastInput = now;
     }
     if (now - m_lastHeartbeat >= m_settings.heartbeatInterval()) {
-        const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
-        send(Packet(HeartbeatMessage(m_token, static_cast<std::uint32_t>(milliseconds.count()))));
+        send(Packet(HeartbeatMessage(m_token, nowMs(now))));
         m_lastHeartbeat = now;
     }
 }
@@ -134,7 +181,30 @@ void ClientConnection::sendPeriodic(std::uint8_t buttons, Time now)
 void ClientConnection::send(Packet packet)
 {
     packet.setSequence(m_sequence++);
-    m_transport.send(m_server, m_codec.encode(packet));
+    const auto bytes = m_codec.encode(packet);
+    m_bytesSent += bytes.size();
+    m_transport.send(m_server, bytes);
+}
+
+std::uint64_t ClientConnection::bytesReceived() const
+{
+    return m_bytesReceived;
+}
+
+std::uint64_t ClientConnection::bytesSent() const
+{
+    return m_bytesSent;
+}
+
+std::uint32_t ClientConnection::pingMs() const
+{
+    return m_ping;
+}
+
+std::uint32_t ClientConnection::nowMs(Time now)
+{
+    return static_cast<std::uint32_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count());
 }
 
 } // namespace engine::network

@@ -16,7 +16,8 @@ float axis(bool positive, bool negative)
 
 } // namespace
 
-PlayerControl::PlayerControl(float speed) : m_speed(speed), m_horizontal(0.f), m_vertical(0.f), m_firing(false)
+PlayerControl::PlayerControl(float speed) : m_speed(speed), m_horizontal(0.f), m_vertical(0.f), m_firing(false), m_action(false), m_previousAction(false),
+      m_actionPressed(false), m_fireHeld(0.f), m_fireReleased(0.f)
 {
 }
 
@@ -49,6 +50,44 @@ void PlayerControl::setFiring(bool firing)
 bool PlayerControl::firing() const
 {
     return m_firing;
+}
+
+void PlayerControl::setAction(bool action)
+{
+    m_action = action;
+}
+
+bool PlayerControl::action() const
+{
+    return m_action;
+}
+
+bool PlayerControl::actionPressed() const
+{
+    return m_actionPressed;
+}
+
+float PlayerControl::fireHeld() const
+{
+    return m_fireHeld;
+}
+
+float PlayerControl::fireReleased() const
+{
+    return m_fireReleased;
+}
+
+void PlayerControl::advance(float dt)
+{
+    m_actionPressed = m_action && !m_previousAction;
+    m_previousAction = m_action;
+    m_fireReleased = 0.f;
+    if (m_firing) {
+        m_fireHeld += dt;
+    } else if (m_fireHeld > 0.f) {
+        m_fireReleased = m_fireHeld;
+        m_fireHeld = 0.f;
+    }
 }
 
 } // namespace engine::ecs

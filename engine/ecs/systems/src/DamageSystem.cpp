@@ -4,6 +4,7 @@
 #include "ContactDamage.hpp"
 #include "Destroyed.hpp"
 #include "Health.hpp"
+#include "HitFlash.hpp"
 #include "Invulnerable.hpp"
 #include "Owner.hpp"
 
@@ -17,7 +18,7 @@ DamageSystem::DamageSystem(
 
 void DamageSystem::update(float)
 {
-    for (const CollisionEvent &collision : m_collisions.take()) {
+    for (const CollisionEvent &collision : m_collisions.events()) {
         apply(collision.first(), collision.second());
         apply(collision.second(), collision.first());
     }
@@ -30,6 +31,10 @@ void DamageSystem::apply(const Entity &source, const Entity &target)
     const ContactDamage &damage = m_registry.get<ContactDamage>(source);
     Health &health = m_registry.get<Health>(target);
     health.damage(damage.amount());
+    if (m_registry.has<HitFlash>(target))
+        m_registry.get<HitFlash>(target).restart(HitFlash::DEFAULT_SECONDS);
+    else
+        m_registry.emplace<HitFlash>(target, HitFlash::DEFAULT_SECONDS);
     if (damage.destroyOnHit()) {
         if (m_registry.has<Health>(source))
             markDestroyed(source, std::nullopt);

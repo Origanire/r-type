@@ -15,8 +15,12 @@ on Linux, the low-level system packages SFML needs (X11, OpenGL, udev) are insta
 ```sh
 sudo apt update
 sudo apt install build-essential cmake ninja-build git curl zip unzip tar pkg-config \
-    libx11-dev libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev
+    libx11-dev libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev \
+    autoconf autoconf-archive automake libtool
 ```
+
+The autotools are only used by vcpkg to build Python (embedded in the server for the gameplay
+scripts). The first build compiles Python once, which takes several minutes.
 
 Install vcpkg inside the repository (the `.vcpkg/` folder is ignored by Git):
 

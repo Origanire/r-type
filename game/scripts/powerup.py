@@ -1,0 +1,44 @@
+"""Power-up: floats to the left; the first player who touches it gets its effect.
+
+Param effect: "double", "spread", "heal", "shield" or "force".
+"""
+
+import common
+import player
+
+FORCE_OFFSET_X = 100.0
+FORCE_OFFSET_Y = 0.0
+
+
+def on_spawn(e):
+    common.start_moving(e, -150.0)
+
+
+def on_update(e, dt):
+    common.sine(e, 40.0, 3.0)
+
+
+def on_contact(e, other):
+    if not other.is_player() or not e.alive():
+        return
+    apply(e.text("effect", "heal"), other)
+    e.world.play_sound("powerup")
+    e.destroy()
+
+
+def apply(effect, ship):
+    world = ship.world
+    if effect == "double":
+        ship.set_weapon(player.missile(world), 0.25, 2, 4.0)
+        ship.set_player_value("weapon", 1)
+    elif effect == "spread":
+        ship.set_weapon(player.missile(world), 0.3, 3, 20.0)
+        ship.set_player_value("weapon", 2)
+    elif effect == "shield":
+        ship.set_invulnerable(3.0)
+    elif effect == "force" and world.count_scripted("force.py") < len(world.players()):
+        force = world.spawn("force", ship.x() + FORCE_OFFSET_X, ship.y())
+        force.attach_to(ship, FORCE_OFFSET_X, FORCE_OFFSET_Y)
+        ship.set_player_value("force", 1)
+    else:
+        ship.heal(30)

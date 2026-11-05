@@ -16,7 +16,7 @@ sf::Color toSfml(Color color)
 } // namespace
 
 SfmlRenderer::SfmlRenderer(Window &window, const TextureManager &textures, const FontManager &fonts)
-    : m_window(window), m_textures(textures), m_fonts(fonts), m_textScale(1.f)
+    : m_window(window), m_textures(textures), m_fonts(fonts), m_textScale(1.f), m_offset()
 {
 }
 
@@ -34,18 +34,35 @@ void SfmlRenderer::clear(Color color)
 void SfmlRenderer::drawRect(Vector2 position, Vector2 size, Color color)
 {
     sf::RectangleShape rect({size.x(), size.y()});
-    rect.setPosition({position.x(), position.y()});
+    rect.setPosition({position.x() + m_offset.x(), position.y() + m_offset.y()});
     rect.setFillColor(toSfml(color));
     m_window.native().draw(rect);
 }
 
-void SfmlRenderer::drawTexture(const std::string &texture, IntRect source, Vector2 position, Vector2 scale)
+void SfmlRenderer::drawTexture(
+    const std::string &texture, IntRect source, Vector2 position, Vector2 scale, float rotation, Color tint)
 {
     sf::Sprite sprite(m_textures.get(texture));
     sprite.setTextureRect(sf::IntRect({source.x(), source.y()}, {source.width(), source.height()}));
-    sprite.setPosition({position.x(), position.y()});
+    const float halfWidth = static_cast<float>(source.width()) / 2.f;
+    const float halfHeight = static_cast<float>(source.height()) / 2.f;
+    sprite.setOrigin({halfWidth, halfHeight});
+    sprite.setPosition({position.x() + m_offset.x() + halfWidth * scale.x(),
+        position.y() + m_offset.y() + halfHeight * scale.y()});
     sprite.setScale({scale.x(), scale.y()});
+    sprite.setRotation(sf::degrees(rotation));
+    sprite.setColor(toSfml(tint));
     m_window.native().draw(sprite);
+}
+
+void SfmlRenderer::setOffset(Vector2 offset)
+{
+    m_offset = offset;
+}
+
+Vector2 SfmlRenderer::offset() const
+{
+    return m_offset;
 }
 
 void SfmlRenderer::drawText(

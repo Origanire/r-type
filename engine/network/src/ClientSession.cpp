@@ -6,7 +6,7 @@ namespace engine::network {
 
 ClientSession::ClientSession(net::Endpoint peer, std::uint32_t token, Time now)
     : m_peer(std::move(peer)), m_token(token), m_confirmed(false), m_lastSeen(now), m_lastInput(now), m_lastAccept(),
-      m_inputSequence(), m_heartbeatSequence(), m_roomId(), m_failedJoins(0)
+      m_inputSequence(), m_heartbeatSequence(), m_outgoingSequence(0), m_roomId(), m_failedJoins(0)
 {
 }
 
@@ -103,6 +103,11 @@ std::optional<std::uint32_t> ClientSession::heartbeatSequence() const
 void ClientSession::setHeartbeatSequence(std::uint32_t sequence)
 {
     m_heartbeatSequence = sequence;
+}
+
+std::uint32_t ClientSession::nextOutgoingSequence()
+{
+    return m_outgoingSequence++;
 }
 
 } // namespace engine::network

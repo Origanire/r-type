@@ -31,6 +31,7 @@ public:
     void setInputSequence(std::uint32_t sequence);
     std::optional<std::uint32_t> heartbeatSequence() const;
     void setHeartbeatSequence(std::uint32_t sequence);
+    std::uint32_t nextOutgoingSequence();
 
     std::optional<std::uint16_t> roomId() const;
     void enterRoom(std::uint16_t roomId);
@@ -47,6 +48,7 @@ private:
     Time m_lastAccept;
     std::optional<std::uint32_t> m_inputSequence;
     std::optional<std::uint32_t> m_heartbeatSequence;
+    std::uint32_t m_outgoingSequence;
     std::optional<std::uint16_t> m_roomId;
     unsigned m_failedJoins;
 };

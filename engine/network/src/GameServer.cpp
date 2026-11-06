@@ -7,7 +7,7 @@ namespace engine::network {
 
 GameServer::GameServer(std::uint16_t port, const NetworkSettings &settings, ISessionFactory &factory)
     : m_settings(settings), m_codec(settings), m_transport(port), m_factory(factory),
-      m_clients(settings.maxClients()), m_rooms(), m_random(std::random_device{}()), m_sequence(0),
+      m_clients(settings.maxClients()), m_rooms(), m_random(std::random_device{}()),
       m_nextRoomId(1), m_rateWindow(), m_lastRoomUpdate(), m_connectRequests(0)
 {
     std::cout << "Server listening on UDP port " << port << std::endl;
@@ -88,7 +88,7 @@ void GameServer::handleConnect(const net::Datagram &datagram, const Packet &pack
         m_clients[*client].emplace(datagram.sender(), newToken(), now);
     }
     m_clients[*client]->markAccepted(now);
-    send(datagram.sender(), Packet(AcceptMessage(m_clients[*client]->token(), static_cast<std::uint8_t>(*client))));
+    sendTo(*client, Packet(AcceptMessage(m_clients[*client]->token(), static_cast<std::uint8_t>(*client))));
 }
 
 void GameServer::handleSessionPacket(std::size_t client, const Packet &packet, Time now)
@@ -378,13 +378,14 @@ void GameServer::broadcastRoom(GameRoom &room, const Packet &packet)
 
 void GameServer::sendTo(std::size_t client, Packet packet)
 {
-    if (m_clients[client])
-        send(m_clients[client]->peer(), std::move(packet));
+    if (!m_clients[client])
+        return;
+    packet.setSequence(m_clients[client]->nextOutgoingSequence());
+    m_transport.send(m_clients[client]->peer(), m_codec.encode(packet));
 }
 
 void GameServer::send(const net::Endpoint &peer, Packet packet)
 {
-    packet.setSequence(m_sequence++);
     m_transport.send(peer, m_codec.encode(packet));
 }
 

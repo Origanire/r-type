@@ -34,6 +34,7 @@ public:
     static constexpr const char *YES = "yes";
     static constexpr const char *NO = "no";
     static constexpr const char *RULE_PREFIX = "rule.";
+    static constexpr const char *PAUSE_KEY = "pause.visible";
 
     OnlineClient(const std::filesystem::path &assetsDirectory, const std::filesystem::path &dataDirectory,
         const std::string &game, const network::NetworkSettings &settings, std::optional<std::string> address);
@@ -46,6 +47,8 @@ private:
     void updateNetwork(Time now);
     void handleActions();
     void handleConsole();
+    void setPaused(bool paused);
+    bool paused();
     void handleAction(const std::string &action);
     void handleEvent(const network::Packet &event, Time now);
     void handleRejection(std::uint8_t reason);

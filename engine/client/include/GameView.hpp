@@ -60,6 +60,7 @@ public:
     std::string escapeAction() const;
     std::vector<ecs::UiActionEvent> takeUiActions();
     ecs::UiStore &uiStore();
+    const ecs::UiStore &uiStore() const;
     void setFieldText(const std::string &field, const std::string &text);
     std::string message(const std::string &key) const;
     const scene::WorldValueTable &worldTable() const;
@@ -81,6 +82,7 @@ public:
     bool consolePressed() const;
     bool enterPressed() const;
     void focusField(const std::string &field);
+    void focusAction(const std::string &action);
     void setMusicVolume(float volume);
     void setSoundVolume(float volume);
     std::size_t entityCount() const;

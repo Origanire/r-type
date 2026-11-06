@@ -7,7 +7,8 @@
 namespace engine::render {
 
 Window::Window(unsigned int width, unsigned int height, const std::string &title, Vector2 worldSize)
-    : m_window(sf::VideoMode({width, height}), title), m_stickUp(false), m_stickDown(false), m_padUp(false), m_padDown(false)
+    : m_window(sf::VideoMode({width, height}), title), m_stickUp(false), m_stickDown(false), m_padUp(false), m_padDown(false), m_stickLeft(false),
+      m_stickRight(false), m_padLeft(false), m_padRight(false)
 {
     if (!m_window.isOpen())
         throw RenderError("Window: cannot open the window");
@@ -34,7 +35,7 @@ void Window::processEvents(UiInput &ui)
         } else if (const auto *button = event->getIf<sf::Event::JoystickButtonPressed>()) {
             if (button->button == CONFIRM_BUTTON)
                 ui.pressKey(UiKey::Enter);
-            else if (button->button == BACK_BUTTON)
+            else if (button->button == SELECT_BUTTON)
                 ui.pressKey(UiKey::Escape);
         } else if (const auto *stick = event->getIf<sf::Event::JoystickMoved>()) {
             handleStick(ui, *stick);
@@ -90,6 +91,10 @@ std::optional<UiKey> Window::uiKeyOf(sf::Keyboard::Key key)
         return UiKey::Debug;
     case sf::Keyboard::Key::F1:
         return UiKey::Console;
+    case sf::Keyboard::Key::Left:
+        return UiKey::Left;
+    case sf::Keyboard::Key::Right:
+        return UiKey::Right;
     default:
         return std::nullopt;
     }
@@ -101,6 +106,10 @@ void Window::handleStick(UiInput &ui, const sf::Event::JoystickMoved &moved)
         pressOnce(ui, moved.position < -STICK_THRESHOLD, moved.position > STICK_THRESHOLD, m_stickUp, m_stickDown);
     else if (moved.axis == sf::Joystick::Axis::PovY)
         pressOnce(ui, moved.position > STICK_THRESHOLD, moved.position < -STICK_THRESHOLD, m_padUp, m_padDown);
+    else if (moved.axis == sf::Joystick::Axis::X)
+        pressSideOnce(ui, moved.position < -STICK_THRESHOLD, moved.position > STICK_THRESHOLD, m_stickLeft, m_stickRight);
+    else if (moved.axis == sf::Joystick::Axis::PovX)
+        pressSideOnce(ui, moved.position < -STICK_THRESHOLD, moved.position > STICK_THRESHOLD, m_padLeft, m_padRight);
 }
 
 void Window::pressOnce(UiInput &ui, bool up, bool down, bool &wasUp, bool &wasDown)
@@ -111,6 +120,16 @@ void Window::pressOnce(UiInput &ui, bool up, bool down, bool &wasUp, bool &wasDo
         ui.pressKey(UiKey::Down);
     wasUp = up;
     wasDown = down;
+}
+
+void Window::pressSideOnce(UiInput &ui, bool left, bool right, bool &wasLeft, bool &wasRight)
+{
+    if (left && !wasLeft)
+        ui.pressKey(UiKey::Left);
+    if (right && !wasRight)
+        ui.pressKey(UiKey::Right);
+    wasLeft = left;
+    wasRight = right;
 }
 
 } // namespace engine::render

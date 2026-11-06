@@ -11,7 +11,9 @@
 #include "EngineComponentLoaders.hpp"
 #include "EngineSystemBuilders.hpp"
 #include "Lives.hpp"
+#include "Button.hpp"
 #include "HitFlash.hpp"
+#include "UiFocus.hpp"
 #include "Persistent.hpp"
 #include "Protocol.hpp"
 #include "Rotation.hpp"
@@ -435,6 +437,20 @@ void GameView::setMusicVolume(float volume)
 void GameView::setSoundVolume(float volume)
 {
     m_audio.setSoundVolume(volume);
+}
+
+void GameView::focusAction(const std::string &action)
+{
+    const auto &buttons = m_registry.getComponents<ecs::Button>();
+    for (std::size_t i : m_registry.view<ecs::Button>()) {
+        if (buttons.at(i).action() == action)
+            ecs::UiFocus::hover(m_registry, m_registry.entityAt(i));
+    }
+}
+
+const ecs::UiStore &GameView::uiStore() const
+{
+    return m_uiStore;
 }
 
 } // namespace engine::client

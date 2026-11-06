@@ -45,6 +45,7 @@
     {"name": "friendlyFire", "labels": ["OFF", "ON"]},
     {"name": "cheats", "labels": ["OFF", "ON"]}
   ],
+  "consoleRule": "cheats",
   "eventSounds": ["warning", "powerup", "bossDeath"],
   "playerPrefab": "player",
   "serverScene": [{"prefab": "match"}, {"prefab": "director"}],
@@ -199,34 +200,6 @@
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 660, "y": 420},
-            "Text": {
-              "font": "hud",
-              "size": 32,
-              "color": [150, 150, 180, 255],
-              "content": "SERVER ADDRESS  (IP OR IP:PORT)"
-            }
-          }
-        },
-        {
-          "prefab": "ui_element",
-          "components": {
-            "Transform": {"x": 660, "y": 470},
-            "RectShape": {"width": 600, "height": 70, "color": [10, 10, 35, 240]},
-            "Text": {"font": "hud", "size": 36, "color": [255, 255, 255, 255], "offsetX": 20, "offsetY": 14},
-            "TextField": {
-              "name": "serverAddress",
-              "maxLength": 64,
-              "placeholder": "127.0.0.1",
-              "width": 600,
-              "height": 70
-            },
-            "Focusable": {"order": 0}
-          }
-        },
-        {
-          "prefab": "ui_element",
-          "components": {
             "Transform": {"x": 660, "y": 590},
             "RectShape": {"width": 600, "height": 80, "color": [20, 30, 70, 230]},
             "Text": {
@@ -247,7 +220,7 @@
               "hoverSound": "hover",
               "clickSound": "click"
             },
-            "Focusable": {"order": 1}
+            "Focusable": {"order": 0}
           }
         },
         {
@@ -273,7 +246,7 @@
               "hoverSound": "hover",
               "clickSound": "click"
             },
-            "Focusable": {"order": 2}
+            "Focusable": {"order": 1}
           }
         },
         {
@@ -755,7 +728,7 @@
               "hoverSound": "hover",
               "clickSound": "click"
             },
-            "Focusable": {"order": 2},
+            "Focusable": {"order": 5},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         },
@@ -782,7 +755,7 @@
               "hoverSound": "hover",
               "clickSound": "click"
             },
-            "Focusable": {"order": 3},
+            "Focusable": {"order": 6},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         },
@@ -809,7 +782,7 @@
               "hoverSound": "hover",
               "clickSound": "click"
             },
-            "Focusable": {"order": 4},
+            "Focusable": {"order": 7},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         },
@@ -959,7 +932,7 @@
               "clickSound": "click"
             },
             "Choice": {"name": "rule.friendlyFire", "options": ["OFF", "ON"]},
-            "Focusable": {"order": 2},
+            "Focusable": {"order": 3},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         },
@@ -1330,7 +1303,7 @@
               "clickSound": "click"
             },
             "Choice": {"name": "rule.cheats", "options": ["OFF", "ON"]},
-            "Focusable": {"order": 2},
+            "Focusable": {"order": 4},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         }
@@ -1961,7 +1934,7 @@
       ]
     },
     "game": {
-      "escapeAction": "leave_room",
+      "escapeAction": "pause",
       "systems": [
         "Parallax",
         "TiltAnimation",
@@ -1971,6 +1944,9 @@
         "Anchor",
         "StatusText",
         "TextField",
+        "Pointer",
+        "FocusNavigation",
+        "ButtonStyle",
         "BoundText",
         "Visibility",
         "ProgressBar",
@@ -2761,6 +2737,89 @@
             },
             "Foreground": {},
             "VisibleWhen": {"key": "console.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 0, "y": 0},
+            "RectShape": {"width": 1920, "height": 1080, "color": [0, 0, 0, 170]},
+            "Foreground": {},
+            "VisibleWhen": {"key": "pause.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 660, "y": 330},
+            "RectShape": {"width": 600, "height": 400, "color": [10, 15, 40, 245]},
+            "Foreground": {},
+            "VisibleWhen": {"key": "pause.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 860, "y": 360},
+            "Text": {"font": "hud", "size": 56, "color": [80, 200, 255, 255], "content": "PAUSE"},
+            "Foreground": {},
+            "VisibleWhen": {"key": "pause.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 710, "y": 470},
+            "RectShape": {"width": 500, "height": 80, "color": [20, 30, 70, 240]},
+            "Text": {
+              "font": "hud",
+              "size": 40,
+              "color": [255, 255, 255, 255],
+              "content": "CONTINUE",
+              "offsetX": 30,
+              "offsetY": 16
+            },
+            "Button": {
+              "action": "resume",
+              "width": 500,
+              "height": 80,
+              "normal": [20, 30, 70, 240],
+              "hover": [40, 80, 170, 245],
+              "pressed": [80, 200, 255, 255],
+              "hoverSound": "hover",
+              "clickSound": "click"
+            },
+            "Focusable": {"order": 0},
+            "Foreground": {},
+            "VisibleWhen": {"key": "pause.visible", "value": "yes"}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
+            "Transform": {"x": 710, "y": 580},
+            "RectShape": {"width": 500, "height": 80, "color": [20, 30, 70, 240]},
+            "Text": {
+              "font": "hud",
+              "size": 40,
+              "color": [255, 255, 255, 255],
+              "content": "QUIT",
+              "offsetX": 30,
+              "offsetY": 16
+            },
+            "Button": {
+              "action": "leave_room",
+              "width": 500,
+              "height": 80,
+              "normal": [20, 30, 70, 240],
+              "hover": [40, 80, 170, 245],
+              "pressed": [80, 200, 255, 255],
+              "hoverSound": "hover",
+              "clickSound": "click"
+            },
+            "Focusable": {"order": 1},
+            "Foreground": {},
+            "VisibleWhen": {"key": "pause.visible", "value": "yes"}
           }
         }
       ]

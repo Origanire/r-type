@@ -88,6 +88,10 @@ void OnlineClient::handleAction(const std::string &action)
 {
     if (action == "quit")
         m_view.closeWindow();
+    else if (action == "pause")
+        setPaused(!paused());
+    else if (action == "resume")
+        setPaused(false);
     else if (action == "connect")
         connect();
     else if (action == "disconnect")
@@ -204,7 +208,8 @@ bool OnlineClient::popupOpen()
 
 void OnlineClient::connect()
 {
-    m_address = field("serverAddress");
+    if (const std::string typed = field("serverAddress"); !typed.empty())
+        m_address = typed;
     const std::size_t colon = m_address.rfind(':');
     try {
         const std::string host = colon == std::string::npos ? m_address : m_address.substr(0, colon);
@@ -239,6 +244,7 @@ void OnlineClient::enterScene(const std::string &scene)
     store.setValue("menu.error", {});
     store.setValue("lobby.error", {});
     store.setValue("room.error", {});
+    store.setValue(PAUSE_KEY, NO);
     store.setValue("lobby.popup", NO);
     store.setValue("lobby.popupError", {});
     if (scene == MENU_SCENE)
@@ -345,7 +351,8 @@ std::uint8_t OnlineClient::buttons() const
 {
     using input::Action;
 
-    if (m_view.currentScene() != GAME_SCENE || m_console.open())
+    if (m_view.currentScene() != GAME_SCENE || m_console.open()
+        || m_view.uiStore().value(PAUSE_KEY) == YES)
         return 0;
     std::uint8_t bits = 0;
     if (m_view.isPressed(Action::Up))
@@ -407,6 +414,18 @@ void OnlineClient::handleConsole()
         m_network->sendCommand(*command);
     else
         m_console.print("not connected to a server");
+}
+
+void OnlineClient::setPaused(bool paused)
+{
+    m_view.uiStore().setValue(PAUSE_KEY, paused ? YES : NO);
+    if (paused)
+        m_view.focusAction("resume");
+}
+
+bool OnlineClient::paused()
+{
+    return m_view.uiStore().value(PAUSE_KEY) == YES;
 }
 
 } // namespace engine::client

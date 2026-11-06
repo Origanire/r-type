@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "DataNode.hpp"
@@ -42,8 +43,10 @@ public:
     std::size_t playerValueCount() const;
     std::size_t ruleCount() const;
     std::size_t eventSoundCount() const;
+    std::optional<std::size_t> consoleRule() const;
 
 private:
+    static std::optional<std::size_t> findRule(const scene::DataNode &game);
     NetworkSettings(const scene::DataNode &game, const scene::DataNode &network);
 
     void checkPacketFits(const std::string &source) const;
@@ -70,6 +73,7 @@ private:
     std::size_t m_playerValueCount;
     std::size_t m_ruleCount;
     std::size_t m_eventSoundCount;
+    std::optional<std::size_t> m_consoleRule;
 };
 
 } // namespace engine::network

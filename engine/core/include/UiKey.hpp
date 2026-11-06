@@ -14,7 +14,9 @@ enum class UiKey : std::uint8_t
     Up,
     Down,
     Debug,
-    Console
+    Console,
+    Left,
+    Right
 };
 
 } // namespace engine

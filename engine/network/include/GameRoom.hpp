@@ -18,7 +18,7 @@ public:
     static constexpr std::size_t OWNER_SLOT = 0;
 
     GameRoom(std::uint16_t id, std::string name, std::string code, std::size_t capacity,
-        std::unique_ptr<IGameSession> session);
+        std::unique_ptr<IGameSession> session, std::vector<std::uint8_t> rules);
 
     std::uint16_t id() const;
     const std::string &name() const;
@@ -29,6 +29,7 @@ public:
     void queueCommand(std::size_t slot, std::string text);
     std::vector<std::pair<std::size_t, std::string>> takeCommands();
     IGameSession &session();
+    std::uint8_t rule(std::size_t index) const;
 
     std::size_t capacity() const;
     std::size_t playerCount() const;
@@ -50,6 +51,7 @@ private:
     std::unique_ptr<IGameSession> m_session;
     std::vector<std::optional<std::size_t>> m_seats;
     std::vector<std::pair<std::size_t, std::string>> m_commands;
+    std::vector<std::uint8_t> m_rules;
 };
 
 } // namespace engine::network

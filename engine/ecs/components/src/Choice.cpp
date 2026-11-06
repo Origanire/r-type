@@ -28,4 +28,9 @@ void Choice::next()
     m_index = (m_index + 1) % m_options.size();
 }
 
+void Choice::previous()
+{
+    m_index = (m_index + m_options.size() - 1) % m_options.size();
+}
+
 } // namespace engine::ecs

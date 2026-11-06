@@ -34,7 +34,8 @@ NetworkSettings::NetworkSettings(const scene::DataNode &game, const scene::DataN
       m_worldValueCount(game.has("worldValues") ? game.child("worldValues").items().size() : 0),
       m_playerValueCount(game.has("playerValues") ? game.child("playerValues").items().size() : 0),
       m_ruleCount(game.has("rules") ? game.child("rules").items().size() : 0),
-      m_eventSoundCount(game.has("eventSounds") ? game.child("eventSounds").items().size() : 0)
+      m_eventSoundCount(game.has("eventSounds") ? game.child("eventSounds").items().size() : 0),
+      m_consoleRule(findRule(game))
 {
 }
 
@@ -66,6 +67,24 @@ std::size_t NetworkSettings::playerValueCount() const
 std::size_t NetworkSettings::ruleCount() const
 {
     return m_ruleCount;
+}
+
+std::optional<std::size_t> NetworkSettings::consoleRule() const
+{
+    return m_consoleRule;
+}
+
+std::optional<std::size_t> NetworkSettings::findRule(const scene::DataNode &game)
+{
+    if (!game.has("consoleRule") || !game.has("rules"))
+        return std::nullopt;
+    const std::string name = game.getString("consoleRule");
+    const auto rules = game.child("rules").items();
+    for (std::size_t index = 0; index < rules.size(); ++index) {
+        if (rules[index].getString("name") == name)
+            return index;
+    }
+    return std::nullopt;
 }
 
 std::size_t NetworkSettings::eventSoundCount() const

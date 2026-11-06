@@ -18,6 +18,7 @@ public:
     const std::string &name() const;
     const std::string &current() const;
     void next();
+    void previous();
 
 private:
     std::string m_name;

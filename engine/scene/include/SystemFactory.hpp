@@ -19,6 +19,7 @@ public:
 
     void add(const std::string &name, Builder builder);
     bool has(const std::string &name) const;
+    void remove(const std::string &name);
     std::unique_ptr<ecs::ISystem> create(SystemContext &context, const DataNode &entry) const;
     void build(SystemContext &context, const DataNode &list, ecs::SystemManager &systems) const;
 

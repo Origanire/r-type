@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <charconv>
+#include <filesystem>
+#include <iostream>
 #include <system_error>
 
 #include "Button.hpp"
@@ -10,6 +12,7 @@
 #include "DeathEvent.hpp"
 #include "Destroyed.hpp"
 #include "EngineComponentLoaders.hpp"
+#include "EngineError.hpp"
 #include "EngineSystemBuilders.hpp"
 #include "HitFlash.hpp"
 #include "Lives.hpp"
@@ -29,11 +32,15 @@ namespace engine::client {
 GameView::GameView(
     const std::filesystem::path &assetsDirectory, const std::filesystem::path &dataDirectory, const std::string &game)
     : m_game(scene::DataNode::fromFile(dataDirectory / (game + "_game.json"))),
-      m_settings(loadLinked(dataDirectory, m_game, "settings")),
+      m_defaults(loadLinked(dataDirectory, m_game, "settings")),
+      m_settings(loadUserSettings(dataDirectory / (game + USER_SETTINGS_SUFFIX), m_defaults)),
       m_window(static_cast<unsigned int>(m_game.child("window").getInt("width")),
           static_cast<unsigned int>(m_game.child("window").getInt("height")), m_game.child("window").getString("title"),
           {m_game.child("world").getFloat("width"), m_game.child("world").getFloat("height")}),
-      m_renderer(m_window, m_textures, m_fonts), m_prefabs(m_registry, m_components), m_context(m_registry, m_prefabs),
+      m_renderer(m_window, m_textures, m_fonts), m_prefabs(m_registry, m_components),
+      m_plugins(m_systemFactory, dataDirectory.parent_path() / PLUGIN_FOLDER), m_context(m_registry, m_prefabs),
+      m_settingsStore(
+          m_uiStore, m_input, m_audio, m_renderer, m_context, dataDirectory / (game + USER_SETTINGS_SUFFIX)),
       m_preload(), m_preloaded(0), m_loading(false), m_loadingFinished(false), m_loadingClock(),
       m_loadingMinimum(m_game.getFloat("loadingMinSeconds", 0.f))
 {
@@ -49,6 +56,8 @@ GameView::GameView(
         m_soundTable.load(m_game.child("eventSounds"));
     scene::EngineComponentLoaders::registerAll(m_components, m_layers);
     scene::EngineSystemBuilders::registerAll(m_systemFactory);
+    if (m_game.has("plugins"))
+        m_plugins.load(m_game.child("plugins"));
     m_prefabs.load(loadLinked(dataDirectory, m_game, "clientPrefabs"));
     m_settings.applyControls(m_input);
     m_renderer.setTextScale(m_settings.textScale());
@@ -59,6 +68,7 @@ GameView::GameView(
     m_context.setUiInput(m_uiInput);
     m_context.setUiStore(m_uiStore);
     m_context.setFlag("showPlayerLabels", m_settings.showPlayerLabels());
+    m_settingsStore.load(m_settings);
     m_systemFactory.build(m_context, m_game.child("renderSystems"), m_render);
     m_match = m_registry.spawn();
     m_registry.emplace<ecs::Match>(*m_match, 0.f);
@@ -158,6 +168,9 @@ const scene::WorldValueTable &GameView::worldTable() const
 void GameView::frame()
 {
     const float dt = std::min(m_clock.restart(), MAX_FRAME_SECONDS);
+    m_settingsStore.update();
+    if (m_plugins.changed())
+        reloadPlugins();
     if (m_loading)
         loadStep();
     m_scenes->update(dt);
@@ -297,6 +310,41 @@ void GameView::setMusicVolume(float volume)
 void GameView::setSoundVolume(float volume)
 {
     m_audio.setSoundVolume(volume);
+}
+
+void GameView::reloadPlugins()
+{
+    m_scenes->clearSystems();
+    m_render = ecs::SystemManager();
+    try {
+        m_plugins.reload();
+    } catch (const EngineError &error) {
+        std::cerr << "[plugins] " << error.what() << std::endl;
+    }
+    m_systemFactory.build(m_context, m_game.child("renderSystems"), m_render);
+    m_scenes->rebuildSystems();
+}
+
+std::vector<std::string> GameView::pluginList() const
+{
+    return m_plugins.describe();
+}
+
+void GameView::resetSettings()
+{
+    m_settingsStore.reset(m_defaults);
+}
+
+PlayerSettings GameView::loadUserSettings(const std::filesystem::path &file, const PlayerSettings &defaults)
+{
+    if (!std::filesystem::exists(file))
+        return defaults;
+    try {
+        return PlayerSettings(scene::DataNode::fromFile(file));
+    } catch (const EngineError &error) {
+        std::cerr << error.what() << ", using the default settings" << std::endl;
+        return defaults;
+    }
 }
 
 void GameView::focusAction(const std::string &action)

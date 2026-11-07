@@ -143,6 +143,25 @@ with code 84 on error.
 **Why.** The same commands on both platforms, and dependencies installed automatically at the version fixed by
 the baseline. See [Libraries and tools](../comparative-study/libraries.md).
 
+## 16. Run-time plugins for systems
+
+**Decision.** Systems can be shipped as shared libraries, listed in the game file, loaded at start and reloaded when
+their file changes. The engine loads a temporary copy, so the original can be rebuilt while the game runs.
+
+**Why.** The last level of modularity described by the subject: extend the engine without rebuilding it, and
+iterate on a system in seconds.
+
+**Cost.** Plugins must be built with the same compiler and engine version, and only add systems.
+
+## 17. Components without virtual functions
+
+**Decision.** `IComponent` is a plain base with a protected, non-virtual destructor.
+
+**Why.** Components are stored by value and never deleted through a base pointer, so a virtual destructor only
+added a hidden pointer to every component. That pointer referenced the code of whoever created the component: a
+component created by a plugin pointed into the plugin, and crashed after the plugin was reloaded. Components are
+now plain data, smaller and safe to share between the engine and plugins.
+
 ## Known limits
 
 | Limit | Effect | Possible improvement |

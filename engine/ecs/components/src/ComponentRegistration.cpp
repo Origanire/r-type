@@ -21,6 +21,7 @@
 #include "HitFlash.hpp"
 #include "Hovered.hpp"
 #include "Invulnerable.hpp"
+#include "KeyBind.hpp"
 #include "Lifetime.hpp"
 #include "ListView.hpp"
 #include "Lives.hpp"
@@ -45,6 +46,7 @@
 #include "Score.hpp"
 #include "ScoreValue.hpp"
 #include "Script.hpp"
+#include "SettingSlider.hpp"
 #include "Solid.hpp"
 #include "SoundCue.hpp"
 #include "Sprite.hpp"
@@ -116,6 +118,8 @@ void registerEngineComponents(Registry &registry)
     registry.registerComponent<Lifetime>();
     registry.registerComponent<MusicWhen>();
     registry.registerComponent<Choice>();
+    registry.registerComponent<KeyBind>();
+    registry.registerComponent<SettingSlider>();
     registry.registerComponent<Gravity>();
     registry.registerComponent<Bounce>();
     registry.registerComponent<BoundText>();

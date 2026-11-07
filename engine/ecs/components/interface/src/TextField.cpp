@@ -73,4 +73,14 @@ std::string TextField::display() const
     return shown;
 }
 
+float TextField::width() const
+{
+    return m_width;
+}
+
+float TextField::height() const
+{
+    return m_height;
+}
+
 } // namespace engine::ecs

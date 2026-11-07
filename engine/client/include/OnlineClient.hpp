@@ -34,6 +34,8 @@ public:
     static constexpr const char *LOBBY_SCENE = "lobby";
     static constexpr const char *ROOM_SCENE = "room";
     static constexpr const char *GAME_SCENE = "game";
+    static constexpr const char *SETTINGS_SCENE = "settings";
+    static constexpr const char *CAPTURING_KEY = "settings.capturing";
     static constexpr const char *YES = "yes";
     static constexpr const char *NO = "no";
     static constexpr const char *RULE_PREFIX = "rule.";
@@ -51,6 +53,8 @@ private:
     void handleActions();
     void handleConsole();
     void setPaused(bool paused);
+    void openSettings();
+    void closeSettings();
     bool paused();
     void handleAction(const std::string &action);
     void handleEvent(const network::Packet &event, Time now);
@@ -84,6 +88,7 @@ private:
     Time m_lastRoomList;
     Time m_lastRoomUpdate;
     std::optional<Time> m_noticeUntil;
+    std::string m_settingsReturn;
     DebugMetrics m_metrics;
     DevConsole m_console;
 };

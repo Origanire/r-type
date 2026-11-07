@@ -55,11 +55,20 @@ bool DevConsole::runLocal(const std::vector<std::string> &words)
 {
     const std::string &name = words.front();
     if (name == "help") {
-        print("local: help, clear, cvars, get <cvar>, set <cvar> <value>");
+        print("local: help, clear, cvars, get <cvar>, set <cvar> <value>, plugins, reload");
         print("anything else is sent to the server (room owner only)");
     } else if (name == "clear") {
         m_lines.clear();
         publish();
+    } else if (name == "plugins") {
+        const std::vector<std::string> plugins = m_view.pluginList();
+        if (plugins.empty())
+            print("no plugin loaded");
+        for (const std::string &line : plugins)
+            print(line);
+    } else if (name == "reload") {
+        m_view.reloadPlugins();
+        print("plugins reloaded");
     } else if (name == "cvars") {
         for (const auto &[cvar, value] : m_cvars)
             print(cvar + " = " + value);

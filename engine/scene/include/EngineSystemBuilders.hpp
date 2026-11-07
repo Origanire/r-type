@@ -45,6 +45,8 @@ private:
     static std::unique_ptr<ecs::ISystem> buildMusic(SystemContext &context, const DataNode &entry);
     static std::unique_ptr<ecs::ISystem> buildShake(SystemContext &context, const DataNode &entry);
     static std::unique_ptr<ecs::ISystem> buildChoice(SystemContext &context, const DataNode &entry);
+    static std::unique_ptr<ecs::ISystem> buildKeyBind(SystemContext &context, const DataNode &entry);
+    static std::unique_ptr<ecs::ISystem> buildSettingSlider(SystemContext &context, const DataNode &entry);
 };
 
 } // namespace engine::scene

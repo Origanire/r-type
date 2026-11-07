@@ -55,7 +55,35 @@ sf::Keyboard::Scancode KeyBindings::keyFromName(const std::string &name)
             return sf::Keyboard::Scancode::Num0;
         return static_cast<sf::Keyboard::Scancode>(static_cast<int>(sf::Keyboard::Scancode::Num1) + name[0] - '1');
     }
-    const std::array<std::pair<const char *, sf::Keyboard::Scancode>, NAMED_KEY_COUNT> named = {{
+    for (const auto &[keyName, key] : namedKeys()) {
+        if (name == keyName)
+            return key;
+    }
+    throw InputError("KeyBindings: unknown key name " + name);
+}
+
+std::string KeyBindings::nameOf(sf::Keyboard::Scancode key)
+{
+    const int code = static_cast<int>(key);
+    const int letter = code - static_cast<int>(sf::Keyboard::Scancode::A);
+    if (letter >= 0 && letter < LETTER_COUNT)
+        return std::string(1, static_cast<char>('A' + letter));
+    if (key == sf::Keyboard::Scancode::Num0)
+        return "0";
+    const int digit = code - static_cast<int>(sf::Keyboard::Scancode::Num1);
+    if (digit >= 0 && digit < DIGIT_COUNT - 1)
+        return std::string(1, static_cast<char>('1' + digit));
+    for (const auto &[keyName, named] : namedKeys()) {
+        if (named == key)
+            return keyName;
+    }
+    return {};
+}
+
+const std::array<std::pair<const char *, sf::Keyboard::Scancode>, KeyBindings::NAMED_KEY_COUNT> &
+KeyBindings::namedKeys()
+{
+    static const std::array<std::pair<const char *, sf::Keyboard::Scancode>, NAMED_KEY_COUNT> named = {{
         {"Up", sf::Keyboard::Scancode::Up},
         {"Down", sf::Keyboard::Scancode::Down},
         {"Left", sf::Keyboard::Scancode::Left},
@@ -71,11 +99,7 @@ sf::Keyboard::Scancode KeyBindings::keyFromName(const std::string &name)
         {"LAlt", sf::Keyboard::Scancode::LAlt},
         {"RAlt", sf::Keyboard::Scancode::RAlt},
     }};
-    for (const auto &[keyName, key] : named) {
-        if (name == keyName)
-            return key;
-    }
-    throw InputError("KeyBindings: unknown key name " + name);
+    return named;
 }
 
 } // namespace engine::input

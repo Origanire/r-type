@@ -29,7 +29,13 @@ flowchart LR
 "VisibleWhen": {"key": "world.phase", "value": "boss"}
 ```
 
-The entity is drawn only while the value matches. Common keys: `world.phase`, `pause.visible`,
+The entity is drawn only while the value matches. A second condition can hide it anyway:
+
+```json
+"VisibleWhen": {"key": "world.phase", "value": "ready", "unless": {"key": "pause.visible", "value": "yes"}}
+```
+
+Here the "GET READY" text disappears while the pause menu is open. Common keys: `world.phase`, `pause.visible`,
 `console.visible`, `debug.visible`, `player0.alive`, `lobby.popup`.
 
 ## Bars
@@ -77,6 +83,7 @@ A black screen that fades in over one second on victory.
 | `quit` | yes | yes |
 | `play` | - | yes |
 | `pause`, `resume` | yes | yes |
+| `settings`, `back`, `settings_reset` | yes | yes |
 | `scene:<name>` | yes | yes |
 | `connect`, `disconnect` | yes | - |
 | `refresh_rooms`, `create_room`, `join:<id>`, `join_code`, `close_popup` | yes | - |

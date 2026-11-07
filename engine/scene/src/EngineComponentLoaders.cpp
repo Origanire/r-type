@@ -76,6 +76,8 @@ void EngineComponentLoaders::registerInterface(ComponentFactory &factory)
     factory.add("Foreground", &EngineComponentLoaders::loadForeground);
     factory.add("ProgressBar", &EngineComponentLoaders::loadProgressBar);
     factory.add("FadeWhen", &EngineComponentLoaders::loadFadeWhen);
+    factory.add("KeyBind", &EngineComponentLoaders::loadKeyBind);
+    factory.add("SettingSlider", &EngineComponentLoaders::loadSettingSlider);
 }
 
 std::string EngineComponentLoaders::readOptionalString(const DataNode &data, const std::string &key)

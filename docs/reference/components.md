@@ -85,11 +85,13 @@ Common value formats:
 | `Focusable` | C | `order` | Can be selected with the keyboard or gamepad, in `order` |
 | `TextField` | C | `name`, `maxLength`, `width`, `height`, `masked` = false, `placeholder` | Text input. Its text is stored as UI value `field.<name>` |
 | `Choice` | C | `name`, `options` | Left/right selector. Its value is stored as `field.<name>` |
-| `VisibleWhen` | C | `key`, `value` | Shown only while UI value `key` equals `value` |
+| `VisibleWhen` | C | `key`, `value`, `unless` = none | Shown only while UI value `key` equals `value`, except while `unless` (`{key, value}`) also matches |
 | `Hidden` | C | - | Not drawn (set and removed by `Visibility`) |
 | `BoundText` | C | `format` | Text built from UI values: `"STAGE {world.stage}"` |
 | `ProgressBar` | C | `key`, `width`, `max` = 1, `vertical` = false | Resizes the `RectShape` to `value / max` |
 | `FadeWhen` | C | `key`, `value`, `seconds` = 0 | Fades the `RectShape` in over `seconds` while `key` equals `value`, and out otherwise |
+| `SettingSlider` | C | `setting`, then `min`, `max`, `step` or `options`, `direction` = 0 | With `direction` 0: left/right on the focused row changes the player setting `setting.<setting>` (numbers stop at the ends, options wrap). With `-1` or `1`: a clickable arrow button that lowers or raises it. See [Controls](../guides/controls.md#settings-screen) |
+| `KeyBind` | C | `action`, `device` = keyboard, `prompt` = "..." | Enter or click, then the next key (or gamepad button with `"device": "gamepad"`) becomes the binding of `action`: `up`, `down`, `left`, `right`, `fire`, `action` |
 | `ListView` | C | `source`, `spacing`, `maxRows`, `parts` | Spawns one row per entry of the UI list `source` (rooms, members). Each row is made of `parts`: `{prefab, offsetX = 0, offsetY = 0}`, rows are `spacing` apart |
 
 ## Example

@@ -67,7 +67,8 @@ Handles accept new attributes, which is how a script stores its per-entity state
 | `e.health()`, `e.max_health()` | Hit points |
 | `e.heal(amount)` | Adds health, up to the maximum |
 | `e.set_health(points, maximum)` | Sets both values (bosses scaled by difficulty) |
-| `e.set_invulnerable(seconds)` | Ignores damage for that time (never shortens a longer shield) |
+| `e.set_invulnerable(seconds)` | Ignores damage for that time (never shortens a longer shield). `0` removes the shield |
+| `e.invulnerable_time()` | Seconds of shield left, `0` without shield |
 | `e.kill()` | Kills: death event, `on_death`, death effect on clients, life lost for players |
 | `e.destroy()` | Removes silently: no death event, no effect, no score |
 

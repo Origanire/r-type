@@ -4,17 +4,18 @@ This page lists, for each category of disability, what the games and the documen
 planned. Features are inspired by settings found in current games: remapping, toggle actions, assist modes,
 scalable text, visual cues for sounds.
 
-All options are **client settings** (`data/<game>_settings.json`): they never change the rules of the server, so
-every player of a room still plays the same game.
+All options are **client settings**, changed in game from the **SETTINGS** screen (main menu and pause menu) and
+saved automatically. They never change the rules of the server, so every player of a room still plays the same
+game.
 
 ## Physical and motor disabilities
 
 | Feature | How | Status |
 |---|---|---|
-| Fully remappable keyboard | `controls` in the settings file, any letter, digit or named key | Available |
-| Gamepad for menus and game | Stick, D-pad, buttons configurable in `gamepad` | Available |
-| Adjustable stick dead zone | `gamepad.deadzone` (worn sticks, tremors) | Available |
-| Toggle fire instead of holding | `"toggleFire": true` | Available |
+| Fully remappable keyboard | SETTINGS screen: press Enter on an action, then the new key. Conflicts are swapped | Available |
+| Gamepad for menus and game | Stick, D-pad, buttons set in the settings file | Available |
+| Adjustable stick dead zone | `gamepad.deadzone` in the settings file (worn sticks, tremors) | Available |
+| Toggle fire instead of holding | SETTINGS: AUTO FIRE ON | Available |
 | Hold to fire continuously, no rapid tapping | Default behaviour | Available |
 | Every menu usable without mouse | Focus navigation with arrows, stick or D-pad, Enter or A to confirm | Available |
 | Pause at any time | Escape or Select | Available (solo); online the game keeps running for others |
@@ -27,12 +28,12 @@ every player of a room still plays the same game.
 
 | Feature | How | Status |
 |---|---|---|
-| Scalable text | `textScale` in the settings file (for example `1.5`) | Available |
+| Scalable text | SETTINGS: TEXT SIZE 0.8 to 1.3, applied at once | Available |
 | Window scaled to any size | The 1920 x 1080 world scales to the window | Available |
-| Players not told apart by color only | `P1` to `P4` label above each ship (`showPlayerLabels`) | Available |
+| Players not told apart by color only | `P1` to `P4` label above each ship (SETTINGS: PLAYER NUMBERS) | Available |
 | Hits shown visually | Hit flash on every damaged entity, health bars in the HUD | Available |
 | Important sounds have a visual equivalent | Boss arrival: warning sign and "BOSS" bar; power-ups: HUD text of the weapon | Available |
-| Separate music and sound volumes | `musicVolume`, `soundVolume` (settings or console) | Available |
+| Separate music and sound volumes | SETTINGS screen, or the console | Available |
 | High-contrast HUD | Bright text on dark panels | Available |
 | Colorblind-friendly palettes | - | Planned |
 | Option to disable screen shake and flashes | Shake strength is set per game in its scene (`Shake` system) | Planned as a player setting |

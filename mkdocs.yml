@@ -58,6 +58,7 @@ nav:
       - Add a component: guides/add-a-component.md
       - Add a system: guides/add-a-system.md
       - Add a network message: guides/add-a-network-message.md
+      - Write a plugin: guides/write-a-plugin.md
       - Replace a library or port: guides/replace-a-library.md
       - Debugging: guides/debugging.md
       - Testing: guides/testing.md

@@ -73,4 +73,38 @@ int PlayerSettings::padSetting(const scene::DataNode &settings, const std::strin
     return settings.child("gamepad").getInt(key, fallback);
 }
 
+const std::string &PlayerSettings::key(input::Action action) const
+{
+    switch (action) {
+    case input::Action::Up:
+        return m_up;
+    case input::Action::Down:
+        return m_down;
+    case input::Action::Left:
+        return m_left;
+    case input::Action::Right:
+        return m_right;
+    case input::Action::Fire:
+        return m_fire;
+    case input::Action::Special:
+        break;
+    }
+    return m_action;
+}
+
+unsigned int PlayerSettings::padButton(input::Action action) const
+{
+    return action == input::Action::Special ? m_padAction : m_padFire;
+}
+
+float PlayerSettings::deadzone() const
+{
+    return m_padDeadzone;
+}
+
+bool PlayerSettings::toggleFire() const
+{
+    return m_toggleFire;
+}
+
 } // namespace engine::client

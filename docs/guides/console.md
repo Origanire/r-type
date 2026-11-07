@@ -21,6 +21,8 @@ Every answer is printed in the console, prefixed with the player number (`[P1] g
 | `cvars` | Lists the settings that can be changed |
 | `get <cvar>` | Shows a setting |
 | `set <cvar> <value>` | Changes a setting: `musicVolume`, `soundVolume` (0 to 100), `showMetrics` (0 or 1) |
+| `plugins` | Lists the loaded plugins and their systems |
+| `reload` | Reloads the plugins now |
 
 ## R-Type server commands
 
@@ -29,7 +31,7 @@ Defined in `game/scripts/console.py`:
 | Command | Effect |
 |---|---|
 | `help` | Lists the commands |
-| `god` | Your ship becomes invulnerable |
+| `god` | Turns invulnerability on, or off when it is already on |
 | `heal` | Restores your ship's health |
 | `give <double\|spread\|heal\|shield\|force>` | Gives a power-up |
 | `spawn <prefab>` | Spawns any server prefab in front of you (`spawn boss_core`) |

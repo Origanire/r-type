@@ -231,9 +231,20 @@ void ScriptEntity::setInvulnerable(float seconds)
 {
     if (!alive())
         return;
+    if (seconds <= 0.f) {
+        if (component<ecs::Invulnerable>())
+            m_world->registry().remove<ecs::Invulnerable>(m_entity);
+        return;
+    }
     const auto *shield = component<ecs::Invulnerable>();
     if (!shield || shield->remaining() < seconds)
         m_world->registry().emplace<ecs::Invulnerable>(m_entity, seconds);
+}
+
+float ScriptEntity::invulnerableTime() const
+{
+    const auto *shield = component<ecs::Invulnerable>();
+    return shield ? shield->remaining() : 0.f;
 }
 
 void ScriptEntity::destroy()

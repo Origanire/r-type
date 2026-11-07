@@ -39,8 +39,13 @@ engine_add_game(rtype
     SCRIPTS game/scripts
     ASSETS assets)
 
+engine_add_plugin(wobble
+    SOURCES plugins/wobble/src/WobbleSystem.cpp plugins/wobble/src/WobblePlugin.cpp
+    INCLUDES plugins/wobble/include)
+
 engine_add_game(skyhop
     LOCAL skyhop
+    PLUGINS wobble
     DATA game2/data
     SCRIPTS game2/scripts
     ASSETS game2/assets)

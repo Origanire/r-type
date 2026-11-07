@@ -12,7 +12,7 @@ LocalClient::LocalClient(const std::filesystem::path &assetsDirectory, const std
     const std::string &game, const network::NetworkSettings &settings, scripting::ScriptEngine &scripts)
     : m_view(assetsDirectory, dataDirectory, game), m_presenter(m_view), m_data(dataDirectory), m_game(game),
       m_settings(settings), m_scripts(scripts), m_simulation(), m_accumulator(0.f),
-      m_tick(1.f / static_cast<float>(settings.tickRate()))
+      m_tick(1.f / static_cast<float>(settings.tickRate())), m_settingsReturn()
 {
 }
 
@@ -56,6 +56,8 @@ void LocalClient::handleActions()
 {
     for (const ecs::UiActionEvent &event : m_view.takeUiActions())
         handleAction(event.action());
+    if (m_view.uiStore().value(CAPTURING_KEY) == YES)
+        return;
     if (m_view.escapePressed() && !m_view.escapeAction().empty())
         handleAction(m_view.escapeAction());
 }
@@ -70,6 +72,12 @@ void LocalClient::handleAction(const std::string &action)
         setPaused(!paused());
     else if (action == "resume")
         setPaused(false);
+    else if (action == "settings")
+        openSettings();
+    else if (action == "back")
+        closeSettings();
+    else if (action == "settings_reset")
+        m_view.resetSettings();
     else if (action.rfind("scene:", 0) == 0)
         stop(action.substr(std::string("scene:").size()));
 }
@@ -89,6 +97,21 @@ void LocalClient::stop(const std::string &scene)
     m_simulation.reset();
     m_view.switchScene(scene);
     setPaused(false);
+}
+
+void LocalClient::openSettings()
+{
+    m_settingsReturn = m_view.currentScene();
+    m_view.switchScene(SETTINGS_SCENE);
+}
+
+void LocalClient::closeSettings()
+{
+    if (m_view.currentScene() != SETTINGS_SCENE || m_settingsReturn.empty())
+        return;
+    m_view.switchScene(m_settingsReturn);
+    if (m_simulation)
+        m_presenter.apply(m_simulation->snapshot());
 }
 
 void LocalClient::setPaused(bool paused)

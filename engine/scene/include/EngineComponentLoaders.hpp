@@ -48,6 +48,9 @@ private:
     static void loadLifetime(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadMusicWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadChoice(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadKeyBind(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadSettingSlider(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static std::vector<std::string> sliderRange(const DataNode &data);
     static void loadRotation(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
 
     static void loadLives(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);

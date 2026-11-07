@@ -8,10 +8,10 @@ sees SFML, Asio, nlohmann-json or pybind11.
 
 | Library | Folder | Provides | Depends on |
 |---|---|---|---|
-| `engine_core` | `core/` | `EngineError` (base of every exception), `Clock`, `FixedTimestep`, `EventQueue`, `Color`, `Vector2`, `IntRect`, `CommandLine`, `AssetPath`, `UiInput`, `ProcessMemory` | - |
+| `engine_core` | `core/` | `EngineError` (base of every exception), `DynamicLibrary`, `Clock`, `FixedTimestep`, `EventQueue`, `Color`, `Vector2`, `IntRect`, `CommandLine`, `AssetPath`, `UiInput`, `ProcessMemory` | - |
 | `engine_physics` | `physics/` | `Aabb` (overlap and separation), `Body`, `CollisionPair`, collision detection | - |
 | `engine_ecs` | `ecs/` | `Registry`, `SparseArray`, `Entity`, `ISystem`, `SystemManager`, `UiStore`, all the engine components and systems | core, physics |
-| `engine_scene` | `scene/` | `DataNode` (JSON reader), `ComponentFactory`, `SystemFactory`, `PrefabLibrary`, `SceneBuilder`, the loaders of every component and system | core, ecs, nlohmann-json (private) |
+| `engine_scene` | `scene/` | `DataNode` (JSON reader), `DataWriter`, `PluginManager`, `ComponentFactory`, `SystemFactory`, `PrefabLibrary`, `SceneBuilder`, the loaders of every component and system | core, ecs, nlohmann-json (private) |
 | `engine_net` | `net/` | `UdpTransport` (socket + I/O thread), `Endpoint`, `Datagram`, big-endian `ByteWriter` / `ByteReader` | core, Asio (private) |
 | `engine_network` | `network/` | The game protocol (`Packet`, `Codec`, every message), `GameServer`, `GameRoom`, `ClientConnection`, `NetworkSettings` | core, net, scene |
 | `engine_render` | `render/` | `Window`, `IRenderer`, `SfmlRenderer`, `TextureManager`, `FontManager` | core, SFML Graphics |
@@ -57,6 +57,10 @@ written without a path: `#include "Health.hpp"`.
 |---|---|---|
 | `ENGINE_BUILD_CLIENT` | `ON` | Builds render, audio, input, client and the client executables |
 | `ENGINE_BUILD_SERVER` | `ON` | Builds scripting, simulation and the server executables |
+
+**Run-time modularity**: systems can also live in plugins, shared libraries loaded and reloaded while the game
+runs ([Write a plugin](../guides/write-a-plugin.md)). The engine libraries are built as position-independent code
+so that plugins can link them.
 
 A dedicated server machine can be built with `-DENGINE_BUILD_CLIENT=OFF`: it then needs neither SFML nor a
 display. The solo executables need both options.

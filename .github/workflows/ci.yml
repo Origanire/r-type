@@ -24,7 +24,7 @@ jobs:
         run: pip install clang-format==${{ env.CLANG_FORMAT_VERSION }}
       - name: Check formatting
         run: |
-          find engine -name '*.cpp' -o -name '*.hpp' -o -name '*.tpp' \
+          find engine plugins -name '*.cpp' -o -name '*.hpp' -o -name '*.tpp' \
             | xargs clang-format --style=file --dry-run --Werror
 
   build:

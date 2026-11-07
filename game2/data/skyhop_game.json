@@ -32,6 +32,9 @@
     "settings": "skyhop_settings.json",
     "scripts": "../scripts/skyhop"
   },
+  "plugins": [
+    "wobble"
+  ],
   "layers": [
     "player",
     "obstacle",
@@ -136,6 +139,12 @@
         "FocusNavigation",
         "ButtonStyle",
         "SpriteAnimation",
+        {
+          "system": "Wobble",
+          "texture": "plane",
+          "amplitude": 12,
+          "speed": 12
+        },
         "Audio",
         "Cleanup"
       ],
@@ -465,7 +474,7 @@
           "prefab": "ui",
           "components": {
             "Transform": {
-              "x": 806.0,
+              "x": 839.5,
               "y": 863
             },
             "Text": {
@@ -477,7 +486,7 @@
                 60,
                 255
               ],
-              "content": "ESPACE OU A POUR VOLER"
+              "content": "ESPACE POUR VOLER"
             }
           }
         },
@@ -485,7 +494,7 @@
           "prefab": "ui",
           "components": {
             "Transform": {
-              "x": 803.0,
+              "x": 836.5,
               "y": 860
             },
             "Text": {
@@ -497,7 +506,7 @@
                 255,
                 255
               ],
-              "content": "ESPACE OU A POUR VOLER"
+              "content": "ESPACE POUR VOLER"
             }
           }
         }
@@ -723,7 +732,11 @@
             },
             "VisibleWhen": {
               "key": "world.phase",
-              "value": "ready"
+              "value": "ready",
+              "unless": {
+                "key": "pause.visible",
+                "value": "yes"
+              }
             },
             "Foreground": {}
           }
@@ -748,7 +761,11 @@
             },
             "VisibleWhen": {
               "key": "world.phase",
-              "value": "ready"
+              "value": "ready",
+              "unless": {
+                "key": "pause.visible",
+                "value": "yes"
+              }
             },
             "Foreground": {}
           }
@@ -773,7 +790,11 @@
             },
             "VisibleWhen": {
               "key": "world.phase",
-              "value": "ready"
+              "value": "ready",
+              "unless": {
+                "key": "pause.visible",
+                "value": "yes"
+              }
             },
             "Foreground": {}
           }
@@ -797,7 +818,11 @@
             },
             "VisibleWhen": {
               "key": "world.phase",
-              "value": "over"
+              "value": "over",
+              "unless": {
+                "key": "pause.visible",
+                "value": "yes"
+              }
             },
             "Foreground": {}
           }
@@ -825,7 +850,11 @@
             },
             "VisibleWhen": {
               "key": "world.phase",
-              "value": "over"
+              "value": "over",
+              "unless": {
+                "key": "pause.visible",
+                "value": "yes"
+              }
             },
             "Foreground": {}
           }
@@ -853,7 +882,11 @@
             },
             "VisibleWhen": {
               "key": "world.phase",
-              "value": "over"
+              "value": "over",
+              "unless": {
+                "key": "pause.visible",
+                "value": "yes"
+              }
             },
             "Foreground": {}
           }
@@ -878,7 +911,11 @@
             },
             "VisibleWhen": {
               "key": "world.phase",
-              "value": "over"
+              "value": "over",
+              "unless": {
+                "key": "pause.visible",
+                "value": "yes"
+              }
             },
             "Foreground": {}
           }
@@ -903,7 +940,11 @@
             },
             "VisibleWhen": {
               "key": "world.phase",
-              "value": "over"
+              "value": "over",
+              "unless": {
+                "key": "pause.visible",
+                "value": "yes"
+              }
             },
             "Foreground": {}
           }

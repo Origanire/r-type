@@ -33,6 +33,7 @@ void Window::processEvents(UiInput &ui)
             if (text->unicode <= static_cast<char32_t>(UiInput::LAST_PRINTABLE))
                 ui.typeCharacter(static_cast<char>(text->unicode));
         } else if (const auto *button = event->getIf<sf::Event::JoystickButtonPressed>()) {
+            ui.pressRawButton(button->button);
             if (button->button == CONFIRM_BUTTON)
                 ui.pressKey(UiKey::Enter);
             else if (button->button == SELECT_BUTTON)
@@ -40,6 +41,7 @@ void Window::processEvents(UiInput &ui)
         } else if (const auto *stick = event->getIf<sf::Event::JoystickMoved>()) {
             handleStick(ui, *stick);
         } else if (const auto *key = event->getIf<sf::Event::KeyPressed>()) {
+            ui.pressRawKey(static_cast<int>(key->scancode));
             if (const auto uiKey = uiKeyOf(key->code))
                 ui.pressKey(*uiKey);
         }

@@ -53,6 +53,7 @@ public:
 
     ScriptEntity spawn(const std::string &prefab, float dx, float dy);
     void setInvulnerable(float seconds);
+    float invulnerableTime() const;
     void destroy();
     void kill();
     ScriptWorld &world() const;

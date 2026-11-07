@@ -36,6 +36,18 @@ void SceneManager::update(float dt)
     m_systems.update(dt);
 }
 
+void SceneManager::clearSystems()
+{
+    m_systems = ecs::SystemManager();
+}
+
+void SceneManager::rebuildSystems()
+{
+    m_systems = ecs::SystemManager();
+    if (!m_current.empty())
+        m_systemFactory.build(m_context, m_scenes.child(m_current).child("systems"), m_systems);
+}
+
 const std::string &SceneManager::current() const
 {
     return m_current;

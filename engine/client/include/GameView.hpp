@@ -20,9 +20,11 @@
 #include "LayerTable.hpp"
 #include "Match.hpp"
 #include "PlayerSettings.hpp"
+#include "PluginManager.hpp"
 #include "PrefabLibrary.hpp"
 #include "Registry.hpp"
 #include "SceneManager.hpp"
+#include "SettingsStore.hpp"
 #include "SfmlAudio.hpp"
 #include "SfmlRenderer.hpp"
 #include "SystemContext.hpp"
@@ -40,6 +42,9 @@ namespace engine::client {
 class GameView
 {
 public:
+    static constexpr const char *USER_SETTINGS_SUFFIX = "_user_settings.json";
+    static constexpr const char *PLUGIN_FOLDER = "plugins";
+
     static constexpr float MAX_FRAME_SECONDS = 0.25f;
     static constexpr unsigned int MAX_KIND = 255;
     static constexpr float LOADING_BUDGET_SECONDS = 0.012f;
@@ -85,6 +90,9 @@ public:
     void focusAction(const std::string &action);
     void setMusicVolume(float volume);
     void setSoundVolume(float volume);
+    void resetSettings();
+    void reloadPlugins();
+    std::vector<std::string> pluginList() const;
     std::size_t entityCount() const;
     void close();
 
@@ -99,10 +107,12 @@ private:
     static std::uint8_t parseKind(const std::string &text);
     static float verticalDirection(float previousY, float nextY);
     void applyVisual(const ecs::Entity &entity, std::uint8_t visual);
+    static PlayerSettings loadUserSettings(const std::filesystem::path &file, const PlayerSettings &defaults);
     static scene::DataNode loadLinked(
         const std::filesystem::path &dataDirectory, const scene::DataNode &game, const std::string &key);
 
     scene::DataNode m_game;
+    PlayerSettings m_defaults;
     PlayerSettings m_settings;
     render::Window m_window;
     render::TextureManager m_textures;
@@ -121,7 +131,9 @@ private:
     scene::ComponentFactory m_components;
     scene::PrefabLibrary m_prefabs;
     scene::SystemFactory m_systemFactory;
+    scene::PluginManager m_plugins;
     scene::SystemContext m_context;
+    SettingsStore m_settingsStore;
     ecs::SystemManager m_render;
     std::unique_ptr<SceneManager> m_scenes;
     Clock m_clock;

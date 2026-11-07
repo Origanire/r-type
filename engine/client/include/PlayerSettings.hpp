@@ -25,6 +25,10 @@ public:
     float soundVolume() const;
     float textScale() const;
     const std::string &serverAddress() const;
+    const std::string &key(input::Action action) const;
+    unsigned int padButton(input::Action action) const;
+    float deadzone() const;
+    bool toggleFire() const;
 
 private:
     static int padSetting(const scene::DataNode &settings, const std::string &key, int fallback);

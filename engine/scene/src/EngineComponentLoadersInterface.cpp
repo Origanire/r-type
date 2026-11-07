@@ -1,5 +1,6 @@
 #include "EngineComponentLoaders.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <utility>
@@ -21,6 +22,7 @@
 #include "Health.hpp"
 #include "Hidden.hpp"
 #include "Invulnerable.hpp"
+#include "KeyBind.hpp"
 #include "Lifetime.hpp"
 #include "ListView.hpp"
 #include "Lives.hpp"
@@ -40,6 +42,7 @@
 #include "Score.hpp"
 #include "ScoreValue.hpp"
 #include "Script.hpp"
+#include "SettingSlider.hpp"
 #include "Solid.hpp"
 #include "SoundCue.hpp"
 #include "Sprite.hpp"
@@ -86,7 +89,13 @@ void EngineComponentLoaders::loadTextField(ecs::Registry &registry, const ecs::E
 
 void EngineComponentLoaders::loadVisibleWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
 {
-    registry.emplace<ecs::VisibleWhen>(entity, data.getString("key"), data.getString("value"));
+    if (!data.has("unless")) {
+        registry.emplace<ecs::VisibleWhen>(entity, data.getString("key"), data.getString("value"));
+        return;
+    }
+    const DataNode unless = data.child("unless");
+    registry.emplace<ecs::VisibleWhen>(
+        entity, data.getString("key"), data.getString("value"), unless.getString("key"), unless.getString("value"));
 }
 
 void EngineComponentLoaders::loadBoundText(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
@@ -134,6 +143,50 @@ void EngineComponentLoaders::loadChoice(ecs::Registry &registry, const ecs::Enti
     for (const DataNode &option : data.child("options").items())
         options.push_back(option.asString());
     registry.emplace<ecs::Choice>(entity, data.getString("name"), std::move(options));
+}
+
+void EngineComponentLoaders::loadKeyBind(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    const std::string device = data.has("device") ? data.getString("device") : ecs::KeyBind::KEYBOARD;
+    if (device != ecs::KeyBind::KEYBOARD && device != ecs::KeyBind::GAMEPAD)
+        throw SceneError("EngineComponentLoaders: " + data.path() + ".device must be keyboard or gamepad");
+    const std::string prompt = data.has("prompt") ? data.getString("prompt") : ecs::KeyBind::DEFAULT_PROMPT;
+    registry.emplace<ecs::KeyBind>(entity, data.getString("action"), device, prompt);
+}
+
+void EngineComponentLoaders::loadSettingSlider(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
+{
+    if (data.has("options")) {
+        std::vector<std::string> options;
+        for (const DataNode &option : data.child("options").items())
+            options.push_back(option.asString());
+        registry.emplace<ecs::SettingSlider>(
+            entity, data.getString("setting"), std::move(options), true, data.getInt("direction", 0));
+        return;
+    }
+    registry.emplace<ecs::SettingSlider>(
+        entity, data.getString("setting"), sliderRange(data), false, data.getInt("direction", 0));
+}
+
+std::vector<std::string> EngineComponentLoaders::sliderRange(const DataNode &data)
+{
+    const float minimum = data.getFloat("min");
+    const float maximum = data.getFloat("max");
+    const float step = data.getFloat("step");
+    if (step <= 0.f || maximum < minimum)
+        throw SceneError("EngineComponentLoaders: " + data.path() + " needs min <= max and a positive step");
+    const bool whole = std::floor(step) == step && std::floor(minimum) == minimum;
+    std::vector<std::string> values;
+    for (int index = 0; minimum + static_cast<float>(index) * step <= maximum + step / 2.f; ++index) {
+        const float value = minimum + static_cast<float>(index) * step;
+        if (whole) {
+            values.push_back(std::to_string(static_cast<int>(std::lround(value))));
+        } else {
+            const long tenths = std::lround(value * 10.f);
+            values.push_back(std::to_string(tenths / 10) + "." + std::to_string(tenths % 10));
+        }
+    }
+    return values;
 }
 
 } // namespace engine::scene

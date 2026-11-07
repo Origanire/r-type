@@ -19,6 +19,7 @@
 #include "GravitySystem.hpp"
 #include "HitFlashSystem.hpp"
 #include "InvulnerabilitySystem.hpp"
+#include "KeyBindSystem.hpp"
 #include "LifetimeSystem.hpp"
 #include "ListViewSystem.hpp"
 #include "LivesSystem.hpp"
@@ -35,6 +36,7 @@
 #include "RenderSystem.hpp"
 #include "RespawnSystem.hpp"
 #include "ScoreSystem.hpp"
+#include "SettingSliderSystem.hpp"
 #include "ShakeSystem.hpp"
 #include "SolidSystem.hpp"
 #include "SpriteAnimationSystem.hpp"
@@ -67,6 +69,8 @@ void EngineSystemBuilders::registerInterface(SystemFactory &factory)
     factory.add("ProgressBar", &EngineSystemBuilders::buildStoreReader<ecs::ProgressBarSystem>);
     factory.add("Fade", &EngineSystemBuilders::buildStoreReader<ecs::FadeSystem>);
     factory.add("Choice", &EngineSystemBuilders::buildChoice);
+    factory.add("KeyBind", &EngineSystemBuilders::buildKeyBind);
+    factory.add("SettingSlider", &EngineSystemBuilders::buildSettingSlider);
 }
 
 std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildButtonStyle(SystemContext &context, const DataNode &)
@@ -184,6 +188,16 @@ std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildShake(SystemContext &co
 std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildChoice(SystemContext &context, const DataNode &)
 {
     return std::make_unique<ecs::ChoiceSystem>(context.registry(), context.uiInput(), context.uiStore());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildKeyBind(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::KeyBindSystem>(context.registry(), context.uiInput(), context.uiStore());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildSettingSlider(SystemContext &context, const DataNode &)
+{
+    return std::make_unique<ecs::SettingSliderSystem>(context.registry(), context.uiInput(), context.uiStore());
 }
 
 } // namespace engine::scene

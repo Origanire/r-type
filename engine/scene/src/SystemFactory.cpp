@@ -13,6 +13,11 @@ void SystemFactory::add(const std::string &name, Builder builder)
     m_builders.insert_or_assign(name, std::move(builder));
 }
 
+void SystemFactory::remove(const std::string &name)
+{
+    m_builders.erase(name);
+}
+
 bool SystemFactory::has(const std::string &name) const
 {
     return m_builders.contains(name);

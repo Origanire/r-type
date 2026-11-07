@@ -57,6 +57,8 @@ Skyhop order (no weapons, gravity handled in its script):
 | `ButtonStyle` | - | Applies the normal, hover and pressed colors or frames, plays button sounds |
 | `TextField` | - | Text input in `TextField` entities |
 | `Choice` | - | Left and right on `Choice` entities |
+| `SettingSlider` | - | Left and right on `SettingSlider` entities |
+| `KeyBind` | - | Captures the next key or button for a `KeyBind` entity. Put it after `FocusNavigation` |
 | `ListView` | - | Rebuilds the rows of a `ListView` when its list changes |
 | `BoundText` | - | Fills `BoundText` formats with UI values |
 | `Visibility` | - | Shows and hides `VisibleWhen` entities |
@@ -77,6 +79,12 @@ Skyhop order (no weapons, gravity handled in its script):
 | `Shake` | `key`, `strength` = 1 | Shakes the camera by the UI value `key` |
 | `Audio` | - | Plays `SoundCue` sounds |
 | `Cleanup` | - | Removes destroyed entities |
+
+## Plugin systems
+
+| Name | Plugin | Options | Does |
+|---|---|---|---|
+| `Wobble` | `wobble` | `texture`, `amplitude` = 12, `speed` = 3 | Rocks the sprites of `texture` (all sprites without it) |
 
 ## Render system
 

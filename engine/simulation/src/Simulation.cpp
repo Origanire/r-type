@@ -34,17 +34,20 @@ namespace engine::simulation {
 Simulation::Simulation(const std::filesystem::path &dataDirectory, const std::string &game,
     const network::NetworkSettings &settings, scripting::ScriptEngine &scripts, const std::vector<std::uint8_t> &rules)
     : m_settings(settings), m_game(scene::DataNode::fromFile(dataDirectory / (game + "_game.json"))),
-      m_prefabs(m_registry, m_components), m_context(m_registry, m_prefabs),
-      m_worldTable(readTable(m_game, "worldValues")), m_playerTable(readTable(m_game, "playerValues")),
-      m_ruleTable(readTable(m_game, "rules")), m_soundTable(readTable(m_game, "eventSounds")),
-      m_worldValues(m_worldTable.size()), m_scriptBuilder(scripts, scriptDirectory(dataDirectory, m_game)),
-      m_cleanup(m_registry), m_playerPrefab(m_game.getString("playerPrefab")), m_events(),
-      m_reportedPhase(ecs::Match::Phase::Waiting), m_nextNetworkId(1), m_tick(0), m_waitingCommands()
+      m_prefabs(m_registry, m_components), m_plugins(m_systemFactory, dataDirectory.parent_path() / PLUGIN_FOLDER),
+      m_context(m_registry, m_prefabs), m_worldTable(readTable(m_game, "worldValues")),
+      m_playerTable(readTable(m_game, "playerValues")), m_ruleTable(readTable(m_game, "rules")),
+      m_soundTable(readTable(m_game, "eventSounds")), m_worldValues(m_worldTable.size()),
+      m_scriptBuilder(scripts, scriptDirectory(dataDirectory, m_game)), m_cleanup(m_registry),
+      m_playerPrefab(m_game.getString("playerPrefab")), m_events(), m_reportedPhase(ecs::Match::Phase::Waiting),
+      m_nextNetworkId(1), m_tick(0), m_waitingCommands()
 {
     ecs::registerEngineComponents(m_registry);
     m_layers.load(m_game.child("layers"));
     scene::EngineComponentLoaders::registerAll(m_components, m_layers);
     scene::EngineSystemBuilders::registerAll(m_systemFactory);
+    if (m_game.has("plugins"))
+        m_plugins.load(m_game.child("plugins"));
     m_prefabs.load(scene::DataNode::fromFile(dataDirectory / m_game.child("files").getString("serverPrefabs")));
     if (!m_prefabs.has(m_playerPrefab))
         throw SimulationError("Simulation: unknown player prefab " + m_playerPrefab);

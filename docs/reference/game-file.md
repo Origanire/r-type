@@ -17,6 +17,7 @@ Examples come from `game/data/rtype_game.json` and `game2/data/skyhop_game.json`
 | `preload` | list of strings | no | Texture and sound keys loaded at start |
 | `playerPrefab` | string | yes | Server prefab spawned for each player |
 | `consoleRule` | string | no | Rule that must be ON for console commands to run (R-Type: `cheats`) |
+| `plugins` | list of strings | no | Plugins to load from `bin/plugins/` ([Write a plugin](../guides/write-a-plugin.md)) |
 
 ### `files`
 
@@ -114,7 +115,8 @@ Translating these texts is enough to translate the online screens.
 
 # Settings file reference
 
-`data/<game>_settings.json` holds the player's preferences. It can be edited by hand.
+`data/<game>_settings.json` holds the default preferences of a game. The settings screen saves the player's own
+choices in `data/<game>_user_settings.json` (same keys), which is read instead when it exists.
 
 | Key | Default | Description |
 |---|---|---|

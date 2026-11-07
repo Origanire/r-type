@@ -2,7 +2,9 @@
 
 namespace engine {
 
-UiInput::UiInput() : m_pointer(), m_pointerMoved(false), m_clicked(false), m_pointerDown(false), m_typedText(), m_keys()
+UiInput::UiInput()
+    : m_pointer(), m_pointerMoved(false), m_clicked(false), m_pointerDown(false), m_typedText(), m_keys(), m_rawKey(),
+      m_rawButton()
 {
 }
 
@@ -12,6 +14,28 @@ void UiInput::beginFrame()
     m_clicked = false;
     m_typedText.clear();
     m_keys.fill(false);
+    m_rawKey.reset();
+    m_rawButton.reset();
+}
+
+void UiInput::pressRawKey(int code)
+{
+    m_rawKey = code;
+}
+
+void UiInput::pressRawButton(unsigned int button)
+{
+    m_rawButton = button;
+}
+
+std::optional<int> UiInput::rawKey() const
+{
+    return m_rawKey;
+}
+
+std::optional<unsigned int> UiInput::rawButton() const
+{
+    return m_rawButton;
 }
 
 void UiInput::movePointer(Vector2 position)

@@ -17,7 +17,8 @@ void VisibilitySystem::update(float)
         const Entity entity = m_registry.entityAt(i);
         const VisibleWhen &rule = m_registry.get<VisibleWhen>(entity);
         const UiStore::Row *row = m_registry.has<RowData>(entity) ? &m_registry.get<RowData>(entity).values() : nullptr;
-        const bool visible = m_store.lookup(rule.key(), row) == rule.value();
+        const bool blocked = !rule.unlessKey().empty() && m_store.lookup(rule.unlessKey(), row) == rule.unlessValue();
+        const bool visible = !blocked && m_store.lookup(rule.key(), row) == rule.value();
         if (visible && m_registry.has<Hidden>(entity)) {
             m_registry.remove<Hidden>(entity);
         } else if (!visible && !m_registry.has<Hidden>(entity)) {

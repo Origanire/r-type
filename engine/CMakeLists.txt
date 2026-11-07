@@ -17,6 +17,8 @@ else()
     set(ENGINE_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" CACHE INTERNAL "")
 endif()
 set(ENGINE_APPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/apps/src" CACHE INTERNAL "")
+# Run-time modularity: the engine libraries are also linked into plugins (shared libraries).
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # ---------------------------------------------------------------------------
 # Dependencies (vcpkg.json).
@@ -55,10 +57,13 @@ add_library(engine_core
     core/src/PortOption.cpp
     core/src/UiInput.cpp
     core/src/ProcessMemory.cpp
+    core/src/DynamicLibrary.cpp
 )
 target_include_directories(engine_core PUBLIC core/include)
 if(WIN32)
     target_link_libraries(engine_core PRIVATE psapi)
+else()
+    target_link_libraries(engine_core PRIVATE ${CMAKE_DL_LIBS})
 endif()
 
 # --- engine_physics: bounding boxes and collision detection (pure geometry)
@@ -90,6 +95,8 @@ add_library(engine_ecs
     ecs/components/gameplay/src/Lifetime.cpp
     ecs/components/presentation/src/MusicWhen.cpp
     ecs/components/interface/src/Choice.cpp
+    ecs/components/interface/src/KeyBind.cpp
+    ecs/components/interface/src/SettingSlider.cpp
     ecs/components/physics/src/Gravity.cpp
     ecs/components/physics/src/Bounce.cpp
     ecs/components/physics/src/Transform.cpp
@@ -177,6 +184,8 @@ add_library(engine_ecs
     ecs/systems/physics/src/GravitySystem.cpp
     ecs/systems/physics/src/BounceSystem.cpp
     ecs/systems/interface/src/ChoiceSystem.cpp
+    ecs/systems/interface/src/KeyBindSystem.cpp
+    ecs/systems/interface/src/SettingSliderSystem.cpp
     ecs/systems/events/src/SoundEvent.cpp
     ecs/systems/events/src/ConsoleEvent.cpp
     ecs/systems/interface/src/ProgressBarSystem.cpp
@@ -202,6 +211,10 @@ target_link_libraries(engine_ecs PUBLIC engine_core engine_physics)
 # --- engine_scene: JSON data, component and system factories, prefabs and scenes (nlohmann-json hidden inside)
 add_library(engine_scene
     scene/src/DataNode.cpp
+    scene/src/DataWriter.cpp
+    scene/src/PluginRegistrar.cpp
+    scene/src/LoadedPlugin.cpp
+    scene/src/PluginManager.cpp
     scene/src/DataNodeImpl.cpp
     scene/src/DataReaders.cpp
     scene/src/LayerTable.cpp
@@ -331,6 +344,7 @@ add_library(engine_client
     client/src/OnlineClientLobby.cpp
     client/src/OnlineClientGame.cpp
     client/src/SnapshotPresenter.cpp
+    client/src/SettingsStore.cpp
 )
 target_include_directories(engine_client PUBLIC client/include)
 target_link_libraries(engine_client PUBLIC engine_scene engine_network engine_render engine_audio engine_input)
@@ -397,7 +411,7 @@ endif()
 # engine_add_game(<name> CLIENT <exe> SERVER <exe> DATA <dir> SCRIPTS <dir> ASSETS <dir>)
 # Builds the generic launchers under the game's executable names and copies its content next to them.
 function(engine_add_game name)
-    cmake_parse_arguments(GAME "" "CLIENT;SERVER;LOCAL;DATA;SCRIPTS;ASSETS" "" ${ARGN})
+    cmake_parse_arguments(GAME "" "CLIENT;SERVER;LOCAL;DATA;SCRIPTS;ASSETS" "PLUGINS" ${ARGN})
     add_custom_target(${name}_content ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/${GAME_ASSETS} ${ENGINE_OUTPUT_DIR}/assets
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/${GAME_DATA} ${ENGINE_OUTPUT_DIR}/data
@@ -421,5 +435,24 @@ function(engine_add_game name)
         target_link_libraries(${GAME_LOCAL} PRIVATE engine_local)
         add_dependencies(${GAME_LOCAL} ${name}_content engine_python_runtime)
         set_target_properties(${GAME_LOCAL} PROPERTIES ENABLE_EXPORTS ON)
+    endif()
+    foreach(plugin IN LISTS GAME_PLUGINS)
+        add_dependencies(${name}_content ${plugin})
+    endforeach()
+endfunction()
+
+# engine_add_plugin(name SOURCES ... [INCLUDES ...]): builds a run-time plugin (shared library) into bin/plugins.
+function(engine_add_plugin name)
+    cmake_parse_arguments(PLUGIN "" "" "SOURCES;INCLUDES" ${ARGN})
+    add_library(${name} SHARED ${PLUGIN_SOURCES})
+    target_include_directories(${name} PRIVATE ${PLUGIN_INCLUDES})
+    target_link_libraries(${name} PRIVATE engine_scene engine_ecs)
+    set_target_properties(${name} PROPERTIES
+        PREFIX ""
+        CXX_VISIBILITY_PRESET hidden
+        LIBRARY_OUTPUT_DIRECTORY ${ENGINE_OUTPUT_DIR}/plugins
+        RUNTIME_OUTPUT_DIRECTORY ${ENGINE_OUTPUT_DIR}/plugins)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_options(${name} PRIVATE -Wl,--exclude-libs,ALL)
     endif()
 endfunction()

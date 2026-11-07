@@ -19,6 +19,7 @@
 #include "NetworkSettings.hpp"
 #include "Packet.hpp"
 #include "PlayerStatus.hpp"
+#include "PluginManager.hpp"
 #include "PrefabLibrary.hpp"
 #include "Registry.hpp"
 #include "ScriptBuilder.hpp"
@@ -38,6 +39,7 @@ public:
     static constexpr int MAX_REPORTED_LIVES = 255;
 
     static constexpr const char *DEFAULT_SCRIPT_DIRECTORY = "scripts";
+    static constexpr const char *PLUGIN_FOLDER = "plugins";
 
     Simulation(const std::filesystem::path &dataDirectory, const std::string &game,
         const network::NetworkSettings &settings, scripting::ScriptEngine &scripts,
@@ -86,6 +88,7 @@ private:
     scene::ComponentFactory m_components;
     scene::PrefabLibrary m_prefabs;
     scene::SystemFactory m_systemFactory;
+    scene::PluginManager m_plugins;
     scene::SystemContext m_context;
     scene::WorldValueTable m_worldTable;
     scene::WorldValueTable m_playerTable;

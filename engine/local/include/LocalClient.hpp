@@ -18,6 +18,8 @@ class LocalClient
 {
 public:
     static constexpr const char *GAME_SCENE = "game";
+    static constexpr const char *SETTINGS_SCENE = "settings";
+    static constexpr const char *CAPTURING_KEY = "settings.capturing";
     static constexpr const char *PAUSE_KEY = "pause.visible";
     static constexpr const char *YES = "yes";
     static constexpr const char *NO = "no";
@@ -38,6 +40,8 @@ private:
     void stop(const std::string &scene);
     void step(float elapsed);
     void setPaused(bool paused);
+    void openSettings();
+    void closeSettings();
     bool paused() const;
     std::uint8_t buttons() const;
 
@@ -50,6 +54,7 @@ private:
     std::unique_ptr<simulation::Simulation> m_simulation;
     float m_accumulator;
     float m_tick;
+    std::string m_settingsReturn;
 };
 
 } // namespace engine::local

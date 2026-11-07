@@ -13,18 +13,18 @@
 | Second game | Skyhop, solo, Kenney CC0 assets |
 | Platforms | Linux, Windows, LAN play |
 | Documentation | Architecture, references, guides, RFC, comparative study, accessibility, team processes |
+| Settings screen | Volumes, text size, toggle fire, labels, dead zone, key and button rebinding, saved per player |
+| Plugins | Systems in shared libraries, loaded from the game file and reloaded while the game runs |
 | Tooling | GitHub Actions CI (format check, Linux and Windows builds, cached dependencies), `clang-format` |
 
 ## Next
 
 | Item | Track | Why |
 |---|---|---|
-| Settings menu in game | Gameplay / accessibility | Change keys, volumes and text size without editing a file |
 | Colorblind palettes, option to disable shake and flashes | Accessibility | See [Accessibility](accessibility.md) |
 | Client-side prediction and interpolation | Network | Remove the round-trip delay on the local ship |
 | Delta snapshots | Network | Less bandwidth, more entities |
 | Generic message bus between systems and scripts | Architecture | Fewer dedicated event queues |
-| Plugins (systems loaded from shared libraries) | Architecture | Engine extensions without rebuilding |
 | Automated tests of the simulation and the codec | Architecture | See [Testing](guides/testing.md) |
 
 Each item becomes a GitHub issue and is developed on its own branch ([Git workflow](contributing/git-workflow.md)).

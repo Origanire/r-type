@@ -23,6 +23,8 @@ public:
 
     void switchTo(const std::string &name);
     void update(float dt);
+    void clearSystems();
+    void rebuildSystems();
     const std::string &current() const;
     std::string escapeAction() const;
 

@@ -17,16 +17,22 @@ bool UiFocus::isVisible(const Registry &registry, const Entity &entity)
 std::optional<Entity> UiFocus::elementAt(const Registry &registry, Vector2 point)
 {
     std::optional<Entity> found;
+    float smallest = 0.f;
     for (std::size_t i : registry.view<Transform>()) {
         const Entity entity = registry.entityAt(i);
         if (!isVisible(registry, entity))
             continue;
         const Transform &transform = registry.get<Transform>(entity);
         const Vector2 origin(transform.x(), transform.y());
+        float area = -1.f;
         if (registry.has<Button>(entity) && registry.get<Button>(entity).contains(origin, point))
-            found = entity;
+            area = registry.get<Button>(entity).width() * registry.get<Button>(entity).height();
         else if (registry.has<TextField>(entity) && registry.get<TextField>(entity).contains(origin, point))
+            area = registry.get<TextField>(entity).width() * registry.get<TextField>(entity).height();
+        if (area >= 0.f && (!found || area <= smallest)) {
             found = entity;
+            smallest = area;
+        }
     }
     return found;
 }

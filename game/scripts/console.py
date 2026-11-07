@@ -5,6 +5,7 @@ Cheats only work when the room was created with CHEATS set to ON.
 
 import powerup
 
+GOD_SECONDS = 100000.0
 HELP = "help, god, heal, give <double|spread|heal|shield|force>, spawn <prefab>, skip"
 
 
@@ -24,7 +25,10 @@ def run(world, ship, text):
     if ship is None:
         return "your ship is not in play"
     if name == "god":
-        ship.set_invulnerable(100000.0)
+        if ship.invulnerable_time() > GOD_SECONDS / 2.0:
+            ship.set_invulnerable(0.0)
+            return "god mode off"
+        ship.set_invulnerable(GOD_SECONDS)
         return "god mode on"
     if name == "heal":
         ship.heal(1000)

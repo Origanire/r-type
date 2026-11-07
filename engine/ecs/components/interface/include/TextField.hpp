@@ -25,6 +25,8 @@ public:
     bool active() const;
     void setActive(bool active);
     bool contains(Vector2 origin, Vector2 point) const;
+    float width() const;
+    float height() const;
     std::string display() const;
 
 private:

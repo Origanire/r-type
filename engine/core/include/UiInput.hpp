@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <string>
 
 #include "UiKey.hpp"
@@ -24,6 +25,8 @@ public:
     void releasePointer();
     void typeCharacter(char character);
     void pressKey(UiKey key);
+    void pressRawKey(int code);
+    void pressRawButton(unsigned int button);
 
     Vector2 pointer() const;
     bool pointerMoved() const;
@@ -31,6 +34,8 @@ public:
     bool pointerDown() const;
     const std::string &typedText() const;
     bool keyPressed(UiKey key) const;
+    std::optional<int> rawKey() const;
+    std::optional<unsigned int> rawButton() const;
 
 private:
     Vector2 m_pointer;
@@ -39,6 +44,8 @@ private:
     bool m_pointerDown;
     std::string m_typedText;
     std::array<bool, KEY_COUNT> m_keys;
+    std::optional<int> m_rawKey;
+    std::optional<unsigned int> m_rawButton;
 };
 
 } // namespace engine

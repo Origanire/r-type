@@ -17,7 +17,7 @@ OnlineClient::OnlineClient(const std::filesystem::path &assetsDirectory, const s
     const std::string &game, const network::NetworkSettings &settings, std::optional<std::string> address)
     : m_view(assetsDirectory, dataDirectory, game), m_presenter(m_view), m_settings(settings), m_network(),
       m_address(address.value_or(m_view.settings().serverAddress())), m_slot(), m_lockedRooms(), m_pendingRoom(0),
-      m_lastRoomList(), m_lastRoomUpdate(), m_noticeUntil(), m_metrics(), m_console(m_view)
+      m_lastRoomList(), m_lastRoomUpdate(), m_noticeUntil(), m_settingsReturn(), m_metrics(), m_console(m_view)
 {
     enterScene(m_view.currentScene());
 }
@@ -78,6 +78,8 @@ void OnlineClient::handleActions()
         return;
     for (const ecs::UiActionEvent &event : events)
         actions.push_back(event.action());
+    if (m_view.uiStore().value(CAPTURING_KEY) == YES)
+        return;
     if (m_view.escapePressed() && popupOpen())
         actions.push_back("close_popup");
     else if (m_view.escapePressed() && !m_view.escapeAction().empty())
@@ -94,6 +96,12 @@ void OnlineClient::handleAction(const std::string &action)
         setPaused(!paused());
     else if (action == "resume")
         setPaused(false);
+    else if (action == "settings")
+        openSettings();
+    else if (action == "back")
+        closeSettings();
+    else if (action == "settings_reset")
+        m_view.resetSettings();
     else if (action == "connect")
         connect();
     else if (action == "disconnect")
@@ -251,6 +259,19 @@ void OnlineClient::handleConsole()
         m_network->sendCommand(*command);
     else
         m_console.print("not connected to a server");
+}
+
+void OnlineClient::openSettings()
+{
+    m_settingsReturn = m_view.currentScene();
+    enterScene(SETTINGS_SCENE);
+}
+
+void OnlineClient::closeSettings()
+{
+    if (m_view.currentScene() != SETTINGS_SCENE)
+        return;
+    enterScene(m_settingsReturn.empty() ? MENU_SCENE : m_settingsReturn);
 }
 
 void OnlineClient::setPaused(bool paused)

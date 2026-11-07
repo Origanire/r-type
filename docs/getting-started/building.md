@@ -1,7 +1,7 @@
 # Building
 
-The build is driven by CMake. The first configuration downloads and compiles the libraries listed
-in `vcpkg.json`, which takes several minutes; later builds reuse them.
+The first configuration downloads and builds the libraries of `vcpkg.json` (several minutes). Later builds reuse
+them.
 
 ## Linux
 
@@ -9,7 +9,7 @@ From the repository root:
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
+cmake --build build --parallel "$(nproc)"
 ```
 
 With vcpkg installed outside the repository:
@@ -17,57 +17,75 @@ With vcpkg installed outside the repository:
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-cmake --build build --parallel 2
+cmake --build build --parallel "$(nproc)"
 ```
 
-Binaries: `build/bin/r-type_server` and `build/bin/r-type_client`.
+Output: `build/bin/`.
 
 ## Windows (PowerShell)
 
-The `out/` folder is ignored by Git and is used for the Windows build:
-
 ```powershell
-cmake -S . -B out -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-cmake --build out --config Release --parallel 4
+cmake -S . -B out\windows -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
+cmake --build out\windows --config Release --parallel 4
 ```
 
-Binaries: `out\bin\Release\r-type_server.exe` and `out\bin\Release\r-type_client.exe`.
+Output: `out\windows\bin\Release\`. The `out/` folder is ignored by Git.
+`out\windows\RType.sln` can be opened in Visual Studio.
 
-## What gets built
+## What the build produces
 
-| Target | Kind | Links |
+```text
+bin/
+├── r-type_server     R-Type server
+├── r-type_client     R-Type client
+├── skyhop            Skyhop, solo
+├── data/             game files of every game
+├── scripts/          Python scripts
+├── assets/           images, sounds, music, fonts
+└── python/           Python standard library used by the embedded interpreter
+```
+
+`data/`, `scripts/` and `assets/` are copied from the game folders at every build. After editing a JSON or
+Python file, run the build again to copy it.
+
+## Targets
+
+| Target | Kind | Content |
 |---|---|---|
-| `engine_core` | library | — |
-| `engine_ecs` | library | `engine_core` |
-| `engine_physics` | library | — |
-| `engine_net` | library | `engine_core`, Asio (private) |
-| `engine_render` | library | `engine_core`, SFML Graphics |
-| `engine_input` | library | `engine_core`, SFML Window |
-| `rtype_shared` | library | `engine_core`, `engine_ecs`, `engine_net` |
-| `r-type_server` | executable | `rtype_shared`, `engine_physics` |
-| `r-type_client` | executable | `rtype_shared`, `engine_render`, `engine_input` |
+| `engine_core`, `engine_physics`, `engine_ecs`, `engine_scene` | libraries | Base engine |
+| `engine_net`, `engine_network` | libraries | Transport and protocol, server and client connection |
+| `engine_render`, `engine_audio`, `engine_input`, `engine_client` | libraries | Client side |
+| `engine_scripting`, `engine_simulation` | libraries | Server side |
+| `engine_local` | library | Solo mode |
+| `engine_python_runtime` | custom | Copies the Python standard library |
+| `rtype_content`, `skyhop_content` | custom | Copy each game's data, scripts and assets |
+| `r-type_server`, `r-type_client`, `skyhop` | executables | Generic launchers built for each game |
 
-The server never links a rendering, input or audio module. After the client is built, CMake copies
-`assets/` next to the client executable.
+Build one target only: `cmake --build build --target r-type_server`.
 
-## Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| `CMAKE_TOOLCHAIN_FILE does not exist` | Install vcpkg or fix `VCPKG_ROOT`, then delete `build/CMakeCache.txt` |
-| Changing vcpkg installation has no effect | Delete `build/CMakeCache.txt` and `build/CMakeFiles` |
-| SFML fails to configure on Linux | Install the system packages listed in [Installation](installation.md) |
-
-## Build options (engine modularity)
+## Options
 
 | Option | Default | Effect |
 |---|---|---|
-| `ENGINE_BUILD_CLIENT` | `ON` | builds render, audio, input, client modules and `r-type_client` (needs SFML) |
-| `ENGINE_BUILD_SERVER` | `ON` | builds scripting, simulation modules and `r-type_server` (needs Python) |
+| `CMAKE_BUILD_TYPE` (Linux) / `--config` (Windows) | - | `Release` for playing, `Debug` for debugging |
+| `ENGINE_BUILD_CLIENT` | `ON` | Builds the client modules and executables (needs SFML) |
+| `ENGINE_BUILD_SERVER` | `ON` | Builds the server modules and executables (needs Python) |
 
-Example, a server-only build for a dedicated machine:
+A server-only build for a dedicated machine, without SFML:
 
 ```sh
 cmake -S . -B build-server -DENGINE_BUILD_CLIENT=OFF
 cmake --build build-server
 ```
+
+The solo executables are only built when both options are `ON`.
+
+## Clean build
+
+```sh
+rm -rf build          # Linux
+rmdir /s /q out       # Windows
+```
+
+Do it after moving files, switching to a very different branch, or changing the vcpkg location. Problems:
+[Troubleshooting](../troubleshooting.md#build).

@@ -1,62 +1,89 @@
-# Onboarding
+# Onboarding: joining the team
 
-This page is for a developer joining the team. It gives the mental model of the project in one
-read, then points to the details.
+This page is for someone who joins the project, at any time. Follow it in order: at the end of the first day you
+can build, play, read the code and make a first change.
 
-## The project in five sentences
+## The project in six sentences
 
-1. Two programs: `r-type_server` runs the game, `r-type_client` displays it and sends the keys.
-2. The server is the authority: it simulates everything at 60 ticks per second and sends a complete
-   snapshot of the world 20 times per second over UDP.
-3. The code is split into a reusable **engine** (`engine/`) and the **game** (`game/`); the engine
-   never includes game code.
-4. Game objects are **entities** made of **components** (plain structs) and updated by **systems**
-   (classes implementing `ISystem`).
-5. The engine records which components each entity has (a bitmask); the game stores the values in
-   one array per component, inside `ServerWorld` or `ClientWorld`.
+1. The repository contains an **engine** written in C++ (`engine/`) and **games** written in data (`game/`,
+   `game2/`).
+2. A game is JSON files (entities, scenes, HUD) plus Python scripts (behaviours). It contains no C++.
+3. R-Type is played online: `r-type_server` simulates, `r-type_client` displays and sends the buttons.
+4. Skyhop is played solo: `skyhop` runs the same simulation inside the client.
+5. Game objects are **entities** made of **components** and updated by **systems** (ECS).
+6. Client and server speak a binary UDP protocol documented as an RFC.
 
-## First hour
+## Day 1
 
-1. Build and run the game: [Installation](../getting-started/installation.md),
-   [Building](../getting-started/building.md), [Running](../getting-started/running.md).
-2. Read the [architecture overview](../architecture/overview.md) and the [ECS](../architecture/ecs.md).
-3. Read these files, in this order:
+### Access
+
+Ask a team member for:
+
+| What | Why |
+|---|---|
+| Write access to the GitHub repository | Push branches, open pull requests |
+| The team's communication channel | Questions, reviews, planning |
+| The list of open issues and who works on what | Pick a first task without overlapping |
+
+### Set up and build
+
+1. [Installation](../getting-started/installation.md): compiler, CMake, vcpkg.
+2. [Building](../getting-started/building.md): the first build downloads the dependencies (several minutes).
+3. [Running](../getting-started/running.md): start a server and two clients, play a stage; start Skyhop.
+
+If anything fails, check [Troubleshooting](../troubleshooting.md) first.
+
+### Read
+
+| Order | Page | Time |
+|---|---|---|
+| 1 | [Architecture overview](../architecture/overview.md) | 15 min |
+| 2 | [Data-driven games](../architecture/data-driven.md) | 10 min |
+| 3 | [ECS](../architecture/ecs.md) | 15 min |
+| 4 | [Coding conventions](conventions.md) | 10 min |
+| 5 | [Git workflow](git-workflow.md) | 5 min |
+| 6 | [Code map](../reference/code-map.md) | 10 min |
+
+Then open these files to see the real code:
 
 | File | What you learn |
 |---|---|
-| `game/server/src/main.cpp` | The fixed-step server loop |
-| `game/server/include/ServerWorld.hpp` | Every server component and its bit |
-| `game/server/src/EntityFactory.cpp` | How an entity is built |
-| `game/server/src/Room.cpp` | System order and game rules |
-| `game/server/src/systems/MovementSystem.cpp` | The shape of every system |
-| `game/client/src/Client.cpp` | The client loop and snapshot application |
-| `game/shared/include/RtypeProtocol.hpp` | Every message and constant of the protocol |
+| `CMakeLists.txt` (root) | How games are declared |
+| `engine/apps/src/ServerMain.cpp` | How a program starts the engine |
+| `engine/simulation/src/Simulation.cpp` | What happens in one server tick |
+| `engine/ecs/systems/physics/src/MovementSystem.cpp` | The shape of every system |
+| `game/data/rtype_server_prefabs.json` | What entities are made of |
+| `game/scripts/campaign.py` | How a game is driven by a script |
 
-## Where does my change go?
+## First change
 
-| Change | Place |
+Pick one of these depending on your role, it touches every layer without risk:
+
+| Role | First task |
 |---|---|
-| A gameplay rule (damage, score, spawning) | A server system or `Room` |
-| What something looks like | Client: `SpriteSheet.hpp`, `Client.cpp`, client systems |
-| A tuning value | `game/shared/include/GameConstants.hpp` |
-| A new message or field on the wire | `RtypeProtocol.hpp`, `Codec.cpp` and the [protocol](../protocol.md), together |
-| Something every game could use | An engine module, with no reference to R-Type |
+| Content (JSON, Python) | [Add an enemy](../guides/add-an-enemy.md) and put it in a wave of stage 1 |
+| Engine (C++) | Add a client-only component and its system, for example a blinking text ([Add a component](../guides/add-a-component.md)) |
+| Network | Read the [RFC](../protocol.md) and decode a captured datagram by hand with Wireshark |
+
+Open a draft pull request early: reviews are the fastest way to learn the conventions.
+
+## Who owns what
+
+| Area | Folder | Track |
+|---|---|---|
+| Engine core, ECS, scenes, simulation, gameplay systems | `engine/core`, `engine/ecs`, `engine/scene`, `engine/simulation` | Architecture and gameplay |
+| Network, protocol, server, lobby | `engine/net`, `engine/network` | Network |
+| Game content (levels, enemies, bosses, HUD) | `game/`, `game2/` | Content |
+| Documentation | `docs/` | Everyone |
+
+The member responsible for each track is the assignee of its issues on the project board.
+
+Ask in the team channel when in doubt: a five-minute question avoids a day of rework.
 
 ## Rules that are easy to miss
 
-- No function body in a header, no comments in code, one exception class per module (see
-  [conventions](conventions.md)).
-- A new `.cpp` must be added to `CMakeLists.txt`.
-- When creating an entity, write every component value before setting its bits.
-- Never let the client decide a gameplay outcome.
-
-## Glossary
-
-| Term | Meaning |
-|---|---|
-| Tick | One server simulation step (1/60 s) |
-| Snapshot | Complete list of replicated entities sent to clients |
-| Slot | Player number, 0 to 3 |
-| Network id | Entity id shared by server and clients (different from the ECS index) |
-| Kind | Entity type on the wire (1 ship, 2 player missile, 3 Bydo) |
-| Generation | Counter making old entity handles invalid after reuse |
+- No comments in the code, no function body in a header, no struct, no lambda (see [conventions](conventions.md)).
+- Every new `.cpp` goes in `engine/CMakeLists.txt`.
+- The engine never contains anything specific to one game.
+- The client never decides a gameplay outcome.
+- Never push directly to `main`.

@@ -1,87 +1,152 @@
 # Architecture overview
 
-## Layers
+## The big picture
 
-The code is split in two layers. The **engine** provides reusable subsystems and knows nothing
-about R-Type. The **game** uses them to implement R-Type's rules, network schema and presentation.
-Each engine module is a separate CMake library, so the dependency rules are enforced by the build:
-engine code never includes game headers, and the server never links rendering or input.
+The repository contains **one engine** and **games built on it**. The engine is written in C++ and knows nothing
+about any particular game. A game is a folder of **data**: JSON files that describe entities, scenes and HUD, and
+Python scripts that describe behaviours. No game contains C++ code.
 
 ```mermaid
 flowchart TB
-    subgraph Game["game/ — R-Type"]
+    subgraph Games["Games (data only)"]
         direction LR
-        Server["server<br/>authoritative simulation,<br/>sessions"]
-        Shared["shared<br/>protocol, common components,<br/>constants"]
-        Client["client<br/>input, display,<br/>snapshot mapping"]
+        RType["game/ - R-Type<br/>JSON + Python + assets"]
+        Skyhop["game2/ - Skyhop<br/>JSON + Python + assets"]
     end
-    subgraph Engine["engine/ — reusable"]
+    subgraph Apps["Launchers (engine/apps)"]
         direction LR
-        Core["core<br/>errors, clock,<br/>fixed timestep"]
-        ECS["ecs<br/>entities, masks,<br/>systems"]
-        Physics["physics<br/>AABB, collision<br/>detection"]
-        Net["net<br/>UDP transport,<br/>byte encoding"]
-        Render["render<br/>window, renderer<br/>interface, textures"]
-        Input["input<br/>actions, key<br/>bindings"]
+        ServerMain["ServerMain<br/>r-type_server"]
+        ClientMain["ClientMain<br/>r-type_client"]
+        LocalMain["LocalMain<br/>skyhop"]
     end
-    Server --> Shared
-    Client --> Shared
-    Game --> Engine
+    subgraph High["High-level engine modules"]
+        direction LR
+        Simulation["simulation<br/>authoritative world"]
+        Client["client<br/>window, scenes, HUD"]
+        Local["local<br/>solo mode"]
+        Network["network<br/>protocol, server,<br/>client connection"]
+        Scripting["scripting<br/>embedded Python"]
+    end
+    subgraph Base["Base engine modules"]
+        direction LR
+        Scene["scene<br/>JSON, factories,<br/>prefabs"]
+        ECS["ecs<br/>registry, components,<br/>systems"]
+        Physics["physics<br/>AABB"]
+        Net["net<br/>UDP, bytes"]
+        Render["render<br/>SFML graphics"]
+        Audio["audio<br/>SFML audio"]
+        Input["input<br/>bindings"]
+        Core["core<br/>errors, time,<br/>geometry"]
+    end
+    Games -->|loaded at run time| Apps
+    Apps --> High
+    High --> Base
 ```
 
-| Directory | Contents |
+| Folder | Contents |
 |---|---|
-| `engine/<module>/include`, `src` | One library per module (`engine_core`, `engine_ecs`…) |
-| `game/shared` | Wire protocol and codec, shared components (`Position`, `Velocity`, `Hitbox`), game constants, `GameError` |
-| `game/server` | `Server` (sessions), `Room` (game world), server components and systems |
-| `game/client` | `Client` (main loop and presentation), `NetworkClient`, client components and systems |
-| `assets/` | Sprites copied next to the client at build time |
-| `docs/` | This documentation |
+| `engine/` | The engine: one CMake library per module, plus the generic launchers in `engine/apps/` |
+| `game/` | R-Type: `data/` (JSON), `scripts/` (Python) |
+| `game2/` | Skyhop: `data/`, `scripts/skyhop/`, `assets/skyhop/` |
+| `assets/` | R-Type sprites, sounds, music and font |
+| `docs/` | This documentation (MkDocs website) |
+| `scripts/` | Helper shell scripts (`play.sh`) |
 
-## Runtime model
+The root `CMakeLists.txt` only declares the games:
 
-The server owns the truth. Clients send the buttons they hold; the server simulates the world at
-60 ticks per second and sends a complete snapshot of it 20 times per second. Clients only render
-what they receive, plus purely cosmetic local effects (scrolling stars, ship tilt).
+```cmake
+add_subdirectory(engine)
+
+engine_add_game(rtype
+    CLIENT r-type_client
+    SERVER r-type_server
+    DATA game/data
+    SCRIPTS game/scripts
+    ASSETS assets)
+
+engine_add_game(skyhop
+    LOCAL skyhop
+    DATA game2/data
+    SCRIPTS game2/scripts
+    ASSETS game2/assets)
+```
+
+`engine_add_game` builds the generic launchers with the game name compiled in, and copies the game's data,
+scripts and assets next to the executables. See [Engine modules](engine-modules.md).
+
+## Three ways to run a game
+
+The same simulation and the same display code are combined in three ways:
+
+| Mode | Executable | Simulation runs in | Display runs in | Link |
+|---|---|---|---|---|
+| Server | `r-type_server` | the server process | - | - |
+| Online client | `r-type_client` | - | the client process | UDP, [protocol](../protocol.md) |
+| Solo | `skyhop` | the same process | the same process | direct function calls |
+
+```mermaid
+flowchart LR
+    subgraph Online
+        direction LR
+        SIM1[Simulation] --> GS[GameServer] -->|UDP SNAPSHOT| CC[ClientConnection] --> OC[OnlineClient] --> GV1[GameView]
+        OC -->|INPUT| CC -->|UDP| GS --> SIM1
+    end
+    subgraph Solo
+        direction LR
+        LC[LocalClient] -->|setInput, update| SIM2[Simulation]
+        SIM2 -->|snapshot| LC --> GV2[GameView]
+    end
+```
+
+The transport is interchangeable because both sides only exchange two things: **button states** going in and
+**snapshots** coming out. See [Solo mode](solo-mode.md).
+
+## Runtime model (online)
+
+The server owns the truth. Clients send the buttons they hold, the server simulates the world at 60 ticks per
+second and sends a full snapshot of it 20 times per second. Clients draw what they receive, plus local cosmetic
+effects (parallax, animations, particles).
 
 ```mermaid
 sequenceDiagram
-    participant K as Keyboard
+    participant P as Player
     participant C as Client
     participant S as Server
-    K->>C: held keys
-    C->>S: INPUT (~30/s)
-    Note over S: 60 ticks/s:<br/>input, shooting, spawning,<br/>movement, collisions
-    S->>C: SNAPSHOT (20/s), events
-    Note over C: create/update/remove<br/>entities, render
+    P->>C: keys / gamepad
+    C->>S: INPUT (every 33 ms)
+    Note over S: 60 ticks per second:<br/>systems + Python scripts
+    S->>C: SNAPSHOT (20 per second), events, sounds
+    Note over C: sync entities, update HUD,<br/>animate, render
 ```
 
 ## One server tick
 
-1. `Server::poll()` expires silent sessions and decodes received datagrams.
-2. `Server::tick()` releases inputs older than 500 ms, then calls `Room::update()`.
-3. `Room` runs its systems in order: Input, Shooting, Spawn, EnemyMovement, Invulnerability,
-   Movement, Boundary, Collision, Offscreen. It then handles respawns and the game state.
-4. Gameplay events (entity destroyed, player killed) are broadcast.
-5. Every third tick, a snapshot of every replicated entity is sent to every connected player.
+1. `GameServer::poll()` drops silent clients and decodes every received datagram.
+2. `GameServer::tick()` runs each playing room: inputs older than 500 ms are released, then
+   `Simulation::update()` runs the server systems listed in the game's `serverSystems`, in that order
+   (R-Type: PlayerControl, Weapon, Invulnerability, Movement, Tilemap, Attachment, Solid, Bounds, Collision,
+   Damage, HitFlash, Script, Lives, Score, Offscreen, Match, Respawn).
+3. Events produced by the tick (entity destroyed, player killed, sounds, console replies) are sent to the room.
+4. Every third tick, a snapshot is sent to every member of the room.
 
 ## One client frame
 
-1. Window events and keyboard state are read.
-2. `NetworkClient` receives datagrams and sends INPUT and HEARTBEAT when due.
-3. The newest snapshot, if any, is applied to the client's ECS world.
-4. Logic systems (stars, ship tilt) run at a fixed 60 Hz.
-5. The render system draws stars then sprites.
+1. Window, keyboard and gamepad events are read.
+2. `ClientConnection` receives datagrams and sends `INPUT` and `HEARTBEAT` when due.
+3. The newest snapshot is applied: entities are created, moved or removed, the HUD values are updated.
+4. The client systems of the current scene run (UI, animations, particles, audio).
+5. `RenderSystem` draws the scene.
 
 ## Ownership
 
 | Data | Owner | Thread |
 |---|---|---|
-| UDP socket, receive queue | `UdpTransport` | network I/O thread |
-| Sessions, tokens, timers | `Server` | server main thread |
-| Server game world (`ServerWorld`) | `Room` | server main thread |
-| Client game world (`ClientWorld`), window, textures | `Client` | client main thread |
-| Wire format | `rtype::protocol` | — |
+| UDP socket and receive queue | `UdpTransport` | network I/O thread |
+| Sessions, tokens, rooms | `GameServer` | server main thread |
+| Game world of one room | `Simulation` (one per room) | server main thread |
+| Python interpreter | `ScriptEngine` | server main thread |
+| Window, textures, client world, UI values | `GameView` | client main thread |
+| Wire format | `engine::network` | - |
 
-Read next: [engine modules](engine-modules.md), [ECS](ecs.md), [server](server.md),
-[client](client.md), [networking](networking.md).
+Read next: [Engine modules](engine-modules.md), [ECS](ecs.md), [Data-driven games](data-driven.md),
+[Scripting](scripting.md), [Server](server.md), [Client](client.md), [Networking](networking.md).

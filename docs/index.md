@@ -1,52 +1,55 @@
 # R-Type documentation
 
-R-Type is a networked multiplayer horizontal shoot'em up written in C++20 on top of a custom,
-reusable game engine. Up to four players connect to an authoritative server, move their ships,
-shoot missiles and fight Bydos that spawn at random on the right of the screen.
+This project is a **data-driven 2D game engine** written in C++20, and the games built on it:
+
+- **R-Type**, a networked shoot'em up for up to four players, with lobby, rooms, three stages and their bosses;
+- **Skyhop**, a solo one-button game, which shows that the engine is not tied to R-Type.
+
+Games are made of JSON files and Python scripts only. The engine provides the ECS, physics, rendering, audio,
+input, scripting, a binary UDP protocol with an authoritative server, and a solo mode.
 
 ## Where to start
 
-| You want to… | Read |
+| You want to... | Read |
 |---|---|
-| Build and run the game | [Installation](getting-started/installation.md), [Building](getting-started/building.md), [Running](getting-started/running.md) |
-| Understand the project quickly | [Onboarding](contributing/onboarding.md), then the [architecture overview](architecture/overview.md) |
-| Understand the engine | [Engine modules](architecture/engine-modules.md), [ECS](architecture/ecs.md) |
-| Understand the game | [Server](architecture/server.md), [Client](architecture/client.md) |
-| Write a new client | [Protocol (RFC)](protocol.md) |
-| Add content | [Add a component](guides/add-a-component.md), [Add a system](guides/add-a-system.md), [Add an enemy](guides/add-an-enemy.md) |
-| Know why things are built this way | [Design decisions](architecture/decisions.md), [Comparative study](comparative-study/index.md) |
-| Contribute | [Coding conventions](contributing/conventions.md) |
+| Build and play | [Installation](getting-started/installation.md), [Building](getting-started/building.md), [Running](getting-started/running.md) |
+| Join the team | [Onboarding](contributing/onboarding.md) |
+| Understand the architecture | [Overview](architecture/overview.md), [Engine modules](architecture/engine-modules.md), [ECS](architecture/ecs.md) |
+| Make content without C++ | [Create a game](guides/create-a-game.md), [Add an enemy](guides/add-an-enemy.md), [Scripting reference](guides/scripting.md) |
+| Look up a component, a system or a JSON key | [Components](reference/components.md), [Systems](reference/systems.md), [Game file](reference/game-file.md) |
+| Write a client for the server | [Network protocol (RFC)](protocol.md) |
+| Extend the engine | [Add a component](guides/add-a-component.md), [Add a system](guides/add-a-system.md), [Add a network message](guides/add-a-network-message.md) |
+| Know why it is built this way | [Design decisions](architecture/decisions.md), [Comparative study](comparative-study/index.md) |
+| Fix a problem | [Troubleshooting](troubleshooting.md), [Debugging](guides/debugging.md), [FAQ](faq.md) |
 
 ## Project at a glance
 
 ```mermaid
-flowchart TD
-    Client["r-type_client"] --> Shared["rtype_shared"]
-    Server["r-type_server"] --> Shared
-    Server --> Physics["engine_physics"]
-    Client --> Render["engine_render"]
-    Client --> Input["engine_input"]
-    Shared --> Net["engine_net"]
-    Shared --> ECS["engine_ecs"]
-    Net --> Core["engine_core"]
-    ECS --> Core
-    Render --> Core
-    Input --> Core
+flowchart LR
+    subgraph Data["Game folders"]
+        G1["game/ R-Type"]
+        G2["game2/ Skyhop"]
+    end
+    subgraph Engine["engine/"]
+        Apps["launchers"] --> Sim["simulation + scripting"]
+        Apps --> View["client view"]
+        Sim --> Base["ECS, scene, physics"]
+        View --> Base
+        Sim <-->|UDP protocol or<br/>direct calls| View
+    end
+    Data -->|JSON + Python| Engine
 ```
-
-The engine (`engine/`) knows nothing about R-Type. The game (`game/`) is split into the server,
-the client and the code they share.
 
 ## Browse this documentation as a website
 
-The pages are written in Markdown and rendered with MkDocs Material (navigation, search bar,
-outline). From the repository root:
+The pages are Markdown rendered with MkDocs Material (navigation, search, outline). From the repository root:
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install mkdocs-material pymdown-extensions
+python -m pip install mkdocs-material
 mkdocs serve
 ```
 
-Then open <http://127.0.0.1:8000>. `mkdocs gh-deploy` publishes the same site on GitHub Pages.
+Open <http://127.0.0.1:8000>. `mkdocs build` produces the static site in `site/`, and `mkdocs gh-deploy`
+publishes it on GitHub Pages.

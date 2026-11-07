@@ -1,98 +1,89 @@
 # Server
 
-`r-type_server` is the authority: it runs every gameplay rule and tells clients what happens.
-It has no window and links no rendering, input or audio library.
+The server executable (`r-type_server`) is built from `engine/apps/src/ServerMain.cpp`. It contains no R-Type
+code: it loads the game named at compile time (or given with `-g`) and runs it for every room.
 
-## Structure
+```mermaid
+flowchart TB
+    Main[ServerMain] --> Runner[ServerRunner<br/>fixed 60 Hz loop]
+    Runner --> GS[GameServer<br/>sessions, rooms, routing]
+    GS --> T[UdpTransport<br/>socket + I/O thread]
+    GS --> R1[GameRoom 1]
+    GS --> R2[GameRoom 2]
+    R1 --> S1[Simulation]
+    R2 --> S2[Simulation]
+    S1 & S2 --> SE[ScriptEngine<br/>one Python interpreter]
+    Factory[SimulationFactory] -.creates.-> S1 & S2
+```
 
-| Class | Responsibility | Files |
+## Classes
+
+| Class | File | Role |
 |---|---|---|
-| `main` | Parses `-p`, installs `SIGINT`/`SIGTERM` handlers, runs the fixed 60 Hz loop | `game/server/src/main.cpp` |
-| `Server` | UDP transport, four player sessions, tokens, timeouts, event broadcast, snapshots | `Server.hpp`, `Server.cpp` |
-| `Room` | The game world: ECS, systems, lives, score, respawns, game state, collision outcomes | `Room.hpp`, `Room.cpp` |
-| `EntityFactory` | Recipes for ships, missiles and Bydos | `EntityFactory.hpp`, `EntityFactory.cpp` |
-| `GameEvents` | Queue of gameplay events raised during a tick | `GameEvents.hpp`, `GameEvents.cpp` |
-| `Snapshot` | Builds the replicated entity list, counts replicated entities | `Snapshot.hpp`, `Snapshot.cpp` |
+| `ServerRunner` | `network/server/` | Main loop: `poll()` the network, run `tick()` at a fixed rate, stop on Ctrl+C (`SIGINT`, `SIGTERM`) |
+| `GameServer` | `network/server/` | Decodes datagrams, owns sessions and rooms, sends packets. Split in `GameServer.cpp` (sessions) and `GameServerRooms.cpp` (rooms) |
+| `ClientSession` | `network/server/` | One connected client: address, token, last sequences, timers, room, failed join attempts |
+| `GameRoom` | `network/server/` | Seats, owner, code, rules, queued console commands, and the game session of the room |
+| `IGameSession`, `ISessionFactory` | `network/server/` | Interfaces between the network layer and the game: the server only knows "add a player, set its input, update, snapshot" |
+| `Simulation` | `simulation/` | Implements `IGameSession`: the world of one room, built from the game JSON |
+| `SimulationFactory` | `simulation/` | Implements `ISessionFactory`: creates a `Simulation` with the rules chosen by the room creator |
 
-`Server` deals with the network and players; `Room` deals with the game. `Room` does not know about
-endpoints or packets, which keeps the simulation independent from the transport.
+`engine_network` does not depend on `engine_simulation`: the two interfaces let another kind of game session be
+plugged into the same server.
 
 ## Main loop
 
 ```cpp
 while (running) {
-    server.poll();
+    server.poll();                       // timeouts + received datagrams
     timestep.addTime(clock.restart());
     while (timestep.step())
-        server.tick(timestep.stepSeconds());
-    std::this_thread::sleep_for(IDLE_DELAY);
+        server.tick(timestep.stepSeconds());  // every playing room advances 1/60 s
+    sleep(IDLE_DELAY);
 }
-server.shutdown();
+server.shutdown();                       // SERVER_SHUTDOWN to every client
 ```
 
-`poll()` never blocks: datagrams are received by the network thread and handed over in a queue.
-The game keeps running frame after frame whether clients send data or not.
+## Simulation of a room
 
-## Sessions
+When a room starts its game, every seated player is added to its `Simulation`. Each tick:
 
-A session is created by `CONNECT` and confirmed by the first valid `INPUT` or `HEARTBEAT`, which
-spawns the player's ship and broadcasts `PLAYER_JOINED`. A session ends on `DISCONNECT`
-(`PLAYER_LEFT`, reason 1) or after 5 s of silence (`PLAYER_LEFT`, reason 2: the client crashed or lost
-its connection). The other players keep playing. Details are in the [protocol](../protocol.md).
+1. Queued console commands are released.
+2. The systems of `serverSystems` run in order.
+3. New replicated entities receive a network id (never 0, unique).
+4. Deaths become `ENTITY_DESTROYED` and `PLAYER_KILLED` events, script sounds become `PLAY_SOUND`, console
+   answers become `CONSOLE_TEXT`.
+5. Event queues are cleared, entities tagged `Destroyed` are removed.
 
-## Components
+`Simulation::snapshot()` builds the `SNAPSHOT`: the world values, one `PlayerStatus` per seat and one
+`EntityState` per `Replicated` entity, with the rotation and the hit flash packed in the `visual` byte.
 
-| Component | Data | Used for |
-|---|---|---|
-| `Position`, `Velocity`, `Hitbox` | shared structs | Movement, bounds, collisions |
-| `PlayerInput` | held buttons | Converted into velocity and fire |
-| `Replicated` | network id, kind | Sent in snapshots |
-| `Shooter` | cooldown | Fire rate limit |
-| `Projectile` | owner slot | Score attribution |
-| `Enemy` | pattern, base height, age | Bydo movement |
-| `Health` | points | Damage |
-| `PlayerShip` | slot | Link between a ship and its player |
-| `Invulnerable` | remaining time | Protection after respawn |
+## Players and avatars
 
-## Systems, in execution order
+A player is an entity created from the game's `playerPrefab` (R-Type: `player`), with `Lives`, `Score` and
+`Respawn`. The ship it controls, its **avatar**, is spawned by `RespawnSystem` from the `Respawn.prefab`
+(R-Type: `player_ship`). When the avatar dies, the player entity stays: its lives and score survive, and a new
+avatar appears after the respawn delay while lives remain.
 
-| System | Entities | Effect |
-|---|---|---|
-| `InputSystem` | PlayerInput, Velocity | Arrow buttons → velocity |
-| `ShootingSystem` | PlayerInput, Shooter, Position, PlayerShip | Fire button → missile, every 0.2 s at most |
-| `SpawnSystem` | — | Spawns a Bydo beyond the right edge every 0.6–1.8 s while a game is running |
-| `EnemyMovementSystem` | Enemy, Position, Velocity, Hitbox | Straight, sine-wave or zigzag velocity |
-| `InvulnerabilitySystem` | Invulnerable | Counts down, then removes the component |
-| `MovementSystem` | Position, Velocity | `position += velocity × dt` |
-| `BoundarySystem` | Position, Hitbox, PlayerInput | Keeps ships inside the 1920 × 1080 world |
-| `CollisionSystem` | Position, Hitbox | Detects overlapping pairs with `engine_physics` and reports them to `Room` |
-| `OffscreenSystem` | Projectile or Enemy | Removes missiles leaving the world and Bydos past the left edge |
+`MatchSystem` follows the state of the match (`waiting`, `playing`, `over`). When every player is out of lives,
+the match is over, and after `restartDelay` seconds the world is cleared (except `Persistent` entities and
+entities without `Transform`) and a new round starts.
 
-Systems that need services from `Room` receive them as callbacks: `nextNetworkId` for the shooting
-and spawn systems, `canSpawn` for spawning, and the collision listener.
+## Logs
 
-## Game rules
+The server writes one line per important event on the standard output:
 
-| Rule | Value (`GameConstants.hpp`) |
-|---|---|
-| Ship speed | 600 units/s |
-| Missile speed / fire interval / damage | 1500 units/s / 0.2 s / 1 |
-| Bydo speed / health / score | 250 units/s / 1 / 100 points |
-| Lives | 3 |
-| Respawn delay / invulnerability | 2 s / 2 s |
-| Game over → new round | 5 s |
+```text
+Server listening on UDP port 4242
+Players on your network can join with: -h 192.168.1.67 -p 4242
+Client 0 connected
+Client 0 created room 1 (FRIENDS)
+Room 1 started
+New round
+Player 0 killed
+Game over
+Room 1 closed
+Client 0 left (reason 1)
+```
 
-Collision outcomes are decided in `Room::onCollision`:
-
-- missile × Bydo: the missile disappears, the Bydo loses health; if destroyed, the shooter scores;
-- ship × Bydo: unless the ship is invulnerable, both are destroyed and the player loses a life.
-
-The game state goes from *waiting* (no player) to *playing* (a player joined) to *game over* (no
-present player has lives left), then back to *playing* after 5 s with full lives and an empty world.
-
-## Snapshots and events
-
-Destroyed entities and killed players are queued in `GameEvents` and broadcast before the next
-snapshot. Every third tick, `collectNetworkEntities` lists every entity with `Position` and
-`Replicated`, player ships first, capped at 150 entities. Shooting and spawning are refused when this
-cap is reached, so a snapshot is always complete.
+Script errors are written on the error output with the `[script]` prefix.

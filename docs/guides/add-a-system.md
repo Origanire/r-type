@@ -1,77 +1,106 @@
 # Add a system
 
-A system is one behavior applied to every entity having a given set of components. Gameplay
-systems run on the server; client systems only handle presentation.
+A system applies one behaviour to every entity that has a given set of components. This guide follows the real
+`GravitySystem`.
 
-## 1. Declare the class
+## 1. Choose the category
 
-`game/server/include/systems/ShieldSystem.hpp`:
+Systems live in `engine/ecs/systems/<category>/include/` and `.../src/`, with the categories `events`,
+`physics`, `gameplay`, `presentation` and `interface`.
+
+## 2. Write the class
+
+`engine/ecs/systems/physics/include/GravitySystem.hpp`:
 
 ```cpp
 #pragma once
 
 #include "ISystem.hpp"
-#include "ServerWorld.hpp"
+#include "Registry.hpp"
 
-namespace rtype::server {
+namespace engine::ecs {
 
-class ShieldSystem : public engine::ecs::ISystem
+class GravitySystem : public ISystem
 {
 public:
-    explicit ShieldSystem(ServerWorld &world);
+    explicit GravitySystem(Registry &registry);
 
     void update(float dt) override;
 
 private:
-    ServerWorld &m_world;
+    Registry &m_registry;
 };
 
-} // namespace rtype::server
+} // namespace engine::ecs
 ```
 
-## 2. Implement it
-
-`game/server/src/systems/ShieldSystem.cpp`:
+`engine/ecs/systems/physics/src/GravitySystem.cpp`:
 
 ```cpp
-#include "ShieldSystem.hpp"
+#include "GravitySystem.hpp"
 
-namespace rtype::server {
+#include "Gravity.hpp"
+#include "Velocity.hpp"
 
-ShieldSystem::ShieldSystem(ServerWorld &world) : m_world(world)
+namespace engine::ecs {
+
+GravitySystem::GravitySystem(Registry &registry) : m_registry(registry)
 {
 }
 
-void ShieldSystem::update(float)
+void GravitySystem::update(float dt)
 {
-    for (std::size_t i : m_world.entities.with(SHIELD)) {
-        if (m_world.shields[i].charges <= 0)
-            m_world.entities.removeComponents(m_world.entities.entityAt(i), SHIELD);
+    const auto &gravities = m_registry.getComponents<Gravity>();
+    auto &velocities = m_registry.getComponents<Velocity>();
+    for (std::size_t i : m_registry.view<Gravity, Velocity>()) {
+        Velocity &velocity = velocities.at(i);
+        velocity.setY(velocity.y() + gravities.at(i).force() * dt);
     }
 }
 
-} // namespace rtype::server
+} // namespace engine::ecs
 ```
 
 Rules inside `update`:
 
-- Scale every change over time by `dt`.
-- Creating or destroying entities while iterating is safe: `with()` returns a copy.
-- Use `entityAt(i)` to get a handle when an engine call needs one.
+- Multiply every change over time by `dt`.
+- `view<...>()` returns a copy of the indices, so spawning entities inside the loop is safe.
+- Do not `kill` entities other systems may still read: add `Destroyed` instead.
+- Use `entityAt(i)` when a function needs an `Entity` handle.
 
-## 3. Register it
+## 3. Give it a builder
 
-Add it in the `Room` constructor at the right place in the order, and add the `.cpp` to the
-`r-type_server` target in `CMakeLists.txt`:
+Systems are created by name from JSON. In `engine/scene/src/EngineSystemBuilders.cpp`, include the header and
+map the name:
 
 ```cpp
-m_systems.add(std::make_unique<ShieldSystem>(m_world));
+factory.add("Gravity", &EngineSystemBuilders::buildSimple<ecs::GravitySystem>);
 ```
 
-If the system needs something owned by `Room` (network ids, game state), pass a callback to its
-constructor, as `ShootingSystem` and `SpawnSystem` do.
+Ready-made builders:
 
-## Client systems
+| Builder | Constructor it calls |
+|---|---|
+| `buildSimple<S>` | `S(Registry &)` |
+| `buildSpawning<S>` | `S(Registry &, IEntityFactory &, canSpawn)`: for systems that create entities |
+| `buildDeathListener<S>` | `S(Registry &, const EventQueue<DeathEvent> &)` |
+| `buildStoreReader<S>` | `S(Registry &, const UiStore &)` |
+| `buildUiActions<S>` | `S(Registry &, const UiInput &, EventQueue<UiActionEvent> &)`: UI systems that react to input |
 
-Client systems follow the same pattern with `ClientWorld`. Register them in `Client::registerSystems`:
-`m_logic` for fixed-step logic, `m_render` for drawing.
+A system with options (like `Shake`) gets its own builder, which reads the options from the `DataNode` it
+receives: `entry.getFloat("strength", 1.f)`. Everything a system may need (registry, events, prefabs, renderer,
+audio, UI store, world size) is available from the `SystemContext`.
+
+## 4. Add it to the build
+
+Add the `.cpp` to `engine_ecs` in `engine/CMakeLists.txt`.
+
+## 5. Use it in a game
+
+Add its name at the right place of `serverSystems` (simulation) or of a scene's `systems` (client):
+
+```json
+"serverSystems": ["PlayerControl", "Gravity", "Movement", "Collision", "Damage", "Script"]
+```
+
+Then add a row to the [System reference](../reference/systems.md).

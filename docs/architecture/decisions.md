@@ -1,162 +1,154 @@
 # Design decisions
 
-Each entry states the decision, why it was taken, its known costs and what it prepares.
+Each entry gives the decision, why it was taken, what it costs, and what it makes possible.
+New decisions are added at the end, with the same structure.
 
-## 1. A reusable engine separated from the game
+## 1. A generic engine, games made of data
 
-**Decision.** `engine/` contains generic modules, each built as its own library; `game/` contains
-everything specific to R-Type.
+**Decision.** `engine/` contains everything written in C++. A game is a folder of JSON, Python and assets.
 
-**Why.** Rendering, networking and game logic must be visible and decoupled subsystems. Making every
-module a CMake library turns the dependency rules into build errors instead of conventions.
+**Why.** Content creators must be able to add levels, enemies and menus without touching the engine, and the
+engine must prove it is reusable by running more than one game.
 
-**Cost.** More targets and include paths to maintain.
+**Cost.** Every feature must be designed generically, and errors in data are found at load time instead of
+compile time.
 
-**Prepares.** Extracting the engine as a standalone project and building a second game on it. A game
-links only the modules it needs (link-time modularity).
+**Makes possible.** Two different games (R-Type and Skyhop) on the same engine, content edited by people who do
+not write C++.
 
 ## 2. Authoritative server, display-only client
 
-**Decision.** The server simulates the whole game. Clients send held buttons and render snapshots.
+**Decision.** The server simulates everything. Clients send button states and draw snapshots.
 
-**Why.** A single source of truth keeps every player in the same game and prevents client-side
-cheating on lives, score or collisions.
+**Why.** A single source of truth keeps every player in the same game and prevents cheating on positions,
+lives or score.
 
-**Cost.** Without prediction, a player's own ship reacts after one round trip.
+**Cost.** Without client-side prediction, a player's own ship reacts after one round trip. On a LAN this delay
+is not noticeable.
 
-**Prepares.** Client-side prediction with server reconciliation, which relies on an authoritative
-server and a fixed-step simulation.
+**Makes possible.** Client prediction later, which needs exactly this model.
 
-## 3. Entity Component System instead of an inheritance tree
+## 3. Entity Component System
 
-**Decision.** Game objects are entities composed of data components, processed by systems.
+**Decision.** Game objects are entities made of data components, processed by systems.
 
-**Why.** Composition avoids deep hierarchies and lets behaviors be combined freely. Components can be
-added and removed at runtime: invulnerability after respawn is a component added then removed.
+**Why.** Composition instead of inheritance: behaviours combine freely and can be added or removed at run time
+(a respawned ship gets `Invulnerable` for two seconds, then loses it).
 
-**Cost.** Logic is spread across systems; reading one object's behavior means reading several systems.
+**Cost.** The behaviour of one object is spread over several systems.
 
-**Prepares.** New enemies, bosses or power-ups are new combinations of components plus, when needed,
-one new system.
+**Makes possible.** Prefabs written in JSON as lists of components.
 
-## 4. Bitmask ECS without templates, values owned by the game
+## 4. Sparse arrays and component masks
 
-**Decision.** `EntityManager` stores a 32-bit component mask per entity and never stores values.
-Each game declares a world with one array per component type.
+**Decision.** One `SparseArray<T>` per component type, indexed by entity, plus a 64-bit mask per entity for
+queries.
 
-**Why.** The engine stays free of game types and of generic type-erasure code, so it is short,
-readable and gives clear compiler errors. A game adds a component with one bit, one array and one
-line in its factory.
+**Why.** Direct access by entity, contiguous memory for loops, and queries that compare integers instead of
+looking at each storage.
 
-**Cost.** Up to 32 component types per world (64 by switching the mask type). Every array has one
-slot per entity, used or not.
+**Cost.** Memory is allocated up to the highest entity index for every component type, and a game is limited to
+64 component types.
 
-**Prepares.** Systems only use `create`, `destroy` and `with`; the storage can later become a sparse
-set or archetypes without changing the systems.
+## 5. Generational entity handles
 
-## 5. Fixed-capacity arrays and a free-index stack
+**Decision.** An entity is an index plus a generation.
 
-**Decision.** Worlds reserve 1024 entities at startup. Freed rows are reused from a stack.
+**Why.** Indices are reused; the generation makes an old handle (kept by a script or a system) detectably stale
+instead of silently pointing to a new entity.
 
-**Why.** No allocation during gameplay and direct indexed access. The protocol limits the replicated
-world to 150 entities, so 1024 is a comfortable margin.
+## 6. System order chosen by the game
 
-**Cost.** Memory is reserved even when unused (a few kilobytes per component).
+**Decision.** Systems are created by name from the game JSON, and run in the listed order.
 
-## 6. Generational entity handles
+**Why.** The order matters (movement before collision, collision before damage) and differs between games:
+Skyhop does not need weapons, R-Type does not need gravity.
 
-**Decision.** An entity handle is an index plus a generation, incremented on destruction.
+**Cost.** A wrong order is a data bug, not a compile error.
 
-**Why.** Missiles and enemies are created and destroyed constantly and rows are reused immediately.
-A stale handle must never affect the new entity of the same row.
+## 7. Python for game behaviours
 
-**Prepares.** Safe references between entities (targets, homing missiles, attachments such as the
-Force).
+**Decision.** Behaviours specific to a game are Python scripts, embedded with pybind11, server side only.
 
-## 7. Systems behind an interface, run in explicit order
+**Why.** JSON cannot express timelines, boss patterns or conditions. Python is readable by content creators,
+needs no compilation, and is a standard choice for game scripting. See
+[Libraries and tools](../comparative-study/libraries.md).
 
-**Decision.** Systems implement `ISystem` and are owned by a `SystemManager` through `unique_ptr`.
+**Cost.** An embedded interpreter, a copy of the Python standard library next to the server, and slower code
+than C++ (acceptable for a few hundred entities).
 
-**Why.** The engine runs game logic it does not know (polymorphism); ownership is automatic; the
-whole simulation order is readable in one constructor.
-
-**Prepares.** Adding a system is one class and one `add()` call.
+**Makes possible.** Errors isolated per entity: a broken script never crashes the server.
 
 ## 8. Fixed-timestep simulation
 
-**Decision.** The simulation advances in steps of exactly 1/60 s, with a catch-up limit of 0.25 s.
+**Decision.** The simulation always advances by 1/60 s, independently of the frame rate.
 
-**Why.** Behavior must not depend on CPU speed; equal steps avoid tunnelling through collisions and
-make the snapshot rate predictable.
+**Why.** Identical physics on every machine, and a simulation that behaves the same for the same inputs.
 
-**Prepares.** Interpolation (`FixedTimestep::alpha()`), prediction and replay, which all require a
-deterministic step.
+## 9. Binary UDP protocol with full snapshots
 
-## 9. Networking hidden in the engine, on its own thread
+**Decision.** One UDP datagram per message, a 10-byte header, full world snapshots 20 times per second.
 
-**Decision.** `engine_net` wraps Asio privately and runs I/O on a background thread; the game sees
-`send()` and a non-blocking `poll()`.
+**Why.** TCP's retransmissions would delay fresh data behind stale data. Full snapshots make every loss
+harmless, and the 1200-byte limit avoids fragmentation.
 
-**Why.** The game loop never blocks on the network, and no game file depends on Asio.
+**Cost.** Bandwidth grows with the number of visible entities. The size check at start-up keeps it bounded.
 
-**Prepares.** Replacing the network library, adding channels or metrics, inside `engine_net` only.
+**Makes possible.** Delta compression later, on top of the same messages.
 
-## 10. A binary UDP protocol with full snapshots
+## 10. Network code hidden behind interfaces
 
-**Decision.** UDP, big-endian fields written one by one, 1200-byte maximum datagrams, a version byte,
-session tokens, sequence numbers, strict validation, complete world snapshots at 20 Hz.
+**Decision.** `GameServer` only knows `IGameSession` and `ISessionFactory`. The simulation only exchanges
+buttons and snapshots.
 
-**Why.** UDP never stalls on a lost packet; complete snapshots make each packet self-sufficient, so
-losses are corrected by the next one. Explicit encoding is identical on every compiler and OS.
-Validation keeps malformed or forged packets from crashing or exhausting the server.
+**Why.** The network layer and the game evolve separately, and the transport can be replaced.
 
-**Cost.** Full snapshots use more bandwidth than deltas (at most about 22 KB/s per client).
+**Makes possible.** The solo mode, which plugs the simulation directly into the view (decision 13).
 
-**Prepares.** Delta compression, quantization and reliable messages, introduced through the version
-byte.
+## 11. Visitors instead of switches on message types
 
-## 11. Rendering behind an interface
+**Decision.** `Packet::visit` applies a visitor (`MessageValidator`, `MessageWriter`, `TokenReader`) to the
+message held in a `std::variant`.
 
-**Decision.** Game code draws through `IRenderer`; only `SfmlRenderer`, `Window` and `TextureManager`
-use SFML.
+**Why.** Adding a message no longer means editing several long `switch` statements: the compiler finds every
+place that must handle it.
 
-**Why.** The server builds without any graphics library and can run headless; the game does not
-depend on SFML types.
+## 12. Third-party libraries wrapped in one module each
 
-**Prepares.** Another backend, or a debug renderer, by implementing `IRenderer`.
+**Decision.** SFML only in render, audio and input. Asio only in net. nlohmann-json only in scene. pybind11 only
+in scripting. Each is a private dependency.
 
-## 12. Geometry-only physics module
+**Why.** Replacing a library touches one module. Headers of the rest of the engine stay free of third-party
+types.
 
-**Decision.** `engine_physics` provides rectangles, overlap tests and pair detection; the game decides
-what a collision means.
+## 13. Solo mode as a second transport
 
-**Why.** Collision detection is reusable across games; collision rules are not.
+**Decision.** `LocalClient` runs the simulation in the client process and applies its snapshots directly.
 
-**Cost.** Pair detection tests every pair (O(n²)), negligible for at most 150 entities.
+**Why.** Some games do not need a server, and players should not have to start one.
 
-**Prepares.** A spatial grid inside `findCollisions()` without touching game code.
+**Cost.** The solo build needs both the client and the server modules.
 
-## 13. Project-specific exceptions
+## 14. Project-specific exceptions and exit code 84
 
-**Decision.** Every error derives from `engine::EngineError`, with one class per module.
+**Decision.** Every error is an exception deriving from `EngineError`, named after its module. Launchers exit
+with code 84 on error.
 
-**Why.** The type and message prefix identify the failing module; one handler in each entry point
-reports any project error and exits with code 84.
+**Why.** Clear messages that name the class that failed, and the exit code required by the school.
 
-## 14. CMake and vcpkg, Linux and Windows
+## 15. CMake and vcpkg, Linux and Windows
 
-**Decision.** CMake generates the build; vcpkg in manifest mode with a pinned baseline provides
-dependencies.
+**Decision.** CMake with a vcpkg manifest (`vcpkg.json`).
 
-**Why.** The project builds on a clean machine without system-wide libraries, with the same library
-versions for everyone, on Linux (GCC) and Windows (MSVC).
+**Why.** The same commands on both platforms, and dependencies installed automatically at the version fixed by
+the baseline. See [Libraries and tools](../comparative-study/libraries.md).
 
 ## Known limits
 
-| Limit | Next step |
-|---|---|
-| `with()` scans every row | Sparse set or archetype storage |
-| Full snapshots | Delta snapshots, quantization |
-| No interpolation or prediction | Interpolation with `alpha()`, then prediction and reconciliation |
-| O(n²) collision detection | Spatial grid |
-| Events are best effort | Acknowledged reliable messages |
+| Limit | Effect | Possible improvement |
+|---|---|---|
+| No client prediction | One round trip of input delay | Predict the local avatar, reconcile with snapshots |
+| Full snapshots | Bandwidth grows with entities | Delta snapshots against the last acknowledged one |
+| No encryption | Fine on a LAN, not on the Internet | DTLS, or a secure handshake |
+| 64 component types | Enough for both games | A larger mask type |
+| One Python interpreter | Scripts of all rooms share it | Sub-interpreters if isolation becomes needed |

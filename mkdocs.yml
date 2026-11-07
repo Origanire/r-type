@@ -27,26 +27,57 @@ nav:
       - Installation: getting-started/installation.md
       - Building: getting-started/building.md
       - Running: getting-started/running.md
+      - Troubleshooting: troubleshooting.md
+      - FAQ: faq.md
   - Architecture:
       - Overview: architecture/overview.md
       - Engine modules: architecture/engine-modules.md
       - Entity Component System: architecture/ecs.md
+      - Data-driven games: architecture/data-driven.md
+      - Scripting: architecture/scripting.md
       - Server: architecture/server.md
       - Client: architecture/client.md
+      - Solo mode: architecture/solo-mode.md
       - Networking: architecture/networking.md
       - Threading: architecture/threading.md
-      - Rendering: architecture/rendering.md
+      - Rendering and audio: architecture/rendering.md
       - Design decisions: architecture/decisions.md
-  - Protocol (RFC): protocol.md
-  - Guides:
-      - Add a component: guides/add-a-component.md
-      - Add a system: guides/add-a-system.md
-      - Scripting reference: guides/scripting.md
+  - Create content:
+      - Create a game from scratch: guides/create-a-game.md
+      - Prefabs and scenes: guides/prefabs-and-scenes.md
       - Add an enemy: guides/add-an-enemy.md
       - Add a level or a boss: guides/add-a-level.md
-  - Contributing:
+      - Tilemaps and terrain: guides/tilemaps.md
+      - UI and HUD: guides/ui-and-hud.md
+      - Values and rules: guides/values-and-rules.md
+      - Audio: guides/audio.md
+      - Console and cheats: guides/console.md
+      - Controls and gamepad: guides/controls.md
+      - Asset pipeline: guides/assets.md
+  - Extend the engine:
+      - Add a component: guides/add-a-component.md
+      - Add a system: guides/add-a-system.md
+      - Add a network message: guides/add-a-network-message.md
+      - Replace a library or port: guides/replace-a-library.md
+      - Debugging: guides/debugging.md
+      - Testing: guides/testing.md
+      - Performance: guides/performance.md
+      - Playing on a LAN: guides/network-play.md
+  - Reference:
+      - Scripting API: guides/scripting.md
+      - Components: reference/components.md
+      - Systems: reference/systems.md
+      - Game and settings files: reference/game-file.md
+      - Code map: reference/code-map.md
+      - Glossary: reference/glossary.md
+  - Protocol (RFC): protocol.md
+  - Team:
       - Onboarding: contributing/onboarding.md
       - Coding conventions: contributing/conventions.md
+      - Git workflow: contributing/git-workflow.md
+      - Handover and team changes: contributing/handover.md
+      - Release process: contributing/release.md
+      - Security policy: contributing/security-policy.md
   - Comparative study:
       - Overview: comparative-study/index.md
       - Libraries and tools: comparative-study/libraries.md

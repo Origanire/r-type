@@ -1,128 +1,169 @@
 # Scripting reference
 
-Gameplay behaviours (how an enemy moves and shoots, how a boss changes phase, how a level unfolds)
-are written in **Python** scripts that the server runs. The engine only provides generic components,
-systems and the commands listed below; it knows nothing about the game.
+This page lists every function a Python script can call. How scripts are loaded and run is explained in
+[Scripting architecture](../architecture/scripting.md).
 
-## How it works
+## Conventions
 
-```mermaid
-flowchart LR
-    JSON["prefab JSON<br/>Script { file, params }"] --> SS[ScriptSystem]
-    SS -->|on_spawn / on_update / on_damage / on_death| PY[game/scripts/*.py]
-    PY -->|commands: fire, spawn, set_velocity...| ECS[(Registry)]
-    PY -->|world.set / set_label| WV[World values]
-    WV -->|snapshot| Client[Client HUD]
-```
-
-1. A prefab declares a `Script` component:
-
-    ```json
-    "hopper": {
-      "Collider": { ... }, "Health": { "points": 2 },
-      "Script": { "file": "hopper.py", "params": { "speed": 300 } }
-    }
-    ```
-
-2. The `Script` system (listed in `serverSystems`) loads the file from the scripts directory
-   (`files.scripts` in the game JSON) the first time an entity uses it, then calls its hooks.
-3. Each entity gets one persistent handle `e`. Anything a script stores on it (`e.phase = 2`) is kept
-   between frames: it is the memory of that entity.
-4. A Python error never stops the server: the error is printed with its file and line, and the script
-   is disabled for that entity only.
-
-Scripts run on the **server only**. The client just receives the result through snapshots.
+- Positions are in world units, `x` to the right, `y` downward. `x()` and `y()` are the top-left corner.
+- Angles are in **degrees**: `0` = right, `90` = down, `180` = left, `270` (or `-90`) = up.
+- Speeds are in world units per second. Times are in seconds.
+- Hooks receive the entity handle, usually named `e`. The world is `e.world`.
 
 ## Hooks
 
-All hooks are optional; write only the ones you need.
-
-| Hook | Called |
-|---|---|
-| `on_spawn(e)` | once, on the first frame of the entity |
-| `on_update(e, dt)` | every simulation tick, `dt` in seconds |
-| `on_damage(e, amount)` | when the entity lost health since the previous tick |
-| `on_death(e)` | when the entity is killed (it can still fire or spawn in this hook) |
-| `on_contact(e, other)` | when the entity overlaps another one its collider can hit (pick-ups, triggers) |
-
-## Entity commands (`e`)
-
-| Command | Description |
-|---|---|
-| `alive()` / `exists()` | still playing / still in memory (true during `on_death`) |
-| `age()` | seconds since the entity appeared |
-| `every(name, seconds)` | true once every `seconds`, one timer per name |
-| `x()`, `y()`, `width()`, `height()`, `center_x()`, `center_y()` | position and collider size |
-| `vx()`, `vy()`, `set_velocity(vx, vy)`, `set_position(x, y)` | movement |
-| `health()`, `max_health()` | health points |
-| `number(name, fallback)`, `text(name, fallback)` | `params` of the prefab |
-| `fire(prefab, angle, speed, dx=0, dy=0)` | spawns a projectile from the centre; angle in degrees, 0 = right, 90 = down, 180 = left |
-| `fire_spread(prefab, count, spread, angle, speed)` | `count` projectiles spread over `spread` degrees around `angle` |
-| `fire_at_player(prefab, speed)` | aimed at the closest player |
-| `nearest_player()` | `(x, y)` centre of the closest player, or `None` |
-| `angle_to_player()` | angle toward the closest player |
-| `spawn(prefab, dx=0, dy=0)` | spawns an entity relative to this one, returns its handle |
-| `set_invulnerable(seconds)` | ignores damage for a while |
-| `destroy()` | removes the entity silently |
-| `kill()` | kills the entity (explosion, score, `on_death` of others) |
-| `is_player()`, `player_slot()` | is this a player ship, and which player (0-3, -1 otherwise) |
-| `heal(amount)`, `set_health(points, maximum)` | change health |
-| `set_weapon(prefab, cooldown, count=1, spread=0)` | change a ship's weapon (several shots spread over `spread` degrees) |
-| `input_held("fire")`, `input_released("fire")`, `input_pressed("action")` | read the player's buttons (charged shot, special action) |
-| `attach_to(other, dx, dy)`, `detach()`, `attached()`, `parent()` | stick to another entity (the engine moves it every tick) |
-| `set_angle(degrees)` | rotate the sprite on every client |
-| `set_player_value(name, value)` | per-player HUD value declared in `playerValues` |
-| `world` | the world commands below |
-
-## World commands (`e.world`)
-
-| Command | Description |
-|---|---|
-| `time()`, `every(name, seconds)`, `random(min, max)` | clock, timers, random numbers |
-| `spawn(prefab, x, y)` | spawns an entity at an absolute position, returns its handle |
-| `can_spawn()` | false when the match is not running or the entity limit is reached |
-| `count_scripted(file)` | number of living entities using that script |
-| `players_alive()` | number of player ships in play |
-| `match_phase()` | `"waiting"`, `"playing"` or `"over"` |
-| `end_match()` | ends the match (used for a victory) |
-| `width()`, `height()` | size of the world |
-| `set(name, value)`, `get(name)` | integer world values sent to every client |
-| `set_label(name, label)`, `label(name)` | same, using the labels declared in the game JSON |
-| `log(text)` | prints a line on the server console |
-| `players()` | handles of every player ship in play |
-| `rule(name)` | room rule chosen in the lobby (labels declared in `rules`) |
-| `play_sound(name)` | plays a sound declared in `eventSounds` on every client |
-
-## World values
-
-World values are the only game state a script publishes to the clients. They are declared in the game
-JSON, so the engine never needs to know what they mean:
-
-```json
-"worldValues": [
-  { "name": "stage" },
-  { "name": "phase", "labels": ["intro", "running", "boss", "clear", "victory", "defeat"] },
-  { "name": "progress" },
-  { "name": "bossHealth" }
-]
+```python
+def on_spawn(e): ...              # first tick
+def on_update(e, dt): ...         # every tick
+def on_damage(e, amount): ...     # health went down by amount
+def on_death(e): ...              # killed
+def on_contact(e, other): ...     # touched another entity
 ```
 
-The client stores each one as `world.<name>` (the label when there is one), so HUD elements can use
-them directly: `"BoundText": { "format": "STAGE {world.stage}" }`,
-`"ProgressBar": { "key": "world.progress", "max": 100 }`,
-`"VisibleWhen": { "key": "world.phase", "value": "boss" }`.
+Console script only:
 
-## Other declarations in the game JSON
+```python
+def run(world, ship, text):       # ship is the sender's avatar, or None
+    return "text printed in the console"
+```
 
-- `playerValues`: per-player values shown by the HUD as `player<slot>.<name>` (weapon, force, charge).
-- `rules`: room rules offered by `Choice` widgets in the lobby (`field.rule.<name>`), read with `world.rule`.
-- `eventSounds`: sounds a script may trigger on the clients with `world.play_sound`.
+## Entity (`e`)
 
-Generic components scripts and prefabs can rely on: `Attachment`, `Solid` / `Pushable` (walls that push players),
-`Tilemap` (scrolling grid of tile prefabs), `Rotation`, `HitFlash`, `ParticleEmitter` / `Lifetime`,
-`MusicWhen` (music by HUD value) and the `Shake` system (screen shake driven by a value).
+### State
 
-## Python runtime
+| Function | Returns |
+|---|---|
+| `e.alive()` | `True` if the entity exists and is not being destroyed |
+| `e.exists()` | `True` if the entity still exists (even if tagged for destruction this tick) |
+| `e.age()` | Seconds since the entity was first seen by its script |
+| `e.every(name, seconds)` | `True` once every `seconds`. The first call starts the timer and returns `False` |
+| `e.number(name, fallback=0.0)` | Number from the `Script.params` of the prefab |
+| `e.text(name, fallback="")` | Text from the `Script.params` of the prefab |
+| `e.world` | The world object (below) |
 
-The server embeds Python through pybind11. The build copies the Python standard library next to the
-server (`build/bin/python/`), so no system Python is needed at runtime.
+Handles accept new attributes, which is how a script stores its per-entity state: `e.phase = 2`.
+
+### Position and movement
+
+| Function | Effect |
+|---|---|
+| `e.x()`, `e.y()` | Top-left corner |
+| `e.width()`, `e.height()` | Size of the collider (0 without collider) |
+| `e.center_x()`, `e.center_y()` | Center of the collider |
+| `e.vx()`, `e.vy()` | Velocity |
+| `e.set_position(x, y)` | Moves the entity |
+| `e.set_velocity(vx, vy)` | Sets the velocity |
+| `e.set_angle(degrees)` | Sets the rotation, drawn by clients |
+| `e.on_ground()` | `True` if the entity stands on a `Solid` entity |
+| `e.attach_to(parent, dx=0, dy=0)` | Follows `parent` at that offset |
+| `e.detach()` | Stops following |
+| `e.attached()` | `True` if attached |
+| `e.parent()` | The parent handle, or `None` |
+
+### Health and life
+
+| Function | Effect |
+|---|---|
+| `e.health()`, `e.max_health()` | Hit points |
+| `e.heal(amount)` | Adds health, up to the maximum |
+| `e.set_health(points, maximum)` | Sets both values (bosses scaled by difficulty) |
+| `e.set_invulnerable(seconds)` | Ignores damage for that time (never shortens a longer shield) |
+| `e.kill()` | Kills: death event, `on_death`, death effect on clients, life lost for players |
+| `e.destroy()` | Removes silently: no death event, no effect, no score |
+
+### Shooting and spawning
+
+| Function | Effect |
+|---|---|
+| `e.fire(prefab, angle, speed, dx=0, dy=0)` | Spawns `prefab` centered on the entity (plus offset) and moving at `angle` |
+| `e.fire_spread(prefab, count, spread, angle, speed)` | `count` shots spread over `spread` degrees around `angle` |
+| `e.fire_at_player(prefab, speed)` | One shot toward the nearest player |
+| `e.spawn(prefab, dx=0, dy=0)` | Spawns `prefab` at the entity position plus offset, returns its handle |
+| `e.set_weapon(prefab, cooldown, count=1, spread=0)` | Changes the player's weapon |
+
+Shots fired by an entity are owned by it: a kill by the shot credits the shooter's player.
+`fire` and `fire_spread` do nothing when the entity limit is reached. `spawn` always spawns: check
+`world.can_spawn()` first when spawning many entities.
+
+### Players
+
+| Function | Returns |
+|---|---|
+| `e.is_player()` | `True` for a player-controlled entity |
+| `e.player_slot()` | Seat of the owning player, or `-1` |
+| `e.nearest_player()` | `(x, y)` of the center of the nearest player avatar, or `None` |
+| `e.angle_to_player()` | Angle toward the nearest player, `180` if there is none |
+| `e.set_player_value(name, value)` | Sets a value of `playerValues` for the owner (`weapon`, `charge`...) |
+
+### Inputs (player avatars only)
+
+| Function | Returns |
+|---|---|
+| `e.input_held("fire")` | Seconds the fire button has been held, `0` if released |
+| `e.input_held("action")` | `1.0` while action is held, else `0` |
+| `e.input_pressed("fire")` | `True` while fire is held |
+| `e.input_pressed("action")` | `True` only on the tick action was pressed |
+| `e.input_released("fire")` | On the tick fire is released: how long it was held. Otherwise `0` |
+
+## World (`e.world`)
+
+### Time and randomness
+
+| Function | Returns |
+|---|---|
+| `world.time()` | Seconds since the simulation started |
+| `world.every(name, seconds)` | Like `e.every`, shared by the whole world |
+| `world.reset_timers()` | Clears every world timer |
+| `world.random(minimum, maximum)` | Random number in the range |
+
+### Values and rules
+
+| Function | Effect |
+|---|---|
+| `world.set(name, value)` | Sets a world value (integer) |
+| `world.get(name)` | Reads a world value |
+| `world.set_label(name, label)` | Sets a labelled value by its label: `world.set_label("phase", "boss")` |
+| `world.label(name)` | Reads a labelled value as text |
+| `world.rule(name)` | Label of a room rule: `world.rule("difficulty")` returns `"HARD"` |
+
+### Entities and match
+
+| Function | Effect |
+|---|---|
+| `world.spawn(prefab, x, y)` | Spawns a server prefab, returns its handle |
+| `world.can_spawn()` | `False` when the entity limit is reached or no match is playing |
+| `world.count_scripted(file)` | Number of living entities running that script |
+| `world.players()` | Handles of the living player avatars |
+| `world.players_alive()` | Number of living player avatars |
+| `world.match_phase()` | `"waiting"`, `"playing"` or `"over"` |
+| `world.end_match()` | Ends the match now (victory) |
+| `world.width()`, `world.height()` | World size |
+
+### Output
+
+| Function | Effect |
+|---|---|
+| `world.play_sound(name)` | Plays a sound of `eventSounds` on every client |
+| `world.log(text)` | Prints `[script] text` on the server output |
+
+## Example: a scripted boss phase
+
+```python
+import common
+
+def on_spawn(e):
+    e.phase = 1
+
+def on_update(e, dt):
+    if e.phase == 1 and common.health_ratio(e) < 0.5:
+        e.phase = 2
+        e.world.play_sound("warning")
+    if e.every("ring", 2.0 if e.phase == 1 else 1.0):
+        common.ring(e, "boss_orb", 12, 300.0)
+
+def on_death(e):
+    e.world.set("shake", 14)
+```
+
+`common.py` in `game/scripts/` contains helpers shared by the R-Type scripts (`sine`, `bounce`,
+`follow_player_y`, `cooldown`, `health_ratio`, `ring`).

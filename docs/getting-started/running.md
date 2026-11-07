@@ -1,52 +1,72 @@
 # Running
 
-Start one server, then one client per player (up to four).
+Executables are in `build/bin/` (Linux) or `out\windows\bin\Release\` (Windows). They find their `data`,
+`scripts` and `assets` folders next to themselves, so they can be started from any directory.
 
-## On one machine
+## R-Type on one machine
 
-```sh
-./build/bin/r-type_server
-./build/bin/r-type_client
-```
-
-Run each command in its own terminal. On Windows, use `out\bin\Release\r-type_server.exe` and
-`out\bin\Release\r-type_client.exe`.
-
-## On a local network
-
-On the server machine, find its IPv4 address (`ip addr` on Linux, `ipconfig` on Windows) and allow
-UDP port 4242 in the firewall. On each player machine:
+Start the server, then one client per player, each in its own terminal:
 
 ```sh
-./build/bin/r-type_client -h 192.168.1.42 -p 4242
+./r-type_server
+./r-type_client
+./r-type_client
 ```
 
-Players on the Internet need the server's UDP port to be forwarded by its router.
+On Linux, `scripts/play.sh 2` builds and starts a server and two clients.
+
+In the client: **CONNECT**, create a room (name, optional code, rules), the other players join it from the
+room list, the owner presses **START GAME**.
+
+## R-Type on a local network
+
+```sh
+./r-type_server -p 4242                 # on the host, prints the address to use
+./r-type_client -h 192.168.1.67         # on each player's machine
+```
+
+Firewall and WSL notes: [Network play](../guides/network-play.md).
+
+## Skyhop
+
+```sh
+./skyhop
+```
+
+No server needed. **JOUER** (play) starts, Space or gamepad A flies, Escape pauses.
 
 ## Command-line options
 
 | Program | Option | Default | Meaning |
 |---|---|---|---|
-| server | `-p <port>` | 4242 | UDP port to listen on |
-| client | `-h <IPv4>` | 127.0.0.1 | Server address (numeric IPv4 only) |
+| server | `-p <port>` | 4242 | UDP port |
+| client | `-h <address>` | `serverAddress` of the settings | Server IPv4 address |
 | client | `-p <port>` | 4242 | Server port |
-| both | `--help` | — | Print usage |
+| all | `-g <game>` | the game it was built for | Load another game from the same `data` folder |
+| all | `--help` | - | Print the usage |
 
 Invalid arguments make the program exit with code 84.
 
 ## Controls
 
-| Key | Action |
-|---|---|
-| Arrow keys | Move |
-| Space | Fire |
-| Escape | Quit the client |
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Move / menu focus | Arrow keys | Left stick, D-pad |
+| Fire / confirm | Space / Enter | A (button 0) |
+| Action (R-Type: Force) | Left Shift | B (button 1) |
+| Pause / back | Escape | Select (button 6) |
+| Console | F1 | - |
+| Debug overlay | F3 | - |
 
-## What to expect
+Keys, volumes and text size: [Controls](../guides/controls.md) and the
+[Settings file reference](../reference/game-file.md#settings-file-reference).
 
-- Each player has a ship of a different color, which leans when moving up or down.
-- Bydos enter from the right, flying straight, in a sine wave or in a zigzag.
-- A missile destroys a Bydo and gives 100 points to the shooter.
-- Touching a Bydo costs a life; the ship respawns after 2 s and is invulnerable for 2 s.
-- When no player has lives left, the server prints `Game over` and starts a new round 5 s later.
-- `Ctrl+C` stops the server cleanly; connected clients are notified and exit.
+## R-Type in short
+
+- Three stages, each ending with a boss. Stage 3 has terrain.
+- Bydos, pods, hoppers, turrets, mines, snakes... each with its own pattern.
+- Power-ups: double shot, spread, heal, shield, and the Force (Action launches and recalls it).
+- Hold fire to charge a big shot.
+- Room rules: difficulty, friendly fire, cheats.
+- When every player is out of lives: game over, then a new round.
+- `Ctrl+C` stops the server cleanly and tells the connected clients.

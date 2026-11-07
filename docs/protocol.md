@@ -1,710 +1,552 @@
 # Network protocol (RFC)
 
-This guide describes the current implementation, its public APIs, operating instructions,
-error handling and known gaps. It is the single version-1 wire reference, including field
-definitions and golden byte examples. The [roadmap](roadmap.md) lists future work.
-
-## 1. Scope and implementation status
-
-The game currently synchronizes player movement between one authoritative server and up to
-four clients. The server owns ship positions; clients send button states and render snapshots.
-There is one room. Communication uses IPv4 UDP, with numeric IPv4 addresses only.
-
-| Feature | Current behavior |
-|---|---|
-| Binary codec | Encodes/decodes all RFC message types, with bounded structural validation |
-| Connection | CONNECT/ACCEPT/REJECT, retried requests, pending slots and token confirmation |
-| Sessions | Four slots, endpoint/token checks, explicit departure and five-second expiration |
-| Simulation | Server movement at 60 ticks/s; snapshots every third tick |
-| Client presentation | Replicated ship creation/update/removal and local stars |
-| Input | Arrow keys; held Fire creates a kind-2 missile every 0.2 s, removed once it leaves the world |
-| Enemies | Kind-3 Bydos spawn beyond the right edge every 0.6–1.8 s at a random height, flying straight, in a sine wave or in a zigzag; removed once past the left edge |
-| Combat | A player missile hitting a Bydo removes the missile and deals 1 damage; a destroyed Bydo gives 100 points to the shooter. A Bydo hitting a ship destroys both: the player loses a life and respawns after 2 s with 2 s of invulnerability while lives remain |
-| Game state | Waiting with no player; playing once a player joins; game over when no present player has lives left, then a new round (full lives, zero score, empty world) after 5 s. A player joining during a game over waits for that round |
-| Events | Join/departure/shutdown are emitted; ENTITY_DESTROYED (destroyed Bydo or ship) and PLAYER_KILLED are broadcast before the next snapshot. Spent missiles only disappear from snapshots |
-| Cosmetic event playback | Not implemented; snapshots update the actual displayed ships |
-| Heartbeat | Request/acknowledgement supported; no RTT/ping display yet |
-| Recovery | Complete snapshots and periodic inputs; no reliable event channel |
-| Advanced smoothing | No interpolation, prediction or reconciliation yet |
-
-A message being documented or decoded does not mean its gameplay effect exists.
-Player lives and score in snapshots are authoritative; the client does not display them yet (no HUD).
-
-## 2. Quick start and operating instructions
-
-### Build and run locally
-
-Install dependencies following the repository [README](../README.md), then:
-
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release &&
-cmake --build build --parallel 2
+```
+Status:   Implemented
+Version:  7
+Transport: UDP, one message per datagram
+Source of truth: engine/network/
 ```
 
-Terminal 1:
+This document specifies the binary protocol spoken between the game server (`r-type_server`) and its clients
+(`r-type_client`). It is written so that a developer can implement a **new compatible client or server from this
+document alone**, without reading the C++ sources.
 
-```sh
-./build/bin/r-type_server -p 4242
-```
+The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpreted as described in RFC 2119.
 
-Terminals 2 and 3, one client per terminal:
+---
 
-```sh
-./build/bin/r-type_client -h 127.0.0.1 -p 4242
-```
+## 1. Overview
 
-Both windows should show both ships. Focus a window and use the arrow keys. The other window
-should display the same movement after receiving the next snapshot. Unfocused clients send
-released buttons. Escape/window close quits a client; Ctrl+C requests graceful server shutdown.
-
-### Command-line interface
-
-| Program | Option | Default | Accepted values |
-|---|---|---|---|
-| Server | `-p` | 4242 | Decimal integer 1..65535 |
-| Client | `-h` | 127.0.0.1 | Numeric IPv4 address |
-| Client | `-p` | 4242 | Decimal integer 1..65535 |
-| Both | `--help` | N/A | Prints usage and exits successfully |
-
-Unknown options, a missing option value or an invalid port terminate with exit code 84.
-`-h` means server host, not help. `localhost`, hostnames and IPv6 are not accepted.
-In the low-level API only, transport port 0 requests an ephemeral local port; the CLI rejects 0.
-
-The server binds all IPv4 interfaces. Each client uses a different ephemeral UDP source port.
-For LAN use, replace 127.0.0.1 with the server's LAN IPv4 address and permit traffic on its UDP
-port. On different machines, 127.0.0.1 always addresses that client's own machine.
-Internet reachability, NAT traversal, automatic discovery and firewall configuration are not
-provided by the application. Linux and Windows builds use the same protocol code.
-
-## 3. Architecture and source map
+- The server is **authoritative**: it runs the whole simulation. Clients only send button states and lobby
+  requests, and draw what the server describes.
+- Every message is **one UDP datagram** of at most **1200 bytes** (header included), small enough to avoid IP
+  fragmentation on usual networks.
+- All multi-byte integers are **big-endian** (network byte order).
+- There is no retransmission: game state is resent continuously (snapshots), so a lost datagram is simply
+  replaced by the next one.
+- A session is identified by a random 32-bit **token** given by the server. Every client message after
+  `CONNECT` carries it.
 
 ```mermaid
-flowchart LR
-    Keyboard[Keyboard actions] --> Client[NetworkClient]
-    Client -->|INPUT / HEARTBEAT| Transport[UDP transport]
-    Transport --> Decode[Codec and validation]
-    Decode --> Session[Server session checks]
-    Session --> Simulation[Authoritative positions]
-    Simulation -->|SNAPSHOT| Client
-    Client --> Rendering[Client ECS and renderer]
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    C->>S: CONNECT (retried every second, 5 attempts)
+    S-->>C: ACCEPT (token, client id)
+    loop every second
+        C->>S: HEARTBEAT (token, timestamp)
+        S-->>C: HEARTBEAT_ACK (timestamp)
+    end
+    C->>S: LIST_ROOMS / CREATE_ROOM / JOIN_ROOM
+    S-->>C: ROOM_LIST / ROOM_JOINED / ROOM_REJECTED
+    S-->>C: ROOM_UPDATE (every second while in a room)
+    C->>S: START_GAME (room owner only)
+    S-->>C: GAME_STARTED
+    loop game running (60 ticks per second)
+        C->>S: INPUT (token, buttons) every 33 ms
+        S-->>C: SNAPSHOT every 3 ticks
+        S-->>C: ENTITY_DESTROYED / PLAYER_KILLED / PLAYER_LEFT / PLAY_SOUND when they happen
+    end
+    C->>S: DISCONNECT
 ```
 
-| Responsibility | Source |
-|---|---|
-| Endpoint/datagram/transport API | `engine/net/include/UdpTransport.hpp` |
-| Asio socket and I/O worker | `engine/net/src/UdpTransport.cpp` |
-| Wire data model and constants | `game/shared/include/RtypeProtocol.hpp` |
-| Big-endian byte writer/reader | `engine/net/include/ByteWriter.hpp`, `engine/net/include/ByteReader.hpp` |
-| Message encoding, decoding and validation | `game/shared/src/protocol/Codec.cpp` |
-| Sessions, tokens, timeouts and events | `game/server/include/Server.hpp`, `game/server/src/Server.cpp` |
-| Game world (ECS world and 60 Hz system manager) | `game/server/include/Room.hpp`, `game/server/src/Room.cpp` |
-| Entity creation and server systems | `game/server/src/EntityFactory.cpp`, `game/server/src/systems/` |
-| Server CLI, clock loop and signals | `game/server/src/main.cpp` |
-| Client session/scheduling | `game/client/include/NetworkClient.hpp`, `game/client/src/NetworkClient.cpp` |
-| Snapshot-to-ECS mapping | `game/client/src/Client.cpp` |
-| Shared CLI port parsing | `game/shared/src/PortOption.cpp` |
+---
 
-Each process has a main thread and one I/O worker. The main thread owns the game/session/ECS
-state. The worker owns socket operations and transfers received bytes through a mutex-protected
-queue. Asio is hidden from game headers. Outgoing buffers remain alive until send completion.
+## 2. Data types
 
-The server loop uses the engine `Clock` and `FixedTimestep`: it polls the network continuously,
-runs as many 1/60-second ticks as the elapsed time requires, and bounds catch-up after a long
-suspension (250 ms). Movement advances by velocity times the tick duration, while inactivity
-uses elapsed steady time. The client's
-FixedTimestep advances local stars and ship tilt; networking also uses the steady clock. ECS worlds and
-system managers are not thread-safe and must remain on their owning main thread.
-
-## 4. Protocol reference
-
-This is the version-1 wire contract. Every packet is exactly one UDP datagram. Maximum
-accepted length is 1200 bytes; the application provides no packet splitting/reassembly.
-The words MUST, MUST NOT and SHOULD express requirements for compatible implementations.
-
-### 4.1 Data encoding
-
-#### Primitive types
-
-| Type | Size | Description |
+| Type | Size | Encoding |
 |---|---|---|
-| `u8` | 1 byte | unsigned integer |
-| `u16` | 2 bytes | unsigned integer |
-| `u32` | 4 bytes | unsigned integer |
-| `i16` | 2 bytes | signed integer, two's complement |
+| `u8` | 1 | unsigned integer |
+| `u16` | 2 | unsigned integer, big-endian |
+| `i16` | 2 | two's complement signed integer, big-endian |
+| `u32` | 4 | unsigned integer, big-endian |
+| `string` | 1 + n | `u8` length `n` (0 to 255), then `n` bytes. No terminator. |
+| `bool` | 1 | `0` = false, `1` = true |
+| `list<T>` | 1 + ... | `u8` element count, then the elements one after the other |
 
-- All multi-byte integers are sent in **big-endian** order ("network byte order"): the most significant byte first.
-  For example, the `u16` value `0x1234` is sent as the bytes `12 34`.
-- Fields are written **one after the other**, with **no padding**, in the order given by the tables of the message definitions.
-- The protocol uses **no floating-point numbers** and **no strings**.
+**Text rules.** Every `string` field MUST only contain printable ASCII characters (`0x20` to `0x7E`).
+Each field has its own length limits, given in the message tables below.
 
-!!! warning "Never send a C++ struct as-is"
-    Copying a struct into a packet (`memcpy`, `reinterpret_cast`) is forbidden: the compiler may add padding
-    and the byte order depends on the machine. Each field MUST be written and read one by one.
+**Coordinates.** Entity positions are `i16` values in **world units** (pixels of a 1920 x 1080 world for R-Type).
+The origin is the top-left corner, `x` grows to the right and `y` grows downward.
 
-#### Coordinates
+---
 
-Positions are expressed in a fixed **logical world of 1920 × 1080 units**, whatever the size of the client window.
+## 3. Packet format
 
-- Origin `(0, 0)` is the **top-left** corner, `x` grows to the right, `y` grows downwards.
-- Coordinates are `i16` (from -32768 to 32767): entities MAY be outside the visible area,
-  for example monsters spawning on the right of the screen.
-- The client scales the logical world to its window. The server simulates with floating-point
-  positions locally and rounds to the nearest integer for transmission. Negative values use
-  two's-complement encoding (`-1` is `FF FF`).
-
-### 4.2 Packet format
-
-Every packet starts with a **10-byte header**, followed by a payload whose format depends on the message type.
+Every datagram starts with a fixed **10-byte header**, followed by the payload of the message.
 
 ```
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-------------------------------+---------------+---------------+
-|          magic (u16)          |  version (u8) |   type (u8)   |
+|          magic (u16)          | version (u8)  |   type (u8)   |
 +-------------------------------+---------------+---------------+
 |                        sequence (u32)                         |
 +-------------------------------+-------------------------------+
-|      payload_size (u16)       |   payload (payload_size bytes) ...
-+-------------------------------+
+|      payload size (u16)       |      payload ...              |
++-------------------------------+-------------------------------+
 ```
 
 | Offset | Field | Type | Description |
 |---|---|---|---|
-| 0 | `magic` | `u16` | Always `0x5254` (the ASCII letters `RT`). Identifies an R-Type packet. |
-| 2 | `version` | `u8` | Protocol version. This document describes version `1`. |
-| 3 | `type` | `u8` | Message type, see the message type table. |
-| 4 | `sequence` | `u32` | Packet number. Each sender keeps its own counter, starting at 0 and increased by 1 for every packet it sends. |
-| 8 | `payload_size` | `u16` | Size of the payload in bytes. It MUST be equal to the datagram size minus 10. |
+| 0 | `magic` | `u16` | Always `0x454E` (ASCII `EN`, for "engine"). |
+| 2 | `version` | `u8` | Protocol version. This document describes version **7**. |
+| 3 | `type` | `u8` | Message type (section 4). Bit `0x80` set means "sent by the server". |
+| 4 | `sequence` | `u32` | Sender's counter, incremented for every datagram it sends. Wraps around. |
+| 8 | `payload size` | `u16` | Number of bytes after the header. MUST equal `datagram size - 10`. |
 
-- A packet MUST NOT be larger than **1200 bytes** (header included), to reduce the risk of IP fragmentation; the path MTU may still be smaller.
-- The `sequence` field lets the receiver ignore packets that arrive late or out of order (see the message definitions).
-  A sequence is newer when `(candidate - previous) mod 2^32` is in `1..2^31-1`.
-  Equal values and a distance of exactly `2^31` are not newer. This handles counter wrap.
-  A receiver MUST NOT share one input-order counter between different clients. INPUT and
-  HEARTBEAT have separate order tracking so a heartbeat cannot suppress a delayed newer input.
-  DISCONNECT must be newer than the last accepted INPUT and HEARTBEAT. Snapshot freshness uses
-  `tick` with the same modular comparison, independently of cosmetic events.
+### Sequence numbers
 
-### 4.3 Message types
+Each side keeps its own counter. A receiver compares sequences with wrap-around arithmetic:
+`candidate` is newer than `previous` if `(candidate - previous) mod 2^32` is between `1` and `2^31 - 1`.
 
-The high bit of `type` gives the direction: `0x0_` = client → server, `0x8_` = server → client.
+The server keeps the last accepted sequence **separately** for `INPUT` and for `HEARTBEAT` messages, and drops
+any older or duplicated one. Other client messages are not ordered.
 
-| Code | Name | Direction | Payload size |
+---
+
+## 4. Message types
+
+Codes `0x01` to `0x7F` are sent by clients, codes `0x81` to `0xFF` by the server.
+
+| Code | Name | Direction | Purpose |
 |---|---|---|---|
-| `0x01` | `CONNECT` | client → server | 0 |
-| `0x02` | `INPUT` | client → server | 5 |
-| `0x03` | `HEARTBEAT` | client → server | 8 |
-| `0x04` | `DISCONNECT` | client → server | 4 |
-| `0x81` | `ACCEPT` | server → client | 5 |
-| `0x82` | `REJECT` | server → client | 1 |
-| `0x83` | `SNAPSHOT` | server → client | 38 + 7 × `entity_count` |
-| `0x84` | `HEARTBEAT_ACK` | server → client | 4 |
-| `0x85` | `ENTITY_DESTROYED` | server → client | 2 |
-| `0x86` | `PLAYER_JOINED` | server → client | 1 |
-| `0x87` | `PLAYER_KILLED` | server → client | 1 |
-| `0x88` | `PLAYER_LEFT` | server → client | 2 |
-| `0x89` | `SERVER_SHUTDOWN` | server → client | 0 |
+| `0x01` | `CONNECT` | C -> S | Ask for a session |
+| `0x02` | `INPUT` | C -> S | Current state of the buttons |
+| `0x03` | `HEARTBEAT` | C -> S | Keep-alive and ping measurement |
+| `0x04` | `DISCONNECT` | C -> S | Leave the server |
+| `0x05` | `LIST_ROOMS` | C -> S | Ask for the room list |
+| `0x06` | `CREATE_ROOM` | C -> S | Create a room and become its owner |
+| `0x07` | `JOIN_ROOM` | C -> S | Join an existing room |
+| `0x08` | `LEAVE_ROOM` | C -> S | Leave the current room |
+| `0x09` | `START_GAME` | C -> S | Start the game of the room (owner) |
+| `0x0A` | `KICK_PLAYER` | C -> S | Remove a player from the room (owner) |
+| `0x0B` | `DELETE_ROOM` | C -> S | Close the room (owner) |
+| `0x0C` | `CONSOLE_COMMAND` | C -> S | Developer console command (owner) |
+| `0x81` | `ACCEPT` | S -> C | Session created |
+| `0x82` | `REJECT` | S -> C | Session refused |
+| `0x83` | `SNAPSHOT` | S -> C | Full state of the game |
+| `0x84` | `HEARTBEAT_ACK` | S -> C | Answer to `HEARTBEAT` |
+| `0x85` | `ENTITY_DESTROYED` | S -> C | An entity was removed |
+| `0x86` | `PLAYER_JOINED` | S -> C | Reserved, not emitted by the current server |
+| `0x87` | `PLAYER_KILLED` | S -> C | A player's avatar died |
+| `0x88` | `PLAYER_LEFT` | S -> C | A player left a running game (quit or crash) |
+| `0x89` | `SERVER_SHUTDOWN` | S -> C | The server is stopping |
+| `0x8A` | `ROOM_LIST` | S -> C | List of rooms |
+| `0x8B` | `ROOM_JOINED` | S -> C | You are in a room |
+| `0x8C` | `ROOM_REJECTED` | S -> C | A room request failed |
+| `0x8D` | `ROOM_UPDATE` | S -> C | Seats of the room |
+| `0x8E` | `GAME_STARTED` | S -> C | The room's game has started |
+| `0x8F` | `KICKED` | S -> C | You were removed from the room |
+| `0x90` | `ROOM_CLOSED` | S -> C | The room no longer exists |
+| `0x91` | `PLAY_SOUND` | S -> C | Play a game sound |
+| `0x92` | `CONSOLE_TEXT` | S -> C | Text for the developer console |
 
-All other codes are reserved for future versions.
+Any other code is invalid and the datagram MUST be dropped.
 
-### 4.4 Message payloads
+---
 
-#### Client -> server
+## 5. Message payloads
 
-##### `CONNECT` (0x01)
+The tables list the payload fields in order, right after the header.
 
-Asks the server for a place in the game. No payload.
+### 5.1 Client to server
 
-##### `INPUT` (0x02)
+#### `CONNECT` (0x01)
 
-The keys the player is **currently holding** (a state, not a "key pressed" event).
+Empty payload. The header `version` tells the server which protocol the client speaks.
+
+#### `INPUT` (0x02)
 
 | Field | Type | Description |
 |---|---|---|
-| `token` | `u32` | Session token received in `ACCEPT`. |
-| `buttons` | `u8` | One bit per action, `1` = held. |
+| `token` | `u32` | Session token from `ACCEPT` |
+| `buttons` | `u8` | Bit field, see below |
 
-| Bit | Mask | Action |
+| Bit | Mask | Button |
 |---|---|---|
 | 0 | `0x01` | Up |
 | 1 | `0x02` | Down |
 | 2 | `0x04` | Left |
 | 3 | `0x08` | Right |
 | 4 | `0x10` | Fire |
-| 5–7 | | Reserved, MUST be 0 |
+| 5 | `0x20` | Action (game-defined: R-Type uses it for the Force) |
+| 6-7 | `0xC0` | Reserved, MUST be 0 |
 
-- The client sends `INPUT` **30 times per second** while it is connected, even if nothing changed:
-  a lost packet is replaced by the next one.
-- The server uses the newest `INPUT` under the modular sequence comparison and ignores duplicates/older ones.
-- If the server receives no `INPUT` from a client for **500 ms**, it considers all its buttons released.
+`INPUT` is a **state**, not an event: the client sends its whole button state every 33 ms while a game runs.
+If the server receives no `INPUT` from a player for 500 ms, it releases all of that player's buttons.
 
-##### `HEARTBEAT` (0x03)
-
-Keeps the session alive and measures the round-trip time (ping).
+#### `HEARTBEAT` (0x03)
 
 | Field | Type | Description |
 |---|---|---|
-| `token` | `u32` | Session token. |
-| `timestamp` | `u32` | Client local time in milliseconds (any origin). |
+| `token` | `u32` | Session token |
+| `timestamp` | `u32` | Any client value, sent back unchanged in `HEARTBEAT_ACK` (the client uses milliseconds to compute its ping) |
 
-The client sends one `HEARTBEAT` **every second**. The server answers with `HEARTBEAT_ACK` carrying the same
-`timestamp`; the client computes the ping as `now - timestamp`.
-
-##### `DISCONNECT` (0x04)
-
-The player quits the game.
+#### `DISCONNECT` (0x04)
 
 | Field | Type | Description |
 |---|---|---|
-| `token` | `u32` | Session token. |
+| `token` | `u32` | Session token |
 
-If this packet is lost, the server detects the departure anyway with the timeout (the session timeout rules).
-
-#### Server -> client
-
-##### `ACCEPT` (0x81)
-
-Answer to `CONNECT` when a place is available.
+#### `LIST_ROOMS` (0x05), `LEAVE_ROOM` (0x08), `START_GAME` (0x09), `DELETE_ROOM` (0x0B)
 
 | Field | Type | Description |
 |---|---|---|
-| `token` | `u32` | Random non-zero session token. The client MUST put it in all its following packets. |
-| `player_id` | `u8` | Player slot, from 0 to 3. It identifies the local ship through `players[player_id]` in snapshots. |
+| `token` | `u32` | Session token |
 
-##### `REJECT` (0x82)
-
-Answer to `CONNECT` when the client cannot join.
+#### `CREATE_ROOM` (0x06)
 
 | Field | Type | Description |
 |---|---|---|
-| `reason` | `u8` | `1` = server full (4 players), `2` = protocol version mismatch. |
+| `token` | `u32` | Session token |
+| `name` | `string` | 1 to `roomNameMaxLength` (16) characters |
+| `code` | `string` | 0 to `roomCodeMaxLength` (8) characters. Empty means "public room" |
+| `rules` | `list<u8>` | One value per rule declared by the game. R-Type has 3: difficulty, friendly fire, cheats |
 
-`REJECT` is always sent with the server's own `version` in the header. Its format will never change, so a client
-MUST read it even if the version differs from its own.
+The number of `rules` MUST equal the number of rules of the game. Each value is an index into that rule's labels
+(for R-Type difficulty: `0` = NORMAL, `1` = HARD, `2` = EASY).
 
-##### `SNAPSHOT` (0x83)
-
-The complete state of the game at a given server tick.
-
-| Field | Type | Description |
-|---|---|---|
-| `tick` | `u32` | Server tick number (the server runs at 60 ticks per second). |
-| `game_state` | `u8` | `0` = waiting for players, `1` = playing, `2` = game over. |
-| `players` | 4 × *Player* | Always 4 entries, the index is the `player_id`. |
-| `entity_count` | `u8` | Number of entities that follow, at most **150**. |
-| `entities` | `entity_count` × *Entity* | All the entities of the game. |
-
-*Player* (8 bytes):
+#### `JOIN_ROOM` (0x07)
 
 | Field | Type | Description |
 |---|---|---|
-| `state` | `u8` | `0` = empty slot, `1` = alive, `2` = dead. |
-| `lives` | `u8` | Remaining lives. |
-| `score` | `u32` | Score. |
-| `entity_id` | `u16` | Id of the player's ship, `0` if it has none. |
+| `token` | `u32` | Session token |
+| `roomId` | `u16` | Id from `ROOM_LIST` |
+| `code` | `string` | 0 to 8 characters, the room code if the room is locked |
 
-*Entity* (7 bytes):
+#### `KICK_PLAYER` (0x0A)
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | `u16` | Network id of the entity, never `0`. |
-| `kind` | `u8` | What the entity is, see the table below. It decides which sprite the client draws. |
-| `x` | `i16` | Position, in world units (the coordinate definitions). |
-| `y` | `i16` | Position, in world units. |
+| `token` | `u32` | Session token |
+| `slot` | `u8` | Seat to free, lower than `maxPlayers` |
 
-| `kind` | Entity |
+#### `CONSOLE_COMMAND` (0x0C)
+
+| Field | Type | Description |
+|---|---|---|
+| `token` | `u32` | Session token |
+| `text` | `string` | 1 to 200 characters, the command line typed in the console |
+
+### 5.2 Server to client
+
+#### `ACCEPT` (0x81)
+
+| Field | Type | Description |
+|---|---|---|
+| `token` | `u32` | Random non-zero session token |
+| `clientId` | `u8` | Index of the client on the server, lower than `maxClients` |
+
+#### `REJECT` (0x82)
+
+| Field | Type | Description |
+|---|---|---|
+| `reason` | `u8` | `1` = server full, `2` = protocol version mismatch |
+
+`REJECT` is always sent with the **server's** version in the header, and its format will never change.
+A client MUST accept it whatever the version is, so that it can report the mismatch.
+
+#### `SNAPSHOT` (0x83)
+
+The complete visible state of the game, sent every `snapshotEveryTicks` ticks (3, so 20 times per second).
+
+| Field | Type | Description |
+|---|---|---|
+| `tick` | `u32` | Simulation tick number |
+| `gameState` | `u8` | `0` = waiting, `1` = playing, `2` = over |
+| `worldValues` | `list<u16>` | One value per world value declared by the game (section 6) |
+| `players` | `list<PlayerStatus>` | Exactly `maxPlayers` entries, one per seat |
+| `entities` | `list<EntityState>` | 0 to `maxEntities` visible entities |
+
+**`PlayerStatus`**
+
+| Field | Type | Description |
+|---|---|---|
+| `state` | `u8` | `0` = empty seat, `1` = alive, `2` = dead (waiting to respawn or out) |
+| `lives` | `u8` | Remaining lives |
+| `health` | `u8` | Health of the avatar in percent, 0 to 100 |
+| `score` | `u32` | Score |
+| `avatarId` | `u16` | Network id of the player's entity in `entities`, `0` if none |
+| `values` | `list<u16>` | One value per player value declared by the game (R-Type: weapon, force, charge) |
+
+Rules: an empty seat has every field at 0. A dead player has `avatarId = 0`. An alive player has
+`lives > 0` and an `avatarId` that appears in `entities`, and two players never share an avatar.
+
+**`EntityState`** (8 bytes)
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `u16` | Network id, never 0, unique in the snapshot |
+| `kind` | `u8` | What to draw. The meaning comes from the game's `kinds` table (R-Type: `1` = ship, `2` = missile, ...) |
+| `x` | `i16` | Position, world units |
+| `y` | `i16` | Position, world units |
+| `visual` | `u8` | Bit `0x80`: the entity was just hit (flash it). Bits `0x7F`: rotation, in steps of 360/128 degrees |
+
+The client MUST treat a snapshot as the full truth: entities present in the previous snapshot but absent from
+the new one are no longer visible.
+
+#### `HEARTBEAT_ACK` (0x84)
+
+| Field | Type | Description |
+|---|---|---|
+| `timestamp` | `u32` | The value received in `HEARTBEAT` |
+
+#### `ENTITY_DESTROYED` (0x85)
+
+| Field | Type | Description |
+|---|---|---|
+| `entityId` | `u16` | Network id of the destroyed entity, never 0 |
+
+Sent when an entity dies, so that the client can play its death effect (explosion) immediately.
+
+#### `PLAYER_KILLED` (0x87)
+
+| Field | Type | Description |
+|---|---|---|
+| `slot` | `u8` | Seat of the player whose avatar died |
+
+#### `PLAYER_LEFT` (0x88)
+
+| Field | Type | Description |
+|---|---|---|
+| `slot` | `u8` | Seat of the player who left |
+| `reason` | `u8` | `1` = quit (left the room or disconnected), `2` = timeout (crashed or lost the network) |
+
+Sent to the remaining members of a room whose game is running, when a player leaves it. A client that crashes
+stops sending heartbeats: after `sessionTimeoutMs` (5 s) the server drops it and sends `PLAYER_LEFT` with reason
+`2`. The game goes on for the others. When the owner leaves, the room closes and `ROOM_CLOSED` is sent instead.
+
+#### `PLAYER_JOINED` (0x86)
+
+Reserved, with a `u8 slot`. The current server does not send it: new seats are reported by `ROOM_UPDATE`.
+
+#### `SERVER_SHUTDOWN` (0x89), `GAME_STARTED` (0x8E), `KICKED` (0x8F), `ROOM_CLOSED` (0x90)
+
+Empty payload.
+
+#### `ROOM_LIST` (0x8A)
+
+| Field | Type | Description |
+|---|---|---|
+| `rooms` | `list<RoomInfo>` | 0 to `maxRooms` (16) rooms |
+
+**`RoomInfo`**
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `u16` | Room id, never 0 |
+| `name` | `string` | 1 to 16 characters |
+| `players` | `u8` | Seated players |
+| `capacity` | `u8` | Number of seats |
+| `flags` | `u8` | `0x01` = locked by a code, `0x02` = game in progress |
+
+#### `ROOM_JOINED` (0x8B)
+
+| Field | Type | Description |
+|---|---|---|
+| `roomId` | `u16` | Id of the room |
+| `name` | `string` | Name of the room |
+| `slot` | `u8` | Your seat in the room |
+
+#### `ROOM_REJECTED` (0x8C)
+
+| Field | Type | Description |
+|---|---|---|
+| `reason` | `u8` | See the table below |
+
+| Value | Meaning |
 |---|---|
-| `1` | Player ship |
-| `2` | Player missile |
-| `3` | Bydo (basic monster) |
-| `4` | Enemy missile |
-| `5` | Power-up |
-| `6` | Obstacle |
-| `7` | Destructible tile |
+| `1` | Room not found |
+| `2` | Room full |
+| `3` | Wrong code |
+| `4` | The server already has the maximum number of rooms |
+| `5` | Invalid room name |
+| `6` | Too many wrong codes (5): join requests are refused for this session |
+| `7` | Not allowed: only the owner can do that |
 
-How the client uses a snapshot:
-
-- It ignores a snapshot whose `tick` is not newer than the last one it applied (the ordering rules).
-- An `id` it does not know yet is a **new entity**: it creates it.
-- An `id` it knows: it updates the position. If the `kind` changed, it treats it as a new entity.
-- An entity it knows that is **absent** from the snapshot no longer exists: it removes it.
-- It MUST ignore a `kind` it does not know (draw nothing), without crashing.
-
-A snapshot MUST contain unique nonzero entity IDs. Empty player slots MUST have all other
-fields zero. An alive player MUST have at least one life and reference exactly one kind-1 entity
-in the snapshot; two players MUST NOT reference the same ship. Dead players have no ship
-(`entity_id = 0`); their lives/score may describe respawn/game-over rules. Unknown entity kinds
-are deliberately allowed for display compatibility and MUST NOT invalidate a whole snapshot.
-
-The maximum snapshot is `10 + 38 + 7 * 150 = 1098` bytes. It is always complete: the server
-MUST limit spawns to at most 150 replicated entities rather than silently truncate the list.
-Network IDs have no generation field. Keep removal visible before reusing an ID; version 1
-cannot distinguish every immediate reuse of the same ID/kind under packet loss.
-
-The server gives ids from 1 to 65535 in increasing order, goes back to 1 after 65535, and never gives an id
-that is still in use.
-
-##### `HEARTBEAT_ACK` (0x84)
+#### `ROOM_UPDATE` (0x8D)
 
 | Field | Type | Description |
 |---|---|---|
-| `timestamp` | `u32` | Copy of the `timestamp` of the `HEARTBEAT` it answers. |
+| `ownerSlot` | `u8` | Seat of the owner, MUST be an occupied seat |
+| `occupied` | `list<bool>` | Exactly `maxPlayers` entries, `1` when the seat is taken |
 
-##### `ENTITY_DESTROYED` (0x85)
+Sent to every member when the seats change, and every second as a keep-alive of the room.
+A client that receives no `ROOM_UPDATE` for 4 seconds while in a room SHOULD consider the room lost.
 
-An entity was destroyed during the game (as opposed to leaving the screen). A client may play an explosion
-at the last known position of the entity.
-
-| Field | Type | Description |
-|---|---|---|
-| `entity_id` | `u16` | Id of the destroyed entity. |
-
-##### `PLAYER_JOINED` (0x86)
+#### `PLAY_SOUND` (0x91)
 
 | Field | Type | Description |
 |---|---|---|
-| `player_id` | `u8` | Slot of the new player. |
+| `sound` | `u8` | Index in the game's `eventSounds` list (R-Type: `0` = warning, `1` = power-up, `2` = boss death) |
 
-##### `PLAYER_KILLED` (0x87)
-
-| Field | Type | Description |
-|---|---|---|
-| `player_id` | `u8` | Slot of the player who was killed. |
-
-##### `PLAYER_LEFT` (0x88)
-
-A player left the game. Sent to the remaining players, so they know when a client has crashed.
+#### `CONSOLE_TEXT` (0x92)
 
 | Field | Type | Description |
 |---|---|---|
-| `player_id` | `u8` | Slot of the player who left. |
-| `reason` | `u8` | `1` = the player quit (`DISCONNECT`), `2` = timeout (the client crashed or lost its connection). |
+| `text` | `string` | 0 to 200 characters to print in the console |
 
-##### `SERVER_SHUTDOWN` (0x89)
+---
 
-The server is stopping. No payload. If this packet is lost, clients detect it with the timeout (the session timeout rules).
+## 6. Game-defined tables
 
-Events are best effort. Losing an event must not change authoritative gameplay; complete
-snapshots and timeouts determine the actual state. Event playback is future work.
+The protocol is generic: some fields only make sense with the game's data file (`<game>_game.json`), which
+**both sides MUST share**. A third-party client needs these tables:
 
-### 4.5 Golden byte examples
-
-All values are written in hexadecimal.
-
-**`CONNECT`**, first packet of a client (sequence 0): 10 bytes.
-
-```
-52 54  01  01  00 00 00 00  00 00
-magic  ver type  sequence   size
-```
-
-**`ACCEPT`**: token `0x1A2B3C4D`, player slot 2: 15 bytes.
-
-```
-52 54  01  81  00 00 00 00  00 05  |  1A 2B 3C 4D  02
-                                   |  token        player_id
-```
-
-**`INPUT`**: sequence 42, the player holds Right and Fire (`0x08 | 0x10 = 0x18`): 15 bytes.
-
-```
-52 54  01  02  00 00 00 2A  00 05  |  1A 2B 3C 4D  18
-                                   |  token        buttons
-```
-
-**`SNAPSHOT`**: tick 1200, game playing, player 0 alive with 3 lives, score 1500 and ship id 1, the other slots
-empty, two entities: the ship of player 0 at (200, 540) and a Bydo (id 7) at (1800, 300). Payload: 38 + 2 × 7 = 52 bytes.
-
-```
-52 54  01  83  00 00 01 2C  00 34      header (sequence 300, payload 52)
-00 00 04 B0                            tick = 1200
-01                                     game_state = playing
-01 03 00 00 05 DC 00 01                player 0: alive, 3 lives, score 1500, ship id 1
-00 00 00 00 00 00 00 00                player 1: empty
-00 00 00 00 00 00 00 00                player 2: empty
-00 00 00 00 00 00 00 00                player 3: empty
-02                                     entity_count = 2
-00 01  01  00 C8  02 1C                id 1, player ship, x 200, y 540
-00 07  03  07 08  01 2C                id 7, Bydo, x 1800, y 300
-```
-
-
-## 5. Session lifecycle and timing
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    C->>S: CONNECT
-    S->>C: ACCEPT(token, slot)
-    Note over S: Pending slot; no ship or snapshots yet
-    C->>S: INPUT or HEARTBEAT(token)
-    Note over S: Confirm endpoint and create ship
-    S->>C: PLAYER_JOINED and subsequent snapshots
-    loop Active session
-        C->>S: INPUT, around 30/s
-        C->>S: HEARTBEAT, 1/s
-        S->>C: HEARTBEAT_ACK
-        S->>C: SNAPSHOT, target 20/s
-    end
-    C->>S: DISCONNECT(token)
-    Note over S: Remove ship and free slot
-```
-
-CONNECT retries use the same endpoint but fresh sequence numbers. An existing pending/active
-endpoint gets the same token/slot; retries do not refresh inactivity. Four slots include pending
-connections. Only a valid token-bearing INPUT/HEARTBEAT creates a ship and enables snapshots.
-
-| Timer/limit | Value | Effect |
+| JSON key | Used by | Meaning |
 |---|---|---|
-| Server simulation | 60 ticks/s | Advances positions by 1/60 s per tick |
-| Snapshot schedule | Every 3 ticks | Sends complete state to confirmed clients |
-| INPUT send interval | At least 33333 microseconds | Approximate 30 Hz, checked once per client frame |
-| HEARTBEAT interval | At least 1 s | Session activity and echo response |
-| Input freshness | 500 ms | Releases all held buttons |
-| Session inactivity | 5 s | Removes pending/active session |
-| Client server inactivity | 5 s | Prints error and exits client |
-| Join retries | t=0,1,2,3,4 s | Failure at the next one-second check if still unanswered |
-| CONNECT handling | At most 32 per one-second server window | Further CONNECT requests dropped |
-| Same-endpoint ACCEPT retries | At least 200 ms apart | Faster retries dropped |
-| Receive queue | 256 datagrams | Additional arrivals dropped |
-| Pending sends | 256 datagrams | Additional send requests dropped |
+| `network.maxPlayers` | `SNAPSHOT`, `ROOM_UPDATE`, `KICK_PLAYER` | Number of seats |
+| `network.maxEntities` | `SNAPSHOT` | Maximum number of entities in one snapshot |
+| `worldValues` | `SNAPSHOT.worldValues` | Ordered names of the world values. A value with `labels` is an index into them |
+| `playerValues` | `PlayerStatus.values` | Ordered names of the per-player values |
+| `rules` | `CREATE_ROOM.rules` | Ordered room rules and their labels |
+| `eventSounds` | `PLAY_SOUND.sound` | Ordered names of the sounds the server can trigger |
+| `kinds` | `EntityState.kind` | Kind number to client prefab name |
 
-Timers run when the main loop checks them; suspension or a slow frame can delay checks.
-The server checks expiration before consuming that tick's inbox. A packet queued close to the
-five-second deadline can therefore arrive too late to rescue a session. Heartbeats are separate
-from input freshness: a client may remain connected while its ship has stopped.
+R-Type world values, in order: `stage`, `phase` (labels: intro, running, boss, clear, victory, defeat),
+`progress`, `bossHealth`, `shake`, `skip`.
 
-## 6. Complete error catalogue
+The server checks at start-up that `maxPlayers` and `maxEntities` produce a snapshot that fits in 1200 bytes,
+and refuses to start otherwise.
 
-The tables list explicit checks and failure paths in the current code. They are not a promise
-that every possible OS/hardware failure has a dedicated diagnosis. Silent drops produce no
-per-packet error log or metric. Only valid, fresh activity refreshes the relevant timers.
+---
 
-### 6.1 Invalid datagrams and fields
+## 7. Session lifecycle and timing
 
-For every rejection below, decoding returns `nullopt` or the transport drops the datagram.
-The server/client ignores it and continues receiving. It does not alter gameplay or refresh activity.
+All values below come from the `network` block of `rtype_game.json`.
 
-| Case | Detection/behavior |
-|---|---|
-| Datagram shorter than 10 bytes | Reject before parsing header |
-| Datagram larger than 1200 bytes | Drop at transport; codec also rejects if called directly |
-| Receive error or oversize/truncated receive | Do not queue those bytes; rearm receive unless cancelled |
-| Wrong magic | Reject header |
-| Unknown message type | Reject during type dispatch |
-| Wrong direction | Server rejects server messages; client rejects client messages |
-| Unsupported version | Reject, except valid CONNECT and REJECT version-negotiation cases |
-| Header payload length differs from received bytes | Reject envelope |
-| Truncated fixed-size payload | Bounds check fails before missing field read |
-| Extra payload bytes | Reject because reader did not consume the entire datagram |
-| Fixed message has wrong payload length | Truncated-read or trailing-byte check rejects |
-| INPUT reserved bits set | Reject buttons with any of bits 5..7 set |
-| Zero session token | Reject INPUT/HEARTBEAT/DISCONNECT/ACCEPT |
-| Player slot outside 0..3 | Reject ACCEPT/PLAYER_JOINED/PLAYER_KILLED/PLAYER_LEFT |
-| Invalid REJECT/PLAYER_LEFT reason | Reject reason other than 1 or 2 |
-| Invalid game_state or player state | Reject values outside 0..2 |
-| Snapshot entity count greater than 150 | Reject before reading entity records |
-| Snapshot length not exactly 48 + 7*N including header | Reject count/length combination |
-| Zero or duplicate entity ID | Reject entire snapshot |
-| ENTITY_DESTROYED with zero ID | Reject event |
-| Empty player with nonzero lives, score or ship ID | Reject snapshot |
-| Alive player with zero lives or missing ship | Reject snapshot |
-| Alive player referencing a non-kind-1 entity | Reject snapshot |
-| Two alive players referencing one ship | Reject snapshot |
-| Dead player with nonzero ship ID | Reject snapshot |
-
-Unknown entity kinds are an intentional exception: keep a structurally valid snapshot, but
-do not draw unsupported entities. No application checksum/MAC exists. A changed bit that
-still produces valid fields can pass every check; for example Right changing to Left. Validation
-protects parsing and schema consistency, not complete detection of corruption or forgery.
-
-### 6.2 Source, ordering and connection errors
-
-| Case | Current response | Recovery |
+| Setting | R-Type value | Effect |
 |---|---|---|
-| Client packet from an unknown endpoint, except CONNECT | Ignore | Endpoint must join first |
-| Token belongs to another endpoint or is wrong | Ignore | Use that endpoint's ACCEPT token |
-| Server packet from a different address/port | Client ignores | Configure the correct endpoint |
-| Structurally valid CONNECT with another version | REJECT reason 2, subject to rate cap | Use a matching protocol version |
-| Malformed CONNECT with another version | Ignore | Correct the packet schema first |
-| Valid REJECT with a different version | Client decoder accepts it for negotiation | Client reports rejection while joining |
-| Four pending/active slots occupied | REJECT reason 1 | Retry manually when a slot is free |
-| Duplicate CONNECT | Reuse token/slot, unless rate-limited | Continue with valid token-bearing traffic |
-| Too many CONNECT requests | Drop excess requests | Normal client retry may recover; no explicit overload message |
-| Pending ACCEPT never confirmed | No ship/snapshots; expire after 5 s | Start a new join attempt |
-| Duplicate/old INPUT or HEARTBEAT | Ignore without refreshing freshness/activity | Send a newer sequence |
-| DISCONNECT not newer than INPUT/HEARTBEAT | Ignore | A fresh DISCONNECT or inactivity timeout removes the session |
-| Duplicate/old snapshot tick | Ignore without refreshing client activity | Wait for a newer snapshot |
-| Old non-snapshot server message | Ignore by sequence | Wait for newer traffic |
-| ACCEPT/REJECT arrives during an established session | Ignore | Existing session remains unchanged |
-| Other server messages arrive before ACCEPT | Ignore while joining | Retry CONNECT and await ACCEPT |
-| Sequence/tick wraps | Modular comparison handles normal wrap | No reset needed |
-| Sequence distance is exactly 2^31 | Treat as not newer | Not an acceptable normal ordering gap |
+| `defaultPort` | 4242 | UDP port of the server |
+| `tickRate` (top level) | 60 | Simulation ticks per second |
+| `snapshotEveryTicks` | 3 | One `SNAPSHOT` every 3 ticks (20 per second) |
+| `inputIntervalMs` | 33 | The client sends `INPUT` every 33 ms in game |
+| `inputReleaseDelayMs` | 500 | Buttons are released if no `INPUT` arrives for 500 ms |
+| `heartbeatIntervalMs` | 1000 | The client sends `HEARTBEAT` every second |
+| `sessionTimeoutMs` | 5000 | The server drops a client silent for 5 seconds |
+| `connectRetryIntervalMs` | 1000 | `CONNECT` is resent every second until `ACCEPT` |
+| `connectAttempts` | 5 | The client gives up after 5 `CONNECT` |
+| `maxClients` | 16 | Connected clients at the same time |
+| `maxRooms` | 16 | Rooms at the same time |
+| `maxJoinAttempts` | 5 | Wrong codes allowed per session |
 
-The current joining client accepts a valid REJECT from its configured server even before
-its first CONNECT has been dispatched; there is no request nonce. Server packets carry no
-session token/epoch. A delayed ACCEPT from an earlier attempt or stale traffic after restart
-cannot always be distinguished. This is a known protocol limitation, not a guaranteed recovery path.
+### Connection
 
-### 6.3 Lost packets, latency and disconnection
+1. The client sends `CONNECT` with its protocol version.
+2. If the version differs, the server answers `REJECT(2)`. If all `maxClients` slots are used, `REJECT(1)`.
+3. Otherwise the server creates a session for the client's address and port and answers `ACCEPT(token, id)`.
+   A repeated `CONNECT` from the same address within 200 ms is ignored, after that the same session is
+   accepted again (lost `ACCEPT`).
+4. The session is **confirmed** when the first valid message carrying the token arrives.
 
-| Lost/delayed message | What happens now |
+### Rooms
+
+- A client is in at most one room. `CREATE_ROOM` or `JOIN_ROOM` while already in a room just answers
+  `ROOM_JOINED` again.
+- The creator is the **owner** (seat 0). Only the owner may `START_GAME`, `KICK_PLAYER`, `DELETE_ROOM` and use
+  `CONSOLE_COMMAND`. Otherwise the server answers `ROOM_REJECTED(7)`.
+- If the owner leaves, the room is closed and every member receives `ROOM_CLOSED`.
+- A player may join a room whose game is already running: they receive `ROOM_JOINED` then `GAME_STARTED`.
+
+### Console
+
+`CONSOLE_COMMAND` is executed by the game's console script on the server. The server answers with
+`CONSOLE_TEXT`. Commands are refused when the sender is not the owner, or when the game's `consoleRule` room
+rule (R-Type: `cheats`) is OFF. Commands sent before the game starts are queued and run at start.
+
+### Leaving
+
+A client leaves with `DISCONNECT`, or by staying silent for `sessionTimeoutMs` (crash, network loss). In both
+cases the other players of a running game receive `PLAYER_LEFT`. When the server stops, it sends
+`SERVER_SHUTDOWN` to every confirmed client.
+
+---
+
+## 8. Validation and error handling
+
+A receiver MUST silently drop a datagram, without answering, when any of these is true:
+
+| Check | Example |
 |---|---|
-| CONNECT | Retry at the next one-second interval |
-| ACCEPT | A CONNECT retry obtains the same token/slot if reservation is still alive |
-| REJECT | Retry CONNECT until reply or five-attempt timeout |
-| First confirmation INPUT/HEARTBEAT | Later periodic traffic can confirm the pending session |
-| One INPUT | Last held state remains; next fresh INPUT replaces it |
-| Release-key INPUT | Previous direction can continue until next INPUT, or 500 ms freshness limit |
-| All INPUT for at least 500 ms | Release buttons; valid heartbeats may keep session alive |
-| One SNAPSHOT | Display stays at last state; next complete snapshot replaces it |
-| Snapshot containing a spawn/removal | Later snapshots include the spawn or omit the removed entity |
-| Several snapshots | Visible freeze/stepping possible; no interpolation/prediction |
-| HEARTBEAT | Other fresh INPUT/HEARTBEAT can maintain session; next heartbeat follows |
-| HEARTBEAT_ACK | Other valid server messages maintain client activity; no ping UI to update |
-| Cosmetic event | Effect/notification can be lost permanently; authoritative state comes from snapshots |
-| DISCONNECT | Server keeps session until inactivity expires |
-| PLAYER_LEFT | Remaining clients remove the ship on a later snapshot |
-| SERVER_SHUTDOWN | Client detects absence of valid server packets after 5 s |
-| Client crash or total client-to-server outage | Server expires slot/ship after 5 s and continues for others |
-| Server crash or total server-to-client outage | Client reports timeout and exits with code 84 |
-| Server process restarted | No automatic reconnect; restart/rejoin clients manually |
-| Client IP/source port changes | New endpoint fails old session checks; old slot expires |
-| Permanent loss of all packets | Join failure or inactivity timeout; no guaranteed recovery |
+| Size lower than 10 or greater than 1200 bytes | Truncated datagram |
+| `magic` is not `0x454E` | Packet of another application |
+| Direction bit does not match the receiver | A server message sent to the server |
+| `payload size` differs from the real payload length | Corrupted or truncated payload |
+| `version` differs, except for `CONNECT` and `REJECT` | Old client |
+| Unknown `type` | Code `0x40` |
+| The payload is shorter or longer than its message needs | Extra bytes |
+| A field breaks its message rules (section 5) | Token 0, reserved buttons set, text with control characters, wrong list size |
+| The token does not match the sender's session | Spoofed or stale message |
+| A sequenced message (`INPUT`, `HEARTBEAT`) is not newer than the last one | Duplicate or reordered datagram |
 
-Periodic state replaces losses; this is not retransmission of the missing packet. A later
-snapshot cannot recreate every transient event: an entity spawned and removed entirely between
-received snapshots may never have been seen. Future combat effects must tolerate that.
+**Rate limit.** The server handles at most 32 `CONNECT` per second in total. Extra ones are dropped.
 
-### 6.4 Transport and application failures
+---
 
-| Failure | Detection and current handling |
-|---|---|
-| Invalid CLI option or missing argument | Entry point prints usage error and returns 84 |
-| Invalid/out-of-range port | `parsePort` throws; entry point returns 84 |
-| Invalid IPv4 address/hostname passed as `-h` | IPv4 parser throws; client returns 84 |
-| Socket creation/bind fails, including port already in use | Constructor throws; entry point prints OS-dependent error and returns 84 |
-| UDP receives an error code | Discard that receive, then rearm unless `operation_aborted`; not surfaced as a health exception |
-| UDP receives `operation_aborted` | Do not rearm that receive; normal teardown stops I/O |
-| UDP send completes with an error code | Error code is ignored; no retry or caller notification |
-| Receive inbox full | Drop new arrivals; do not evict already queued data |
-| Pending send limit reached | `send()` returns silently without posting the datagram |
-| Outgoing raw datagram exceeds 1200 bytes | Throw `NetError` (`datagram exceeds the maximum size`) |
-| Invalid outgoing packet values | Encoder throws `GameError` (`invalid outgoing packet`) |
-| Writer would exceed maximum packet bytes | `ByteWriter` throws `NetError` |
-| Exception escapes an I/O handler | Worker stores it; next `checkHealth`, `poll` or `send` rethrows on main thread |
-| Allocation/thread creation failure | May throw; not translated into a malformed-packet drop; entry-point exception handling terminates with 84 |
-| Five unanswered join attempts | Throw `GameError` (`connection timed out after five attempts`); client exits 84 |
-| Valid full-server rejection | Throw `GameError` (`server full`); client exits 84 |
-| Valid version rejection | Throw `GameError` (`protocol version mismatch`); client exits 84 |
-| Five seconds without fresh accepted server traffic | Throw `GameError` (`connection lost`); client exits 84 |
-| Valid ordered shutdown message | Throw `GameError` (`server stopped`); client exits 84 |
-| Server SIGINT/SIGTERM | Best-effort shutdown sends, flushed by the transport destructor (at most 200 ms), normal exit 0 |
-| Normal client window close | Best-effort DISCONNECT, flushed by the transport destructor (at most 200 ms), normal exit 0 |
+## 9. Example datagrams
 
-`send()` successfully returning only means it did not throw; it does not prove queuing,
-sending or reception. Persistent receive errors are not classified or backed off, and transport
-health does not detect an unreachable peer. Session timers provide the eventual liveness signal.
-All errors derive from `engine::EngineError` (`NetError` in the engine, `GameError` in the game),
-so both entry points report them with the same handler. There is no reconnect/menu recovery in that handler.
+Byte values are hexadecimal.
 
-## 7. Developer API usage
+**`CONNECT`**, sequence 0:
 
-### Transport
-
-| API | Contract |
-|---|---|
-| `UdpTransport(port)` | Bind IPv4 and start worker; 0 requests an ephemeral local port |
-| `numericEndpoint(address, port)` | Parse/normalize numeric IPv4; invalid address throws |
-| `send(peer, bytes)` | Asynchronous best effort, maximum 1200 bytes; may silently drop on saturation |
-| `poll()` | Transfer all queued datagrams to caller; returns immediately, possibly empty |
-| `checkHealth()` | Rethrow worker exception if stored; does not test peer reachability |
-| Destructor | Wait up to 200 ms for pending sends, then stop I/O and join the worker |
-
-Use transport from its owning main thread. Do not race teardown against another caller or
-access the game world from the I/O worker. Data buffers remain alive until send completion.
-
-### Encode and decode
-
-```cpp
-#include "RtypeProtocol.hpp"
-#include "UdpTransport.hpp"
-
-void dispatchConnect(engine::net::UdpTransport &transport)
-{
-    const auto server = engine::net::UdpTransport::numericEndpoint("127.0.0.1", 4242);
-    rtype::protocol::Packet request;
-    request.type = rtype::protocol::MessageType::Connect;
-    request.sequence = 0;
-    transport.send(server, rtype::protocol::encode(request));
-}
+```
+45 4E 07 01  00 00 00 00  00 00
+magic ver type  sequence   size=0
 ```
 
-This sends one request only. A real client must retry, accept its token, confirm and schedule
-inputs/heartbeats; use `NetworkClient` for that state machine.
+**`INPUT`** with token `0x12345678`, Up + Fire pressed (`0x11`), sequence 42:
 
-```cpp
-for (const auto &datagram : transport.poll()) {
-    // Validate the expected peer separately in the client.
-    const auto packet = rtype::protocol::decode(datagram.bytes,
-        rtype::protocol::Receiver::Server);
-    if (!packet)
-        continue;
-    // Only act after endpoint/token and sequence checks also pass.
-}
+```
+45 4E 07 02  00 00 00 2A  00 05  12 34 56 78  11
 ```
 
-The decoder has no detailed error-result enum: `nullopt` does not distinguish malformed lengths
-from invalid fields. Packet fields are an in-memory model; only fields selected by `type` are emitted.
-`encode()` is not a session check. Explicitly increment outgoing counters at the application layer.
+**`ACCEPT`** with token `0x12345678`, client id 3, server sequence 0:
 
-### Client and server integration
+```
+45 4E 07 81  00 00 00 00  00 05  12 34 56 78  03
+```
 
-`NetworkClient::update(buttons)` polls inbound traffic and schedules outgoing messages. Call it
-regularly from the frame loop. `takeSnapshot()` returns the latest pending snapshot once, or
-`nullopt`; intermediate snapshots within a single poll are intentionally superseded.
-`disconnect()` sends a best-effort packet and clears the local token; it does not await an ACK.
-Continue teardown as in `Client::run`, or allow the server's timeout to handle a lost departure.
-The object is not designed for reconnect after `disconnect()`; construct a new client session.
+**`PLAY_SOUND`** "boss death" (index 2):
 
-`Server::poll()` expires silent sessions and handles received packets; call it continuously.
-`Server::tick(dt)` releases stale inputs, updates the `Room` (one run of its systems), broadcasts gameplay events and sends a
-snapshot every third tick; call it at the fixed tick rate. `shutdown()` dispatches a best-effort
-event; the transport destructor gives it a short dispatch window. The server links no rendering/input module.
+```
+45 4E 07 91  00 00 00 10  00 01  02
+```
 
-## 8. Security and protocol evolution
+---
 
-Endpoint/token checks associate input with a slot, but they are not cryptographic authentication.
-Tokens currently use `mt19937` seeded by `random_device`. No application checksum, signature,
-encryption, credentials or authenticated server-session identity is present.
+## 10. Writing a new client
 
-Confirmation prevents a blind unconfirmed endpoint from receiving a continuous snapshot stream,
-but CONNECT replies still reflect 15 or 11 bytes for a 10-byte request. Rate/queue/session bounds
-limit resource growth, not all denial-of-service attacks. An observer able to see or alter traffic
-can interfere. A packet with plausible fields may be accepted even when its meaning was modified.
+A minimal client that can join a game and display it:
 
-For future work, consider explicit session identity in both directions, stronger token generation,
-authentication/integrity appropriate to deployment, counters for dropped/error packets, classified
-I/O failures and backoff, plus reliability for messages that must not be lost. These changes are
-not implemented. Any incompatible header/payload change requires a version bump, RFC updates,
-golden vectors and client/server changes together.
+1. Open a UDP socket and send `CONNECT` every second until you get `ACCEPT` (keep the token).
+2. Send `HEARTBEAT` every second, or the server drops you after 5 seconds.
+3. Send `LIST_ROOMS`, then `JOIN_ROOM` (or `CREATE_ROOM` and `START_GAME`).
+4. After `GAME_STARTED`, send `INPUT` every 33 ms with your buttons.
+5. On each `SNAPSHOT`, replace your list of entities by the received one and draw each entity according to its
+   `kind`, at `(x, y)`.
+6. Send `DISCONNECT` when you quit.
 
-## 9. Troubleshooting
+Everything else (sounds, console, kicks) is optional.
 
-| Symptom | Checks and action |
-|---|---|
-| Server cannot start | Read error, verify selected port is available, choose another `-p` |
-| Five-attempt connection timeout | Check server is running, correct numeric IPv4/UDP port, routing/firewall, slot/rate limits |
-| `Server full` | Four slots may include pending clients; close a client or wait for expiration |
-| `Protocol version mismatch` | Rebuild client/server from matching wire schema |
-| Connected but no movement | Focus correct window, verify periodic INPUT and confirmation; server releases stale input |
-| Jerky movement | Check snapshot arrival rate/latency; interpolation is not implemented |
-| Client suddenly exits | Read error text: shutdown, inactivity, rejection or propagated exception |
-| Client disappears from other windows | Explicit quit or server timeout; absence in full snapshot removes ship |
-| Packet injection has no effect | Check type/direction, lengths, fields, endpoint/token and freshness |
-| No useful log for a bad datagram | Silent drop is intentional; there are currently no rejection counters |
+---
 
-For a manual acceptance run, verify two windows, movement, clamping, window focus, quitting,
-client termination and server shutdown. Keep future loss/delay tests isolated from an active
-user network. See the operating instructions above and the [roadmap](roadmap.md).
+## 11. Security considerations
+
+- The token is random and bound to the sender's address and port: a third party must both guess the token and
+  spoof the address to inject messages.
+- Every field is checked against strict limits before use, and decoding never reads past the datagram.
+- The server never trusts client positions: clients only send buttons.
+- The protocol has **no encryption and no authentication of the server**. It is designed for LAN and
+  trusted-network play. See [Security](comparative-study/security.md) for the discussion.
+
+---
+
+## 12. Evolution
+
+Any change of a payload or of the header MUST increase `Protocol::VERSION`
+(`engine/network/protocol/include/Protocol.hpp`) and update this document. Old clients are then refused with
+`REJECT(2)`, which is the only message guaranteed to stay readable.
+
+Only version 7 is supported: any other version is refused with `REJECT(2)`.

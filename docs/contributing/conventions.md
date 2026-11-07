@@ -1,80 +1,121 @@
 # Coding conventions
 
-These rules keep the code consistent, whoever wrote it. Follow them in every pull request.
+These rules keep the code consistent, whoever wrote it. Every pull request must follow them; reviewers refuse
+code that does not.
 
 ## Language
 
 - Code, commit messages and documentation are written in **English**.
-- No comments in the code, including Doxygen: names must be explicit, explanations go in this documentation.
-- C++20. No compiler extensions.
+- **No comments in the code**, Doxygen included. Names must explain the code; explanations go in this
+  documentation.
+- C++20, no compiler extensions.
 
 ## Naming
 
 | Element | Style | Example |
 |---|---|---|
-| Classes, structs, enums | `PascalCase` | `EntityManager`, `MessageType` |
-| Functions and methods | `camelCase` | `create()`, `addComponents()` |
+| Classes and enums | `PascalCase` | `GameServer`, `MessageType` |
+| Functions and methods | `camelCase` | `takeEvents()`, `onGround()` |
 | Variables and parameters | `camelCase` | `entityCount` |
-| Private members | `m_` + `camelCase` | `m_world` |
-| Constants (`constexpr`) | `UPPER_SNAKE_CASE` | `MAX_PLAYERS` |
+| Private members | `m_` + `camelCase` | `m_registry` |
+| Constants | `UPPER_SNAKE_CASE`, as `static constexpr` class members | `MAX_PACKET_BYTES` |
 | `enum class` values | `PascalCase` | `MessageType::Connect` |
-| Namespaces | `lowercase` | `engine::ecs` |
+| Namespaces | `lowercase` | `engine::network` |
+| Python functions and variables | `snake_case` | `start_moving`, `boss_health` |
+| Python constants | `UPPER_SNAKE_CASE` | `FLAP_SPEED` |
+| JSON keys | `camelCase` | `restartDelay`, `maxEntities` |
 
-## Namespaces
+## Classes and types
 
-| Code | Namespace |
-|---|---|
-| `engine/<module>/` | `engine::<module>` (for example `engine::ecs`, `engine::net`) |
-| `game/shared/` | `rtype` |
-| `game/server/` | `rtype::server` |
-| `game/client/` | `rtype::client` |
-
-- Never write `using namespace` in a header.
-- The engine knows nothing about R-Type: code in `engine/` never includes anything from `game/`.
-- The server never uses the render, audio, input or UI modules.
+- **Classes only, no `struct`.** Data holders are classes with private members and accessors.
+- **No lambdas.** Use named member functions, with `std::bind_front` when a callable is needed.
+- **No global variables and no namespace-level constants**, `inline` ones included. Constants are
+  `static constexpr` members of the class that uses them.
+- **No anonymous namespaces.** Helpers are private static member functions.
+- `enum class` only.
+- No `new` / `delete`: RAII, `std::unique_ptr`, containers.
 
 ## Files
 
-- One main class per file, the file has the name of the class: `EntityManager.hpp`.
-- Headers (`.hpp`) only contain declarations: no function body. The code goes in a `.cpp` with the same name.
-- Templates are the exception: their code must be visible wherever they are used, so it stays in the `.hpp`.
-- Headers go in `include/`, sources in `src/`, following the existing folders.
+- One main class per file, named after the class: `GameServer.hpp`, `GameServer.cpp`.
+- A long class may be split in several `.cpp` files named after their topic: `GameServer.cpp`,
+  `GameServerRooms.cpp`.
+- **Headers contain no function body.** Templates go in a `.tpp` file with the same name, included at the end of
+  the header.
+- Headers in `include/`, sources in `src/`, private headers of a module in `internal/`.
 - Every header starts with `#pragma once`.
-- Includes use the file name only: `#include "EntityManager.hpp"`. File names MUST be unique in the whole
-  project: use precise names (`ClientConfig.hpp`, `ServerConfig.hpp`, not two `Config.hpp`).
-- When a folder receives its first real file, delete its `.gitkeep`.
-- Every new `.cpp` is added to the root `CMakeLists.txt` in the same pull request.
+- Includes use the file name only: `#include "GameServer.hpp"`. **File names are unique in the whole engine.**
+- Every new `.cpp` is added to `engine/CMakeLists.txt` in the same pull request.
+
+## Errors
+
+- Errors are exceptions deriving from `engine::EngineError`, one class per module (`SceneError`,
+  `NetError`...). Never throw `std::runtime_error` or other standard exceptions directly.
+- Messages start with the class that raises them: `"Registry: component type not registered"`.
+- Launchers catch everything and return **84**.
+- A thread function catches all its exceptions and forwards them to the main thread.
+
+## C++ rules
+
+- `nullptr`, `const` references for objects passed as parameters, `override` on virtual functions.
+- Fixed-size integers (`std::uint16_t`...) for anything sent on the network, written field by field, never by
+  copying memory.
+- Time-based changes use `dt` (`position += velocity * dt`), never the frame rate.
+- Third-party types never appear in a public header outside the module that wraps them.
 
 ## Formatting
 
-- 4 spaces, no tabs.
-- Opening brace on a new line for functions and classes, on the same line for `if`, `for`, `while`:
+Formatting is automatic: the rules are in `.clang-format` at the repository root (clang-format 18). Format before
+committing:
+
+```sh
+pip install clang-format==18.1.8
+find engine -name '*.cpp' -o -name '*.hpp' -o -name '*.tpp' | xargs clang-format --style=file -i
+```
+
+Most IDEs (VS Code, CLion, Visual Studio) apply the same file on save. The CI refuses a pull request whose code
+is not formatted. The main rules:
+
+- 4 spaces, no tabs, lines up to 120 characters.
+- Opening brace on its own line for functions and classes, on the same line for control statements:
 
 ```cpp
-void Server::run()
+void GameServer::poll()
 {
-    while (m_running) {
-        update();
+    for (const net::Datagram &datagram : m_transport.poll()) {
+        receive(datagram, now);
     }
 }
 ```
 
-## C++ rules
+## Data and scripts
 
-- No `new` / `delete`: use RAII, `std::unique_ptr` and containers.
-- `nullptr`, `enum class`, `const` references for objects passed as parameters.
-- Fixed-size integers (`std::uint16_t`, `std::uint32_t`…) for anything sent on the network.
-- Network data is written and read field by field, never by copying a struct (see the [protocol](../protocol.md)).
-- Times are computed from a delta time (`position += velocity * dt`), never from the frame rate.
-- Every thread function catches its exceptions: an uncaught exception in a thread kills the program.
-- Errors are reported with the project exceptions (`EngineError` and one subclass per module), never with `std::runtime_error` directly.
+- One prefab per entity type, named in `snake_case` (`bydo_sine`, `boss_core`).
+- Python scripts start with a docstring that explains the behaviour and its params; module-level values are
+  constants only.
+- New assets come with their license file ([Assets](../guides/assets.md)).
 
-## Git workflow
+## Commits
 
-- One issue = one branch = one pull request.
-- Branches start from `dev` and are named `feature/<topic>` (or `fix/<topic>` for a bug).
-- Pull requests target `dev`. `dev` is merged into `main` when it is stable; `main` is what gets evaluated.
-- A pull request towards `dev` does not close its issue automatically: close it by hand after the merge.
-- Commit messages: short, in English, imperative form, as in the existing history
-  (`Add Shield component`, `Fix packet size check`).
-- A tag is created on `main` before each defense.
+Conventional commits, in English, imperative:
+
+```text
+feat(network): add console messages
+fix(client): keep the pause menu above the HUD
+docs: rewrite the protocol RFC for version 7
+refactor(ecs): split GameplaySystems into one file per system
+build: add the solo launcher
+```
+
+| Prefix | For |
+|---|---|
+| `feat` | A new feature |
+| `fix` | A bug fix |
+| `refactor` | Code change without behaviour change |
+| `docs` | Documentation only |
+| `build` | CMake, vcpkg, scripts |
+| `chore` | Anything else (cleanup, backups) |
+
+The scope is the module or folder: `ecs`, `network`, `client`, `scripting`, `game`, `skyhop`.
+
+See [Git workflow](git-workflow.md) for branches and reviews.

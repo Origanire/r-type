@@ -1,38 +1,38 @@
 # Threading
 
-Each program runs two threads.
+The engine uses **two threads per process**, and only one of them touches the game.
 
-| Thread | Owns | Work |
+| Thread | Created by | Runs |
 |---|---|---|
-| Main thread | Game world, sessions, systems, window (client) | Fixed-step simulation, packet handling, rendering |
-| Network I/O thread | UDP socket, receive buffer | Receives datagrams, completes asynchronous sends |
+| Main thread | the launcher | Everything: game loop, simulation, Python scripts, rendering, audio, input, packet encoding and decoding |
+| Network I/O thread | `UdpTransport` | Asio's event loop: receives datagrams into a queue and performs the queued sends |
 
 ```mermaid
-sequenceDiagram
-    participant IO as I/O thread (Asio)
-    participant Q as Receive queue (mutex)
-    participant M as Main thread
-    IO->>Q: push datagram
-    M->>Q: poll() swaps the queue out
-    M->>IO: send() posts an asynchronous send
+flowchart LR
+    subgraph IO["I/O thread"]
+        R[async receive] --> Q[(incoming queue<br/>mutex)]
+        SQ[(send queue)] --> S[async send]
+    end
+    subgraph Main["Main thread"]
+        P["poll()"] --> D[decode] --> G[game logic] --> E[encode] --> SEND["send()"]
+    end
+    Q --> P
+    SEND --> SQ
 ```
 
 ## Why this design
 
-- The server never waits for a client: receiving happens on the I/O thread, and the main thread
-  only collects what has already arrived. The game advances frame after frame regardless of
-  client activity.
-- Only one small structure is shared: the receive queue, protected by a mutex. `poll()` takes the
-  whole queue in one swap, so the lock is held for a very short time.
-- The ECS, sessions and rendering are touched by one thread only, so they need no locks and cannot
-  have data races.
+- A blocking socket call never freezes the game loop: the main thread only reads a queue.
+- The simulation is single-threaded, so it has no locks and is deterministic for a given input sequence.
+- Python's interpreter is used from one thread only, which avoids any interaction with its global lock.
+- The cost of the simulation is small compared to a frame (a few hundred entities), so parallel systems would
+  bring complexity without visible gain.
 
 ## Safety rules
 
-- The I/O thread never accesses game data.
-- Every I/O handler catches its exceptions; a failure is stored and rethrown on the main thread by
-  `poll()`, `send()` or `checkHealth()`.
-- Outgoing buffers are owned by the asynchronous operation until it completes.
-- The transport destructor waits at most 200 ms for pending sends (for example the final
-  `DISCONNECT` or `SERVER_SHUTDOWN`), then stops Asio and joins the thread.
-- The server's signal handler only sets a `sig_atomic_t` flag; shutdown runs on the main thread.
+- Only `UdpTransport` touches the socket. Its queues are protected by a mutex and bounded to 256 datagrams.
+- Datagrams are copied when they cross the thread boundary: no buffer is shared.
+- A failure of the I/O thread is stored and raised as a `NetError` on the main thread at the next `poll()`.
+- On shutdown, pending sends are flushed for at most 200 ms (so that `DISCONNECT` and `SERVER_SHUTDOWN` leave),
+  then the I/O thread is joined.
+- Nothing else in the engine creates threads.

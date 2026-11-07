@@ -37,8 +37,9 @@
 | **Complete snapshots** | Each snapshot is self-sufficient | Higher |
 | Delta snapshots against acknowledged state | Tolerant with acknowledgements | Lowest, more complex |
 
-**Choice:** complete snapshots at 20 Hz with a 60 Hz simulation, at most 1098 bytes each. Events
-(destroyed, killed, joined, left) are sent in addition, for presentation only.
+**Choice:** complete snapshots at 20 Hz with a 60 Hz simulation, at most 1134 bytes each for R-Type (the size is
+checked at start-up from the game file). Events (entity destroyed, player killed, sounds) are sent in addition,
+for presentation only: losing one never breaks the state.
 
 ## Input
 
@@ -55,3 +56,20 @@
 | 20 snapshots/s | One every 3 ticks; balance between smoothness and bandwidth |
 | ~30 inputs/s | Below one frame of delay at 60 Hz |
 | 1 heartbeat/s, 5 s timeout | Detects crashed peers quickly without traffic overhead |
+
+## Solo transport
+
+The same snapshots can be produced and consumed in one process. The solo mode calls the simulation directly
+instead of sending datagrams, which proves the separation between the game state and its transport: no
+encoding, no socket, the same simulation and the same display code.
+
+## Lobby
+
+| Option | Strengths | Weaknesses |
+|---|---|---|
+| One game per server process | Simple | One port and one process per group of players |
+| Separate lobby server | Scales to many servers | A second program and protocol |
+| **Rooms inside one server** (ours) | One process, one port, up to 16 rooms, each with its own simulation and rules | All rooms share one machine |
+
+Rooms are messages of the same protocol (`CREATE_ROOM`, `JOIN_ROOM`, `ROOM_UPDATE`...), so a single UDP socket
+serves the lobby and every game.

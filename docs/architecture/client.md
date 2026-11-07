@@ -1,68 +1,102 @@
 # Client
 
-`r-type_client` displays the game and sends the player's input. It never decides gameplay outcomes:
-positions, deaths and scores come from the server.
+The client side is made of a **view**, which can show any game from its JSON, and a **driver**, which decides
+where the game state comes from.
 
-## Structure
-
-| Class | Responsibility | Files |
-|---|---|---|
-| `main` | Parses `-h` / `-p`, finds the assets folder, runs the client | `game/client/src/main.cpp` |
-| `Client` | Window, textures, input, ECS world, systems, snapshot application | `Client.hpp`, `Client.cpp` |
-| `NetworkClient` | Connection retries, token, sequences, periodic INPUT/HEARTBEAT, snapshot ordering, timeout | `NetworkClient.hpp`, `NetworkClient.cpp` |
-| `SpriteSheet` | Describes a grid of frames in a sprite sheet | `SpriteSheet.hpp`, `SpriteSheet.cpp` |
-
-## Main loop
-
-```cpp
-while (m_window.isOpen()) {
-    m_window.processEvents();
-    m_input.update(m_window.hasFocus());
-    m_network.update(m_input.toBits());
-    if (auto snapshot = m_network.takeSnapshot())
-        applySnapshot(*snapshot);
-    m_timestep.addTime(clock.restart());
-    while (m_timestep.step())
-        m_logic.update(m_timestep.stepSeconds());
-    m_render.update(0.f);
-}
-m_network.disconnect();
+```mermaid
+flowchart TB
+    subgraph Drivers
+        OC[OnlineClient<br/>lobby, rooms, UDP]
+        LC[LocalClient<br/>solo, in memory]
+    end
+    OC & LC --> SP[SnapshotPresenter<br/>snapshot to view]
+    SP --> GV[GameView]
+    OC & LC --> GV
+    GV --> SM[SceneManager<br/>scenes of the game JSON]
+    GV --> W[Window + SfmlRenderer]
+    GV --> A[SfmlAudio]
+    GV --> I[InputManager + PlayerSettings]
+    GV --> UI[(UiStore)]
 ```
 
-The client has two `SystemManager`s: `m_logic` runs at a fixed 60 Hz, `m_render` once per frame
-(the window is limited to 60 FPS). An unfocused window sends released buttons.
+## Classes
 
-## Components and systems
-
-| Component | Data |
-|---|---|
-| `Position` | Shared struct |
-| `Sprite` | Texture name, source rectangle, scale |
-| `Star` | Speed, size, color |
-| `ShipTilt` | Color row, vertical direction, current tilt |
-
-| System | Manager | Effect |
+| Class | File | Role |
 |---|---|---|
-| `StarfieldSystem` | logic | Scrolls three layers of stars (120, 60, 25) at different speeds |
-| `ShipAnimationSystem` | logic | Moves each ship's tilt towards its direction and picks the sprite frame |
-| `RenderSystem` | render | Clears, draws stars as rectangles, then sprites, then displays |
+| `GameView` | `client/` | Opens the window, loads textures, fonts and sounds, builds scenes, runs the client systems, syncs remote entities. Split in `GameView.cpp` and `GameViewSync.cpp` |
+| `SceneManager` | `client/` | Switches scenes: destroys the entities of the old scene, spawns the new one, builds its systems, plays its music |
+| `SnapshotPresenter` | `client/` | Applies a `SNAPSHOT` to the view: creates, moves and removes entities, writes world and player values in the `UiStore` |
+| `OnlineClient` | `client/` | Driver for online play: connection, lobby, rooms, pause, console. Split in `OnlineClient.cpp`, `OnlineClientLobby.cpp`, `OnlineClientGame.cpp` |
+| `LocalClient` | `local/` | Driver for solo play, see [Solo mode](solo-mode.md) |
+| `PlayerSettings` | `client/` | Reads `<game>_settings.json`: controls, gamepad, volumes, text scale |
+| `DevConsole` | `client/` | The F1 console: local commands and server commands |
+| `DebugMetrics` | `client/` | The F3 overlay: FPS, ping, entities, memory, bandwidth, ping history |
+| `ClientConnection` | `network/client/` | The UDP side: connect, heartbeat, input, events and snapshot buffering |
 
-## Applying a snapshot
+## Scenes
 
-The client keeps a map from network id to local entity.
+A scene is declared in the `scenes` block of the game file. R-Type has `loading`, `menu`, `lobby`, `room` and
+`game`; Skyhop has `menu` and `game`.
 
-- Unknown id → create the entity for its kind (`createShip`, `createMissile`, `createBydo`).
-- Known id → update its position; for a ship, compare with the previous position to set its tilt
-  direction.
-- Id absent from the snapshot → destroy the local entity.
-- Unknown kind → ignored.
+```json
+"game": {
+    "music": "main",
+    "escapeAction": "pause",
+    "systems": ["Parallax", "SpriteAnimation", "DeathEffect", "Audio", "Cleanup"],
+    "entities": [
+        {"prefab": "star_far", "count": 120, "scatter": true},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 24, "y": 12}, "Text": {...}}}
+    ]
+}
+```
 
-The ship color is the row of the player sheet matching the slot that owns the ship, so the four
-players are always distinguishable.
+| Key | Meaning |
+|---|---|
+| `music` | Music key played while the scene is active |
+| `escapeAction` | Action triggered by Escape (or the gamepad Select button) |
+| `systems` | Client systems of the scene, in order |
+| `entities` | Entities to spawn: a prefab, optional extra `components`, optional `count` and `scatter` |
 
-## Connection lifecycle
+On start, the view shows `loadingScene` while it loads the textures and sounds listed in `preload`, for at
+least `loadingMinSeconds`, then switches to `startScene`.
 
-`NetworkClient` sends `CONNECT` every second, up to five attempts. After `ACCEPT` it sends INPUT about
-30 times per second and HEARTBEAT every second. It throws `GameError` (the client exits with code 84)
-on rejection, on `SERVER_SHUTDOWN`, or after 5 s without a valid server packet. Closing the window
-sends a best-effort `DISCONNECT`.
+## Online client flow
+
+| Scene | What happens | Actions handled by `OnlineClient` |
+|---|---|---|
+| `menu` | Title screen | `connect`, `quit` |
+| `lobby` | Room list, refreshed every 2 seconds, create or join | `create_room`, `join:<id>`, `join_code`, `refresh_rooms`, `disconnect` |
+| `room` | Seats, owner can kick and start | `start_game`, `kick:<slot>`, `leave_room`, `delete_room` |
+| `game` | Game, pause menu, console | `pause`, `resume`, `leave_room` |
+
+Buttons only carry an action string (`"Button": {"action": "create_room"}`): the screens themselves are pure JSON.
+
+## Remote entities
+
+For each `EntityState` of a snapshot, the view looks up the client prefab named by `kinds` and creates it the
+first time the id appears. It then updates its position, its rotation and its hit flash. An entity absent from
+the snapshot is removed. On `ENTITY_DESTROYED`, the view plays the `DeathEffect` of the entity (explosion,
+particles) before removing it.
+
+## UI values written by the client
+
+| Key | Value |
+|---|---|
+| `world.<name>` | Each world value, or its label |
+| `player<N>.present`, `.alive`, `.health`, `.score`, `.<value>` | Status of seat N |
+| `game.phase` | `waiting`, `playing` or `over` |
+| `game.notice` | For 4 seconds, "P2 LOST THE CONNECTION" when a player leaves or crashes (`uiMessages` `playerLeft`, `playerLost`) |
+| `pause.visible`, `console.visible`, `debug.visible` | `yes` or `no` |
+| `lobby.status`, `lobby.error`, `room.error` | Messages from `uiMessages` |
+
+## Console (F1)
+
+The console is available in the room and game scenes.
+
+| Command | Where | Effect |
+|---|---|---|
+| `help`, `clear` | client | Help, clear the lines |
+| `cvars`, `get <cvar>`, `set <cvar> <value>` | client | Settings: `musicVolume`, `soundVolume`, `showMetrics` |
+| anything else | server | Sent as `CONSOLE_COMMAND`, run by the game's console script (room owner, cheats ON) |
+
+R-Type's server commands are listed in [Console and cheats](../guides/console.md).

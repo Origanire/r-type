@@ -40,15 +40,16 @@ In `game/data/rtype_server_prefabs.json`:
   "ScoreValue": { "points": 150 },
   "Script": { "file": "diver.py" },
   "DespawnOffscreen": { "minX": -500, "minY": -400, "maxX": 2500, "maxY": 1480 },
-  "Replicated": { "kind": 20 }
+  "Replicated": { "kind": 35 }
 }
 ```
 
-`kind` is the number sent on the network to tell the client which sprite to draw.
+`kind` is the number sent on the network to tell the client which sprite to draw. Use a number not yet in
+the `kinds` table of `rtype_game.json` (R-Type uses 1 to 34).
 
 ## 3. Declare how the client draws it
 
-In `game/data/rtype_game.json`, map the kind to a client prefab (`"kinds": { "20": "diver" }`) and
+In `game/data/rtype_game.json`, map the kind to a client prefab (`"kinds": { "35": "diver" }`) and
 register the sprite sheet in `textures`. In `game/data/rtype_client_prefabs.json`:
 
 ```json

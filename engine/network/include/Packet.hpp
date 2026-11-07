@@ -53,6 +53,12 @@ public:
     std::uint8_t version() const;
     std::uint32_t sequence() const;
     void setSequence(std::uint32_t sequence);
+    std::uint32_t ack() const;
+    void setAck(std::uint32_t ack);
+    std::uint32_t ackBits() const;
+    void setAckBits(std::uint32_t ackBits);
+    std::uint16_t reliableId() const;
+    void setReliableId(std::uint16_t reliableId);
 
     template <class Message>
     bool holds() const;
@@ -63,6 +69,9 @@ private:
     MessageType m_type;
     std::uint8_t m_version;
     std::uint32_t m_sequence;
+    std::uint32_t m_ack;
+    std::uint32_t m_ackBits;
+    std::uint16_t m_reliableId;
     Body m_body;
 };
 

@@ -9,7 +9,7 @@
 namespace engine::network {
 
 ClientConnection::ClientConnection(net::Endpoint server, const NetworkSettings &settings)
-    : m_settings(settings), m_codec(settings), m_server(std::move(server)), m_sequence(0), m_token(0),
+    : m_settings(settings), m_codec(settings), m_server(std::move(server)), m_sequence(1), m_sender(), m_receiver(), m_token(0),
       m_attempts(0), m_lastConnect(), m_lastInput(), m_lastHeartbeat(), m_lastReceive(), m_lastTick(),
       m_serverSequence(), m_snapshot(), m_events(), m_bytesReceived(0), m_bytesSent(0), m_ping(0)
 {
@@ -23,7 +23,18 @@ void ClientConnection::update(std::uint8_t buttons)
             continue;
         m_bytesReceived += datagram.bytes().size();
         const auto packet = m_codec.decode(datagram.bytes(), Receiver::Client);
-        if (packet && handlePacket(*packet))
+        if (!packet)
+            continue;
+        m_receiver.receive(packet->sequence());
+        m_sender.acknowledge(packet->ack(), packet->ackBits(), now);
+        if (packet->reliableId() != 0) {
+            if (m_receiver.isDuplicate(packet->reliableId())) {
+                m_lastReceive = now;
+                continue;
+            }
+            m_receiver.remember(packet->reliableId());
+        }
+        if (handlePacket(*packet))
             m_lastReceive = now;
     }
     if (!connected()) {
@@ -32,6 +43,8 @@ void ClientConnection::update(std::uint8_t buttons)
     }
     if (now - m_lastReceive >= m_settings.sessionTimeout())
         throw net::NetError("ClientConnection: connection lost, the server stopped answering");
+    for (Packet &packet : m_sender.expired(now))
+        send(std::move(packet));
     sendPeriodic(buttons, now);
 }
 
@@ -71,7 +84,8 @@ bool ClientConnection::handlePacket(const Packet &packet)
     if (packet.holds<SnapshotMessage>()) {
         if (!handleSnapshot(packet.as<SnapshotMessage>()))
             return false;
-    } else if (m_serverSequence && !Codec::isNewer(packet.sequence(), *m_serverSequence)) {
+    } else if (packet.reliableId() == 0 && m_serverSequence
+        && !Codec::isNewer(packet.sequence(), *m_serverSequence)) {
         return false;
     }
     if (packet.type() == MessageType::ServerShutdown)
@@ -180,7 +194,13 @@ void ClientConnection::sendPeriodic(std::uint8_t buttons, Time now)
 
 void ClientConnection::send(Packet packet)
 {
+    if (packet.reliableId() == 0 && Protocol::isReliable(packet.type()))
+        packet.setReliableId(m_sender.nextReliableId());
     packet.setSequence(m_sequence++);
+    packet.setAck(m_receiver.ack());
+    packet.setAckBits(m_receiver.ackBits());
+    if (packet.reliableId() != 0)
+        m_sender.track(packet.sequence(), packet, std::chrono::steady_clock::now());
     const auto bytes = m_codec.encode(packet);
     m_bytesSent += bytes.size();
     m_transport.send(m_server, bytes);
@@ -199,6 +219,11 @@ std::uint64_t ClientConnection::bytesSent() const
 std::uint32_t ClientConnection::pingMs() const
 {
     return m_ping;
+}
+
+std::uint32_t ClientConnection::roundTripMs() const
+{
+    return static_cast<std::uint32_t>(m_sender.roundTrip().count());
 }
 
 std::uint32_t ClientConnection::nowMs(Time now)

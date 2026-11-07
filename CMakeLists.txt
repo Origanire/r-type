@@ -243,6 +243,10 @@ add_library(engine_network
     engine/network/src/NetworkSettings.cpp
     engine/network/src/Codec.cpp
     engine/network/src/Packet.cpp
+    engine/network/src/Protocol.cpp
+    engine/network/src/PendingMessage.cpp
+    engine/network/src/ReliableReceiver.cpp
+    engine/network/src/ReliableSender.cpp
     engine/network/src/PlayerStatus.cpp
     engine/network/src/EntityState.cpp
     engine/network/src/ConnectMessage.cpp

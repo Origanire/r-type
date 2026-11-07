@@ -10,6 +10,8 @@
 #include "Endpoint.hpp"
 #include "NetworkSettings.hpp"
 #include "Packet.hpp"
+#include "ReliableReceiver.hpp"
+#include "ReliableSender.hpp"
 #include "SnapshotMessage.hpp"
 #include "UdpTransport.hpp"
 
@@ -37,6 +39,7 @@ public:
     std::uint64_t bytesReceived() const;
     std::uint64_t bytesSent() const;
     std::uint32_t pingMs() const;
+    std::uint32_t roundTripMs() const;
 
 private:
     using Time = std::chrono::steady_clock::time_point;
@@ -54,6 +57,8 @@ private:
     net::UdpTransport m_transport;
     net::Endpoint m_server;
     std::uint32_t m_sequence;
+    ReliableSender m_sender;
+    ReliableReceiver m_receiver;
     std::uint32_t m_token;
     unsigned m_attempts;
     Time m_lastConnect;

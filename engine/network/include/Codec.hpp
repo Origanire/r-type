@@ -17,7 +17,7 @@ namespace engine::network {
 class Codec
 {
 public:
-    static constexpr std::size_t PAYLOAD_SIZE_OFFSET = 8;
+    static constexpr std::size_t PAYLOAD_SIZE_OFFSET = 18;
     static constexpr std::uint8_t TO_CLIENT_BIT = 0x80;
     static constexpr std::uint32_t HALF_SEQUENCE_RANGE = 0x80000000u;
 

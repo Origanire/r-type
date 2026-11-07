@@ -46,9 +46,11 @@ enum class Receiver
 class Protocol
 {
 public:
+    static bool isReliable(MessageType type);
+
     static constexpr std::uint16_t MAGIC = 0x454E;
-    static constexpr std::uint8_t VERSION = 7;
-    static constexpr std::size_t HEADER_SIZE = 10;
+    static constexpr std::uint8_t VERSION = 8;
+    static constexpr std::size_t HEADER_SIZE = 20;
     static constexpr std::size_t MAX_PACKET_BYTES = 1200;
 
     static constexpr std::uint8_t BUTTON_UP = 0x01;

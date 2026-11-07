@@ -5,6 +5,8 @@
 #include <optional>
 
 #include "Endpoint.hpp"
+#include "ReliableReceiver.hpp"
+#include "ReliableSender.hpp"
 
 namespace engine::network {
 
@@ -32,6 +34,8 @@ public:
     std::optional<std::uint32_t> heartbeatSequence() const;
     void setHeartbeatSequence(std::uint32_t sequence);
     std::uint32_t nextOutgoingSequence();
+    ReliableSender &sender();
+    ReliableReceiver &receiver();
 
     std::optional<std::uint16_t> roomId() const;
     void enterRoom(std::uint16_t roomId);
@@ -49,6 +53,8 @@ private:
     std::optional<std::uint32_t> m_inputSequence;
     std::optional<std::uint32_t> m_heartbeatSequence;
     std::uint32_t m_outgoingSequence;
+    ReliableSender m_sender;
+    ReliableReceiver m_receiver;
     std::optional<std::uint16_t> m_roomId;
     unsigned m_failedJoins;
 };

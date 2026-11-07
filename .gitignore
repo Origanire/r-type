@@ -3,6 +3,7 @@ build/
 out/
 vcpkg_installed/
 .vcpkg/
+.vcpkg-cache/
 CMakeUserPresets.json
 compile_commands.json
 

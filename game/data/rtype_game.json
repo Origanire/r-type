@@ -2742,6 +2742,15 @@
         {
           "prefab": "hud_line",
           "components": {
+            "Transform": {"x": 660, "y": 190},
+            "Text": {"font": "hud", "size": 40, "color": [255, 200, 80, 255]},
+            "BoundText": {"format": "{game.notice}"},
+            "Foreground": {}
+          }
+        },
+        {
+          "prefab": "hud_line",
+          "components": {
             "Transform": {"x": 0, "y": 0},
             "RectShape": {"width": 1920, "height": 1080, "color": [0, 0, 0, 170]},
             "Foreground": {},
@@ -2876,7 +2885,9 @@
     "noRooms": "NO ROOM YET, CREATE ONE",
     "ownerTag": "  [OWNER]",
     "youTag": "  (YOU)",
-    "emptySlot": "- FREE -"
+    "emptySlot": "- FREE -",
+    "playerLeft": "P{slot} LEFT THE GAME",
+    "playerLost": "P{slot} LOST THE CONNECTION"
   },
   "renderSystems": [{"system": "Render", "background": [5, 5, 20, 255]}]
 }

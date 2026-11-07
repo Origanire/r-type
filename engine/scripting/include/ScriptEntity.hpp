@@ -16,6 +16,7 @@ class ScriptEntity
 public:
     static constexpr float DEFAULT_ANGLE = 180.f;
     static constexpr int NO_SLOT = -1;
+    static constexpr float GROUND_PROBE = 2.f;
     static constexpr const char *INPUT_FIRE = "fire";
     static constexpr const char *INPUT_ACTION = "action";
 
@@ -31,6 +32,7 @@ public:
     float y() const;
     float width() const;
     float height() const;
+    bool onGround() const;
     float centerX() const;
     float centerY() const;
     float vx() const;
@@ -54,7 +56,6 @@ public:
     void destroy();
     void kill();
     ScriptWorld &world() const;
-    ecs::Entity entity() const;
     bool isPlayer() const;
     int playerSlot() const;
     void heal(int amount);
@@ -71,6 +72,11 @@ public:
     void setPlayerValue(const std::string &name, int value);
 
 private:
+    template <class Component>
+    const Component *component() const;
+    template <class Component>
+    Component *liveComponent();
+
     ScriptWorld *m_world;
     ecs::Entity m_entity;
     float m_age;
@@ -78,3 +84,5 @@ private:
 };
 
 } // namespace engine::scripting
+
+#include "ScriptEntity.tpp"

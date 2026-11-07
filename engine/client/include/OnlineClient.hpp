@@ -19,6 +19,7 @@
 #include "RoomListMessage.hpp"
 #include "RoomUpdateMessage.hpp"
 #include "SnapshotMessage.hpp"
+#include "SnapshotPresenter.hpp"
 
 namespace engine::client {
 
@@ -27,6 +28,8 @@ class OnlineClient
 public:
     static constexpr std::chrono::seconds ROOM_LIST_INTERVAL{2};
     static constexpr std::chrono::seconds ROOM_SILENCE_LIMIT{4};
+    static constexpr std::chrono::seconds NOTICE_DURATION{4};
+    static constexpr const char *NOTICE_KEY = "game.notice";
     static constexpr const char *MENU_SCENE = "menu";
     static constexpr const char *LOBBY_SCENE = "lobby";
     static constexpr const char *ROOM_SCENE = "room";
@@ -52,6 +55,8 @@ private:
     void handleAction(const std::string &action);
     void handleEvent(const network::Packet &event, Time now);
     void handleRejection(std::uint8_t reason);
+    void showPlayerLeft(const network::PlayerLeftMessage &left, Time now);
+    void expireNotice(Time now);
     void createRoom();
     std::vector<std::uint8_t> ruleValues();
     void joinOrAsk(std::uint16_t roomId);
@@ -64,16 +69,12 @@ private:
     void showRoomList(const network::RoomListMessage &list);
     void showMembers(const network::RoomUpdateMessage &update);
     void applySnapshot(const network::SnapshotMessage &snapshot);
-    void showWorld(const network::SnapshotMessage &snapshot);
-    void showPlayer(std::size_t slot, const network::PlayerStatus &player);
-    static std::string ratio(std::uint8_t percent);
-    static std::string phaseName(std::uint8_t gameState);
     std::uint8_t buttons() const;
     std::string field(const std::string &name);
     static bool startsWith(const std::string &text, const std::string &prefix);
-    static ecs::Match::Phase toPhase(std::uint8_t gameState);
 
     GameView m_view;
+    SnapshotPresenter m_presenter;
     network::NetworkSettings m_settings;
     std::unique_ptr<network::ClientConnection> m_network;
     std::string m_address;
@@ -82,6 +83,7 @@ private:
     std::uint16_t m_pendingRoom;
     Time m_lastRoomList;
     Time m_lastRoomUpdate;
+    std::optional<Time> m_noticeUntil;
     DebugMetrics m_metrics;
     DevConsole m_console;
 };

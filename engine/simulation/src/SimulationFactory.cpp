@@ -6,9 +6,8 @@
 
 namespace engine::simulation {
 
-SimulationFactory::SimulationFactory(
-    std::filesystem::path dataDirectory, std::string game, network::NetworkSettings settings,
-    scripting::ScriptEngine &scripts)
+SimulationFactory::SimulationFactory(std::filesystem::path dataDirectory, std::string game,
+    network::NetworkSettings settings, scripting::ScriptEngine &scripts)
     : m_dataDirectory(std::move(dataDirectory)), m_game(std::move(game)), m_settings(std::move(settings)),
       m_scripts(scripts)
 {

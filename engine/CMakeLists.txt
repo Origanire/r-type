@@ -19,7 +19,7 @@ endif()
 set(ENGINE_APPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/apps/src" CACHE INTERNAL "")
 
 # ---------------------------------------------------------------------------
-# Dependencies (vcpkg.json). Check the exact target names printed by vcpkg.
+# Dependencies (vcpkg.json).
 # ---------------------------------------------------------------------------
 
 find_package(Threads REQUIRED)
@@ -41,8 +41,7 @@ endif()
 # Engine: knows nothing about R-Type. One module = one library [p.16].
 # ---------------------------------------------------------------------------
 
-# --- engine_core: errors, clock, logger, event bus, thread-safe queue, config, paths
-# Planned: Logger.cpp, Random.cpp, Config.cpp, Paths.cpp
+# --- engine_core: errors, clock, timestep, colors, geometry, command line, asset paths, UI input, process memory
 add_library(engine_core
     core/src/EngineError.cpp
     core/src/Clock.cpp
@@ -61,8 +60,6 @@ target_include_directories(engine_core PUBLIC core/include)
 if(WIN32)
     target_link_libraries(engine_core PRIVATE psapi)
 endif()
-# Uncomment once Config.cpp exists
-# target_link_libraries(engine_core PRIVATE nlohmann_json::nlohmann_json)
 
 # --- engine_physics: bounding boxes and collision detection (pure geometry)
 add_library(engine_physics
@@ -82,102 +79,122 @@ add_library(engine_ecs
     ecs/src/SystemManager.cpp
     ecs/src/UiStore.cpp
     ecs/src/WorldValues.cpp
-    ecs/components/src/Script.cpp
-    ecs/components/src/Attachment.cpp
-    ecs/components/src/HitFlash.cpp
-    ecs/components/src/Rotation.cpp
-    ecs/components/src/PlayerValues.cpp
-    ecs/components/src/Tilemap.cpp
-    ecs/components/src/ParticleEmitter.cpp
-    ecs/components/src/Lifetime.cpp
-    ecs/components/src/MusicWhen.cpp
-    ecs/components/src/Choice.cpp
-    ecs/components/src/Gravity.cpp
-    ecs/components/src/Bounce.cpp
-    ecs/components/src/Transform.cpp
-    ecs/components/src/Velocity.cpp
-    ecs/components/src/Collider.cpp
-    ecs/components/src/Bounded.cpp
-    ecs/components/src/Health.cpp
-    ecs/components/src/ContactDamage.cpp
-    ecs/components/src/Invulnerable.cpp
-    ecs/components/src/DespawnOffscreen.cpp
-    ecs/components/src/PlayerControl.cpp
-    ecs/components/src/Owner.cpp
-    ecs/components/src/ScoreValue.cpp
-    ecs/components/src/Sprite.cpp
-    ecs/components/src/RectShape.cpp
-    ecs/components/src/Parallax.cpp
-    ecs/components/src/TiltAnimation.cpp
-    ecs/components/src/Weapon.cpp
-    ecs/components/src/Replicated.cpp
-    ecs/components/src/SpriteAnimation.cpp
-    ecs/components/src/SoundCue.cpp
-    ecs/components/src/Text.cpp
-    ecs/components/src/Anchor.cpp
-    ecs/components/src/Player.cpp
-    ecs/components/src/Lives.cpp
-    ecs/components/src/Score.cpp
-    ecs/components/src/Respawn.cpp
-    ecs/components/src/Match.cpp
-    ecs/components/src/DeathEffect.cpp
-    ecs/components/src/PlayerIndex.cpp
-    ecs/components/src/PlayerLabel.cpp
-    ecs/components/src/StatusText.cpp
-    ecs/components/src/Button.cpp
-    ecs/components/src/Focusable.cpp
-    ecs/components/src/TextField.cpp
-    ecs/components/src/VisibleWhen.cpp
-    ecs/components/src/BoundText.cpp
-    ecs/components/src/RowData.cpp
-    ecs/components/src/ListRowPart.cpp
-    ecs/components/src/ListView.cpp
-    ecs/components/src/ProgressBar.cpp
-    ecs/components/src/FadeWhen.cpp
+    ecs/components/gameplay/src/Script.cpp
+    ecs/components/combat/src/Destroyed.cpp
+    ecs/components/physics/src/Attachment.cpp
+    ecs/components/combat/src/HitFlash.cpp
+    ecs/components/physics/src/Rotation.cpp
+    ecs/components/gameplay/src/PlayerValues.cpp
+    ecs/components/gameplay/src/Tilemap.cpp
+    ecs/components/presentation/src/ParticleEmitter.cpp
+    ecs/components/gameplay/src/Lifetime.cpp
+    ecs/components/presentation/src/MusicWhen.cpp
+    ecs/components/interface/src/Choice.cpp
+    ecs/components/physics/src/Gravity.cpp
+    ecs/components/physics/src/Bounce.cpp
+    ecs/components/physics/src/Transform.cpp
+    ecs/components/physics/src/Velocity.cpp
+    ecs/components/physics/src/Collider.cpp
+    ecs/components/physics/src/Bounded.cpp
+    ecs/components/combat/src/Health.cpp
+    ecs/components/combat/src/ContactDamage.cpp
+    ecs/components/combat/src/Invulnerable.cpp
+    ecs/components/physics/src/DespawnOffscreen.cpp
+    ecs/components/gameplay/src/PlayerControl.cpp
+    ecs/components/combat/src/Owner.cpp
+    ecs/components/combat/src/ScoreValue.cpp
+    ecs/components/presentation/src/Sprite.cpp
+    ecs/components/presentation/src/RectShape.cpp
+    ecs/components/presentation/src/Parallax.cpp
+    ecs/components/presentation/src/TiltAnimation.cpp
+    ecs/components/combat/src/Weapon.cpp
+    ecs/components/gameplay/src/Replicated.cpp
+    ecs/components/presentation/src/SpriteAnimation.cpp
+    ecs/components/presentation/src/SoundCue.cpp
+    ecs/components/presentation/src/Text.cpp
+    ecs/components/presentation/src/Anchor.cpp
+    ecs/components/gameplay/src/Player.cpp
+    ecs/components/gameplay/src/Lives.cpp
+    ecs/components/gameplay/src/Score.cpp
+    ecs/components/gameplay/src/Respawn.cpp
+    ecs/components/gameplay/src/Match.cpp
+    ecs/components/presentation/src/DeathEffect.cpp
+    ecs/components/gameplay/src/PlayerIndex.cpp
+    ecs/components/presentation/src/PlayerLabel.cpp
+    ecs/components/presentation/src/StatusText.cpp
+    ecs/components/interface/src/Button.cpp
+    ecs/components/interface/src/Focusable.cpp
+    ecs/components/interface/src/TextField.cpp
+    ecs/components/interface/src/VisibleWhen.cpp
+    ecs/components/interface/src/BoundText.cpp
+    ecs/components/interface/src/RowData.cpp
+    ecs/components/interface/src/ListRowPart.cpp
+    ecs/components/interface/src/ListView.cpp
+    ecs/components/interface/src/ProgressBar.cpp
+    ecs/components/interface/src/FadeWhen.cpp
     ecs/components/src/ComponentRegistration.cpp
-    ecs/systems/src/CollisionEvent.cpp
-    ecs/systems/src/DeathEvent.cpp
-    ecs/systems/src/MovementSystem.cpp
-    ecs/systems/src/BoundsSystem.cpp
-    ecs/systems/src/CollisionSystem.cpp
-    ecs/systems/src/PlayerControlSystem.cpp
-    ecs/systems/src/InvulnerabilitySystem.cpp
-    ecs/systems/src/DamageSystem.cpp
-    ecs/systems/src/OffscreenSystem.cpp
-    ecs/systems/src/CleanupSystem.cpp
-    ecs/systems/src/ParallaxSystem.cpp
-    ecs/systems/src/TiltAnimationSystem.cpp
-    ecs/systems/src/RenderSystem.cpp
-    ecs/systems/src/WeaponSystem.cpp
-    ecs/systems/src/SpriteAnimationSystem.cpp
-    ecs/systems/src/AnchorSystem.cpp
-    ecs/systems/src/AudioSystem.cpp
-    ecs/systems/src/MatchSystem.cpp
-    ecs/systems/src/RespawnSystem.cpp
-    ecs/systems/src/LivesSystem.cpp
-    ecs/systems/src/ScoreSystem.cpp
-    ecs/systems/src/DeathEffectSystem.cpp
-    ecs/systems/src/PlayerLabelSystem.cpp
-    ecs/systems/src/StatusTextSystem.cpp
-    ecs/systems/src/UiActionEvent.cpp
-    ecs/systems/src/UiFocus.cpp
-    ecs/systems/src/PointerSystem.cpp
-    ecs/systems/src/FocusNavigationSystem.cpp
-    ecs/systems/src/ButtonStyleSystem.cpp
-    ecs/systems/src/TextFieldSystem.cpp
-    ecs/systems/src/BoundTextSystem.cpp
-    ecs/systems/src/VisibilitySystem.cpp
-    ecs/systems/src/ListViewSystem.cpp
-    ecs/systems/src/GameplaySystems.cpp
-    ecs/systems/src/SoundEvent.cpp
-    ecs/systems/src/ConsoleEvent.cpp
-    ecs/systems/src/ProgressBarSystem.cpp
-    ecs/systems/src/FadeSystem.cpp
+    ecs/systems/events/src/CollisionEvent.cpp
+    ecs/systems/events/src/DeathEvent.cpp
+    ecs/systems/physics/src/MovementSystem.cpp
+    ecs/systems/physics/src/BoundsSystem.cpp
+    ecs/systems/physics/src/CollisionSystem.cpp
+    ecs/systems/gameplay/src/PlayerControlSystem.cpp
+    ecs/systems/gameplay/src/InvulnerabilitySystem.cpp
+    ecs/systems/gameplay/src/DamageSystem.cpp
+    ecs/systems/physics/src/OffscreenSystem.cpp
+    ecs/systems/physics/src/CleanupSystem.cpp
+    ecs/systems/presentation/src/ParallaxSystem.cpp
+    ecs/systems/presentation/src/TiltAnimationSystem.cpp
+    ecs/systems/presentation/src/RenderSystem.cpp
+    ecs/systems/gameplay/src/WeaponSystem.cpp
+    ecs/systems/presentation/src/SpriteAnimationSystem.cpp
+    ecs/systems/presentation/src/AnchorSystem.cpp
+    ecs/systems/presentation/src/AudioSystem.cpp
+    ecs/systems/gameplay/src/MatchSystem.cpp
+    ecs/systems/gameplay/src/RespawnSystem.cpp
+    ecs/systems/gameplay/src/LivesSystem.cpp
+    ecs/systems/gameplay/src/ScoreSystem.cpp
+    ecs/systems/presentation/src/DeathEffectSystem.cpp
+    ecs/systems/presentation/src/PlayerLabelSystem.cpp
+    ecs/systems/presentation/src/StatusTextSystem.cpp
+    ecs/systems/events/src/UiActionEvent.cpp
+    ecs/systems/interface/src/UiFocus.cpp
+    ecs/systems/interface/src/PointerSystem.cpp
+    ecs/systems/interface/src/FocusNavigationSystem.cpp
+    ecs/systems/interface/src/ButtonStyleSystem.cpp
+    ecs/systems/interface/src/TextFieldSystem.cpp
+    ecs/systems/interface/src/BoundTextSystem.cpp
+    ecs/systems/interface/src/VisibilitySystem.cpp
+    ecs/systems/interface/src/ListViewSystem.cpp
+    ecs/systems/physics/src/AttachmentSystem.cpp
+    ecs/systems/gameplay/src/HitFlashSystem.cpp
+    ecs/systems/physics/src/SolidSystem.cpp
+    ecs/systems/gameplay/src/TilemapSystem.cpp
+    ecs/systems/presentation/src/ParticleSystem.cpp
+    ecs/systems/presentation/src/LifetimeSystem.cpp
+    ecs/systems/presentation/src/MusicSystem.cpp
+    ecs/systems/presentation/src/ShakeSystem.cpp
+    ecs/systems/physics/src/GravitySystem.cpp
+    ecs/systems/physics/src/BounceSystem.cpp
+    ecs/systems/interface/src/ChoiceSystem.cpp
+    ecs/systems/events/src/SoundEvent.cpp
+    ecs/systems/events/src/ConsoleEvent.cpp
+    ecs/systems/interface/src/ProgressBarSystem.cpp
+    ecs/systems/interface/src/FadeSystem.cpp
 )
 target_include_directories(engine_ecs PUBLIC
     ecs/include
     ecs/components/include
-    ecs/systems/include
+    ecs/components/physics/include
+    ecs/components/combat/include
+    ecs/components/gameplay/include
+    ecs/components/presentation/include
+    ecs/components/interface/include
+    ecs/systems/events/include
+    ecs/systems/physics/include
+    ecs/systems/gameplay/include
+    ecs/systems/presentation/include
+    ecs/systems/interface/include
     render/include
     audio/include)
 target_link_libraries(engine_ecs PUBLIC engine_core engine_physics)
@@ -190,6 +207,9 @@ add_library(engine_scene
     scene/src/LayerTable.cpp
     scene/src/ComponentFactory.cpp
     scene/src/EngineComponentLoaders.cpp
+    scene/src/EngineComponentLoadersGameplay.cpp
+    scene/src/EngineComponentLoadersPresentation.cpp
+    scene/src/EngineComponentLoadersInterface.cpp
     scene/src/PrefabLibrary.cpp
     scene/src/SystemContext.cpp
     scene/src/SystemFactory.cpp
@@ -218,54 +238,62 @@ endif()
 
 # --- engine_network: generic game protocol, game server and client connection on top of engine_net
 add_library(engine_network
-    network/src/NetworkSettings.cpp
-    network/src/Codec.cpp
-    network/src/Packet.cpp
-    network/src/PlayerStatus.cpp
-    network/src/EntityState.cpp
-    network/src/ConnectMessage.cpp
-    network/src/InputMessage.cpp
-    network/src/HeartbeatMessage.cpp
-    network/src/DisconnectMessage.cpp
-    network/src/AcceptMessage.cpp
-    network/src/RejectMessage.cpp
-    network/src/SnapshotMessage.cpp
-    network/src/HeartbeatAckMessage.cpp
-    network/src/EntityDestroyedMessage.cpp
-    network/src/PlayerJoinedMessage.cpp
-    network/src/PlayerKilledMessage.cpp
-    network/src/PlayerLeftMessage.cpp
-    network/src/ServerShutdownMessage.cpp
-    network/src/ListRoomsMessage.cpp
-    network/src/CreateRoomMessage.cpp
-    network/src/JoinRoomMessage.cpp
-    network/src/LeaveRoomMessage.cpp
-    network/src/StartGameMessage.cpp
-    network/src/KickPlayerMessage.cpp
-    network/src/DeleteRoomMessage.cpp
-    network/src/RoomListMessage.cpp
-    network/src/RoomJoinedMessage.cpp
-    network/src/RoomRejectedMessage.cpp
-    network/src/RoomUpdateMessage.cpp
-    network/src/GameStartedMessage.cpp
-    network/src/KickedMessage.cpp
-    network/src/RoomClosedMessage.cpp
-    network/src/PlaySoundMessage.cpp
-    network/src/ConsoleCommandMessage.cpp
-    network/src/ConsoleTextMessage.cpp
-    network/src/TextRules.cpp
-    network/src/RoomInfo.cpp
-    network/src/GameRoom.cpp
-    network/src/ClientSession.cpp
-    network/src/GameServer.cpp
-    network/src/ServerRunner.cpp
-    network/src/ClientConnection.cpp
+    network/protocol/src/NetworkSettings.cpp
+    network/protocol/src/Codec.cpp
+    network/protocol/src/PacketVisitors.cpp
+    network/protocol/src/Packet.cpp
+    network/messages/game/src/PlayerStatus.cpp
+    network/messages/game/src/EntityState.cpp
+    network/messages/connection/src/ConnectMessage.cpp
+    network/messages/game/src/InputMessage.cpp
+    network/messages/connection/src/HeartbeatMessage.cpp
+    network/messages/connection/src/DisconnectMessage.cpp
+    network/messages/connection/src/AcceptMessage.cpp
+    network/messages/connection/src/RejectMessage.cpp
+    network/messages/game/src/SnapshotMessage.cpp
+    network/messages/connection/src/HeartbeatAckMessage.cpp
+    network/messages/game/src/EntityDestroyedMessage.cpp
+    network/messages/game/src/PlayerJoinedMessage.cpp
+    network/messages/game/src/PlayerKilledMessage.cpp
+    network/messages/game/src/PlayerLeftMessage.cpp
+    network/messages/connection/src/ServerShutdownMessage.cpp
+    network/messages/lobby/src/ListRoomsMessage.cpp
+    network/messages/lobby/src/CreateRoomMessage.cpp
+    network/messages/lobby/src/JoinRoomMessage.cpp
+    network/messages/lobby/src/LeaveRoomMessage.cpp
+    network/messages/lobby/src/StartGameMessage.cpp
+    network/messages/lobby/src/KickPlayerMessage.cpp
+    network/messages/lobby/src/DeleteRoomMessage.cpp
+    network/messages/lobby/src/RoomListMessage.cpp
+    network/messages/lobby/src/RoomJoinedMessage.cpp
+    network/messages/lobby/src/RoomRejectedMessage.cpp
+    network/messages/lobby/src/RoomUpdateMessage.cpp
+    network/messages/lobby/src/GameStartedMessage.cpp
+    network/messages/lobby/src/KickedMessage.cpp
+    network/messages/lobby/src/RoomClosedMessage.cpp
+    network/messages/game/src/PlaySoundMessage.cpp
+    network/messages/console/src/ConsoleCommandMessage.cpp
+    network/messages/console/src/ConsoleTextMessage.cpp
+    network/protocol/src/TextRules.cpp
+    network/messages/lobby/src/RoomInfo.cpp
+    network/server/src/GameRoom.cpp
+    network/server/src/ClientSession.cpp
+    network/server/src/GameServer.cpp
+    network/server/src/GameServerRooms.cpp
+    network/server/src/ServerRunner.cpp
+    network/client/src/ClientConnection.cpp
 )
-target_include_directories(engine_network PUBLIC network/include)
+target_include_directories(engine_network PUBLIC
+    network/protocol/include
+    network/messages/connection/include
+    network/messages/lobby/include
+    network/messages/game/include
+    network/messages/console/include
+    network/server/include
+    network/client/include)
 target_link_libraries(engine_network PUBLIC engine_core engine_net engine_scene)
 
-# --- engine_render: window, SFML renderer, textures, fonts, palettes (client only)
-# Planned: Palette.cpp
+# --- engine_render: window, SFML renderer, textures, fonts (client only)
 if(ENGINE_BUILD_CLIENT)
 add_library(engine_render
     render/src/SfmlRenderer.cpp
@@ -294,32 +322,27 @@ target_link_libraries(engine_input PUBLIC engine_core SFML::Window)
 # --- engine_client: window, resources, systems and scene of a game JSON file, fed by any transport (client only)
 add_library(engine_client
     client/src/GameView.cpp
+    client/src/GameViewSync.cpp
     client/src/PlayerSettings.cpp
     client/src/SceneManager.cpp
     client/src/DebugMetrics.cpp
     client/src/DevConsole.cpp
     client/src/OnlineClient.cpp
+    client/src/OnlineClientLobby.cpp
+    client/src/OnlineClientGame.cpp
+    client/src/SnapshotPresenter.cpp
 )
 target_include_directories(engine_client PUBLIC client/include)
 target_link_libraries(engine_client PUBLIC engine_scene engine_network engine_render engine_audio engine_input)
 
 endif()
 
-# --- engine_ui: widgets for menus and settings (client only)
-# add_library(engine_ui
-#     ui/src/Widget.cpp
-#     ui/src/Button.cpp
-#     ui/src/Label.cpp
-#     ui/src/Slider.cpp
-# )
-# target_include_directories(engine_ui PUBLIC ui/include)
-# target_link_libraries(engine_ui PUBLIC engine_render engine_input)
-
 if(ENGINE_BUILD_SERVER)
 # --- engine_scripting: runs the Python behaviour scripts named by Script components (server only)
 add_library(engine_scripting
     scripting/src/ScriptEngine.cpp
     scripting/src/ScriptEngineImpl.cpp
+    scripting/src/ScriptApiBindings.cpp
     scripting/src/ScriptWorld.cpp
     scripting/src/ScriptEntity.cpp
     scripting/src/ScriptRecord.cpp
@@ -334,10 +357,20 @@ set_target_properties(engine_scripting PROPERTIES CXX_VISIBILITY_PRESET hidden)
 # --- engine_simulation: authoritative game world built from a game JSON file (no rendering)
 add_library(engine_simulation
     simulation/src/Simulation.cpp
+    simulation/src/SimulationSnapshot.cpp
     simulation/src/SimulationFactory.cpp
 )
 target_include_directories(engine_simulation PUBLIC simulation/include)
 target_link_libraries(engine_simulation PUBLIC engine_scene engine_network engine_scripting)
+
+if(ENGINE_BUILD_CLIENT)
+# --- engine_local: solo mode, the client runs the simulation in memory without any server
+add_library(engine_local
+    local/src/LocalClient.cpp
+)
+target_include_directories(engine_local PUBLIC local/include)
+target_link_libraries(engine_local PUBLIC engine_client engine_simulation)
+endif()
 
 endif()
 
@@ -364,7 +397,7 @@ endif()
 # engine_add_game(<name> CLIENT <exe> SERVER <exe> DATA <dir> SCRIPTS <dir> ASSETS <dir>)
 # Builds the generic launchers under the game's executable names and copies its content next to them.
 function(engine_add_game name)
-    cmake_parse_arguments(GAME "" "CLIENT;SERVER;DATA;SCRIPTS;ASSETS" "" ${ARGN})
+    cmake_parse_arguments(GAME "" "CLIENT;SERVER;LOCAL;DATA;SCRIPTS;ASSETS" "" ${ARGN})
     add_custom_target(${name}_content ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/${GAME_ASSETS} ${ENGINE_OUTPUT_DIR}/assets
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/${GAME_DATA} ${ENGINE_OUTPUT_DIR}/data
@@ -381,5 +414,12 @@ function(engine_add_game name)
         target_compile_definitions(${GAME_CLIENT} PRIVATE ENGINE_PROGRAM_NAME="${GAME_CLIENT}" ENGINE_DEFAULT_GAME="${name}")
         target_link_libraries(${GAME_CLIENT} PRIVATE engine_client)
         add_dependencies(${GAME_CLIENT} ${name}_content)
+    endif()
+    if(ENGINE_BUILD_CLIENT AND ENGINE_BUILD_SERVER AND GAME_LOCAL)
+        add_executable(${GAME_LOCAL} ${ENGINE_APPS_DIR}/LocalMain.cpp)
+        target_compile_definitions(${GAME_LOCAL} PRIVATE ENGINE_PROGRAM_NAME="${GAME_LOCAL}" ENGINE_DEFAULT_GAME="${name}")
+        target_link_libraries(${GAME_LOCAL} PRIVATE engine_local)
+        add_dependencies(${GAME_LOCAL} ${name}_content engine_python_runtime)
+        set_target_properties(${GAME_LOCAL} PROPERTIES ENABLE_EXPORTS ON)
     endif()
 endfunction()

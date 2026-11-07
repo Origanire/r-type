@@ -47,8 +47,8 @@ void SfmlRenderer::drawTexture(
     const float halfWidth = static_cast<float>(source.width()) / 2.f;
     const float halfHeight = static_cast<float>(source.height()) / 2.f;
     sprite.setOrigin({halfWidth, halfHeight});
-    sprite.setPosition({position.x() + m_offset.x() + halfWidth * scale.x(),
-        position.y() + m_offset.y() + halfHeight * scale.y()});
+    sprite.setPosition(
+        {position.x() + m_offset.x() + halfWidth * scale.x(), position.y() + m_offset.y() + halfHeight * scale.y()});
     sprite.setScale({scale.x(), scale.y()});
     sprite.setRotation(sf::degrees(rotation));
     sprite.setColor(toSfml(tint));

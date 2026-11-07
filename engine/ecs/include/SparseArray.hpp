@@ -18,7 +18,6 @@ class SparseArray : public ISparseArray
 public:
     template <class... Args>
     Component &emplaceAt(std::size_t index, Args &&...args);
-    Component &insertAt(std::size_t index, Component component);
 
     void erase(std::size_t index) override;
     bool has(std::size_t index) const override;

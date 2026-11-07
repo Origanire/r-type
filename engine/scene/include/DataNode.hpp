@@ -11,7 +11,6 @@ class DataNode
 {
 public:
     static DataNode fromFile(const std::filesystem::path &path);
-    static DataNode fromString(const std::string &text, const std::string &source);
 
     bool has(const std::string &key) const;
     bool isString() const;

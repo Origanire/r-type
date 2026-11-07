@@ -26,12 +26,12 @@ void SfmlAudio::decode(const std::string &name, const std::string &path)
     std::vector<std::int16_t> samples;
     std::array<std::int16_t, DECODE_CHUNK_SAMPLES> chunk{};
     for (std::uint64_t read = input.read(chunk.data(), chunk.size()); read > 0;
-        read = input.read(chunk.data(), chunk.size()))
+         read = input.read(chunk.data(), chunk.size()))
         samples.insert(samples.end(), chunk.begin(), chunk.begin() + static_cast<std::ptrdiff_t>(read));
     sf::SoundBuffer buffer;
     if (samples.empty()
-        || !buffer.loadFromSamples(samples.data(), samples.size(), input.getChannelCount(), input.getSampleRate(),
-            input.getChannelMap()))
+        || !buffer.loadFromSamples(
+            samples.data(), samples.size(), input.getChannelCount(), input.getSampleRate(), input.getChannelMap()))
         throw AudioError("SfmlAudio: cannot decode sound " + path);
     m_buffers.insert_or_assign(name, std::move(buffer));
 }

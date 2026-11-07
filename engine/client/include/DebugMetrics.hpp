@@ -21,8 +21,8 @@ public:
 
     DebugMetrics();
 
-    void frame(ecs::UiStore &store, std::size_t entities, std::uint64_t bytesIn, std::uint64_t bytesOut,
-        std::uint32_t pingMs);
+    void frame(
+        ecs::UiStore &store, std::size_t entities, std::uint64_t bytesIn, std::uint64_t bytesOut, std::uint32_t pingMs);
     static void toggle(ecs::UiStore &store);
 
 private:

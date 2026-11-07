@@ -15,6 +15,7 @@
 #include "Script.hpp"
 #include "ScriptError.hpp"
 #include "ScriptWorld.hpp"
+#include "Solid.hpp"
 #include "Transform.hpp"
 #include "Velocity.hpp"
 #include "Weapon.hpp"
@@ -35,8 +36,7 @@ void ScriptEntity::advance(float dt)
 
 bool ScriptEntity::alive() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return registry.isAlive(m_entity) && !registry.has<ecs::Destroyed>(m_entity);
+    return ecs::Destroyed::isActive(m_world->registry(), m_entity);
 }
 
 bool ScriptEntity::exists() const
@@ -60,26 +60,46 @@ bool ScriptEntity::every(const std::string &name, float seconds)
 
 float ScriptEntity::x() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return exists() && registry.has<ecs::Transform>(m_entity) ? registry.get<ecs::Transform>(m_entity).x() : 0.f;
+    const auto *transform = component<ecs::Transform>();
+    return transform ? transform->x() : 0.f;
 }
 
 float ScriptEntity::y() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return exists() && registry.has<ecs::Transform>(m_entity) ? registry.get<ecs::Transform>(m_entity).y() : 0.f;
+    const auto *transform = component<ecs::Transform>();
+    return transform ? transform->y() : 0.f;
 }
 
 float ScriptEntity::width() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return exists() && registry.has<ecs::Collider>(m_entity) ? registry.get<ecs::Collider>(m_entity).width() : 0.f;
+    const auto *collider = component<ecs::Collider>();
+    return collider ? collider->width() : 0.f;
 }
 
 float ScriptEntity::height() const
 {
+    const auto *collider = component<ecs::Collider>();
+    return collider ? collider->height() : 0.f;
+}
+
+bool ScriptEntity::onGround() const
+{
+    const auto *collider = component<ecs::Collider>();
+    const auto *transform = component<ecs::Transform>();
+    if (!collider || !transform)
+        return false;
     const ecs::Registry &registry = m_world->registry();
-    return exists() && registry.has<ecs::Collider>(m_entity) ? registry.get<ecs::Collider>(m_entity).height() : 0.f;
+    const physics::Aabb probe = collider->boundsAt(transform->x(), transform->y() + GROUND_PROBE);
+    for (std::size_t i : registry.view<ecs::Solid, ecs::Transform, ecs::Collider>()) {
+        const ecs::Entity wall = registry.entityAt(i);
+        if (wall == m_entity)
+            continue;
+        const ecs::Transform &block = registry.get<ecs::Transform>(wall);
+        const auto push = probe.separation(registry.get<ecs::Collider>(wall).boundsAt(block.x(), block.y()));
+        if (push && push->second < 0.f)
+            return true;
+    }
+    return false;
 }
 
 float ScriptEntity::centerX() const
@@ -94,68 +114,50 @@ float ScriptEntity::centerY() const
 
 float ScriptEntity::vx() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return exists() && registry.has<ecs::Velocity>(m_entity) ? registry.get<ecs::Velocity>(m_entity).x() : 0.f;
+    const auto *velocity = component<ecs::Velocity>();
+    return velocity ? velocity->x() : 0.f;
 }
 
 float ScriptEntity::vy() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return exists() && registry.has<ecs::Velocity>(m_entity) ? registry.get<ecs::Velocity>(m_entity).y() : 0.f;
+    const auto *velocity = component<ecs::Velocity>();
+    return velocity ? velocity->y() : 0.f;
 }
 
 void ScriptEntity::setPosition(float x, float y)
 {
-    ecs::Registry &registry = m_world->registry();
-    if (!alive())
-        return;
-    if (registry.has<ecs::Transform>(m_entity))
-        registry.get<ecs::Transform>(m_entity).setPosition(x, y);
-    else
-        registry.emplace<ecs::Transform>(m_entity, x, y);
+    if (alive())
+        m_world->registry().emplace<ecs::Transform>(m_entity, x, y);
 }
 
 void ScriptEntity::setVelocity(float vx, float vy)
 {
-    ecs::Registry &registry = m_world->registry();
-    if (!alive())
-        return;
-    if (registry.has<ecs::Velocity>(m_entity))
-        registry.get<ecs::Velocity>(m_entity).set(vx, vy);
-    else
-        registry.emplace<ecs::Velocity>(m_entity, vx, vy);
+    if (alive())
+        m_world->registry().emplace<ecs::Velocity>(m_entity, vx, vy);
 }
 
 int ScriptEntity::health() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return registry.isAlive(m_entity) && registry.has<ecs::Health>(m_entity)
-        ? registry.get<ecs::Health>(m_entity).points()
-        : 0;
+    const auto *health = component<ecs::Health>();
+    return health ? health->points() : 0;
 }
 
 int ScriptEntity::maxHealth() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return registry.isAlive(m_entity) && registry.has<ecs::Health>(m_entity)
-        ? registry.get<ecs::Health>(m_entity).maximum()
-        : 0;
+    const auto *health = component<ecs::Health>();
+    return health ? health->maximum() : 0;
 }
 
 float ScriptEntity::number(const std::string &name, float fallback) const
 {
-    const ecs::Registry &registry = m_world->registry();
-    if (!registry.isAlive(m_entity) || !registry.has<ecs::Script>(m_entity))
-        return fallback;
-    return registry.get<ecs::Script>(m_entity).number(name, fallback);
+    const auto *script = component<ecs::Script>();
+    return script ? script->number(name, fallback) : fallback;
 }
 
 std::string ScriptEntity::text(const std::string &name, const std::string &fallback) const
 {
-    const ecs::Registry &registry = m_world->registry();
-    if (!registry.isAlive(m_entity) || !registry.has<ecs::Script>(m_entity))
-        return fallback;
-    return registry.get<ecs::Script>(m_entity).text(name, fallback);
+    const auto *script = component<ecs::Script>();
+    return script ? script->text(name, fallback) : fallback;
 }
 
 void ScriptEntity::fire(const std::string &prefab, float angle, float speed, float dx, float dy)
@@ -227,15 +229,11 @@ ScriptEntity ScriptEntity::spawn(const std::string &prefab, float dx, float dy)
 
 void ScriptEntity::setInvulnerable(float seconds)
 {
-    ecs::Registry &registry = m_world->registry();
     if (!alive())
         return;
-    if (registry.has<ecs::Invulnerable>(m_entity)) {
-        if (registry.get<ecs::Invulnerable>(m_entity).remaining() >= seconds)
-            return;
-        registry.remove<ecs::Invulnerable>(m_entity);
-    }
-    registry.emplace<ecs::Invulnerable>(m_entity, seconds);
+    const auto *shield = component<ecs::Invulnerable>();
+    if (!shield || shield->remaining() < seconds)
+        m_world->registry().emplace<ecs::Invulnerable>(m_entity, seconds);
 }
 
 void ScriptEntity::destroy()
@@ -254,22 +252,18 @@ ScriptWorld &ScriptEntity::world() const
     return *m_world;
 }
 
-ecs::Entity ScriptEntity::entity() const
-{
-    return m_entity;
-}
-
 bool ScriptEntity::isPlayer() const
 {
-    return exists() && m_world->registry().has<ecs::PlayerControl>(m_entity);
+    return component<ecs::PlayerControl>() != nullptr;
 }
 
 int ScriptEntity::playerSlot() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    if (!exists() || !registry.has<ecs::Owner>(m_entity))
+    const auto *link = component<ecs::Owner>();
+    if (!link)
         return NO_SLOT;
-    const ecs::Entity owner = registry.get<ecs::Owner>(m_entity).owner();
+    const ecs::Registry &registry = m_world->registry();
+    const ecs::Entity owner = link->owner();
     if (!registry.isAlive(owner) || !registry.has<ecs::Player>(owner))
         return NO_SLOT;
     return static_cast<int>(registry.get<ecs::Player>(owner).slot());
@@ -277,113 +271,86 @@ int ScriptEntity::playerSlot() const
 
 void ScriptEntity::heal(int amount)
 {
-    ecs::Registry &registry = m_world->registry();
-    if (alive() && registry.has<ecs::Health>(m_entity))
-        registry.get<ecs::Health>(m_entity).heal(amount);
+    if (auto *health = liveComponent<ecs::Health>())
+        health->heal(amount);
 }
 
 void ScriptEntity::setHealth(int points, int maximum)
 {
-    ecs::Registry &registry = m_world->registry();
-    if (!alive())
-        return;
-    if (registry.has<ecs::Health>(m_entity))
-        registry.get<ecs::Health>(m_entity).set(points, maximum);
-    else
-        registry.emplace<ecs::Health>(m_entity, points);
+    if (auto *health = liveComponent<ecs::Health>())
+        health->set(points, maximum);
+    else if (alive())
+        m_world->registry().emplace<ecs::Health>(m_entity, points);
 }
 
 void ScriptEntity::setWeapon(const std::string &prefab, float cooldown, int count, float spread)
 {
-    ecs::Registry &registry = m_world->registry();
-    if (!alive() || !registry.has<ecs::Weapon>(m_entity))
-        return;
-    registry.get<ecs::Weapon>(m_entity).configure(prefab, cooldown, count, spread);
+    if (auto *weapon = liveComponent<ecs::Weapon>())
+        weapon->configure(prefab, cooldown, count, spread);
 }
 
 float ScriptEntity::inputHeld(const std::string &name) const
 {
-    const ecs::Registry &registry = m_world->registry();
-    if (!alive() || !registry.has<ecs::PlayerControl>(m_entity))
+    const auto *control = alive() ? component<ecs::PlayerControl>() : nullptr;
+    if (!control)
         return 0.f;
-    const ecs::PlayerControl &control = registry.get<ecs::PlayerControl>(m_entity);
     if (name == INPUT_FIRE)
-        return control.fireHeld();
+        return control->fireHeld();
     if (name == INPUT_ACTION)
-        return control.action() ? 1.f : 0.f;
+        return control->action() ? 1.f : 0.f;
     throw ScriptError("ScriptEntity: unknown input " + name);
 }
 
 bool ScriptEntity::inputPressed(const std::string &name) const
 {
-    const ecs::Registry &registry = m_world->registry();
-    if (!alive() || !registry.has<ecs::PlayerControl>(m_entity))
+    const auto *control = alive() ? component<ecs::PlayerControl>() : nullptr;
+    if (!control)
         return false;
-    const ecs::PlayerControl &control = registry.get<ecs::PlayerControl>(m_entity);
     if (name == INPUT_ACTION)
-        return control.actionPressed();
+        return control->actionPressed();
     if (name == INPUT_FIRE)
-        return control.firing();
+        return control->firing();
     throw ScriptError("ScriptEntity: unknown input " + name);
 }
 
 float ScriptEntity::inputReleased(const std::string &name) const
 {
-    const ecs::Registry &registry = m_world->registry();
-    if (!alive() || !registry.has<ecs::PlayerControl>(m_entity))
-        return 0.f;
     if (name != INPUT_FIRE)
         throw ScriptError("ScriptEntity: only fire reports a release, not " + name);
-    return registry.get<ecs::PlayerControl>(m_entity).fireReleased();
+    const auto *control = alive() ? component<ecs::PlayerControl>() : nullptr;
+    return control ? control->fireReleased() : 0.f;
 }
 
 void ScriptEntity::attachTo(const ScriptEntity &parent, float dx, float dy)
 {
-    ecs::Registry &registry = m_world->registry();
-    if (!alive() || !parent.exists())
-        return;
-    if (registry.has<ecs::Attachment>(m_entity) && registry.get<ecs::Attachment>(m_entity).parent() == parent.m_entity)
-        registry.get<ecs::Attachment>(m_entity).attach(dx, dy);
-    else {
-        if (registry.has<ecs::Attachment>(m_entity))
-            registry.remove<ecs::Attachment>(m_entity);
-        registry.emplace<ecs::Attachment>(m_entity, parent.m_entity, dx, dy);
-    }
+    if (alive() && parent.exists())
+        m_world->registry().emplace<ecs::Attachment>(m_entity, parent.m_entity, dx, dy);
 }
 
 void ScriptEntity::detach()
 {
-    ecs::Registry &registry = m_world->registry();
-    if (exists() && registry.has<ecs::Attachment>(m_entity))
-        registry.get<ecs::Attachment>(m_entity).detach();
+    if (exists() && m_world->registry().has<ecs::Attachment>(m_entity))
+        m_world->registry().get<ecs::Attachment>(m_entity).detach();
 }
 
 bool ScriptEntity::attached() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    return exists() && registry.has<ecs::Attachment>(m_entity) && registry.get<ecs::Attachment>(m_entity).attached();
+    const auto *link = component<ecs::Attachment>();
+    return link && link->attached();
 }
 
 std::optional<ScriptEntity> ScriptEntity::parent() const
 {
-    const ecs::Registry &registry = m_world->registry();
-    if (!exists() || !registry.has<ecs::Attachment>(m_entity))
+    const auto *link = component<ecs::Attachment>();
+    if (!link || !m_world->registry().isAlive(link->parent()))
         return std::nullopt;
-    const ecs::Entity parent = registry.get<ecs::Attachment>(m_entity).parent();
-    if (!registry.isAlive(parent))
-        return std::nullopt;
-    return ScriptEntity(*m_world, parent);
+    return ScriptEntity(*m_world, link->parent());
 }
 
 void ScriptEntity::setAngle(float degrees)
 {
-    ecs::Registry &registry = m_world->registry();
-    if (!exists())
-        return;
-    if (registry.has<ecs::Rotation>(m_entity))
-        registry.get<ecs::Rotation>(m_entity).setDegrees(degrees);
-    else
-        registry.emplace<ecs::Rotation>(m_entity, degrees);
+    if (exists())
+        m_world->registry().emplace<ecs::Rotation>(m_entity, degrees);
 }
 
 void ScriptEntity::setPlayerValue(const std::string &name, int value)

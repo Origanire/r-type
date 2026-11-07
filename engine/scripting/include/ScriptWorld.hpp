@@ -13,8 +13,8 @@
 #include "Registry.hpp"
 #include "SystemContext.hpp"
 #include "Vector2.hpp"
-#include "WorldValueTable.hpp"
 #include "WorldValues.hpp"
+#include "WorldValueTable.hpp"
 
 namespace engine::scripting {
 

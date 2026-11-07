@@ -27,7 +27,6 @@ public:
     void send(const Endpoint &peer, std::vector<std::uint8_t> bytes);
     std::vector<Datagram> poll();
     void checkHealth() const;
-    static Endpoint numericEndpoint(const std::string &address, std::uint16_t port);
     static Endpoint resolve(const std::string &host, std::uint16_t port);
     static std::optional<std::string> primaryLocalAddress();
 

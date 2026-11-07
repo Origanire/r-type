@@ -85,10 +85,7 @@ std::string ScriptWorld::label(const std::string &name) const
 ScriptEntity ScriptWorld::spawn(const std::string &prefab, float x, float y)
 {
     const ecs::Entity entity = m_factory.spawn(prefab);
-    if (m_registry.has<ecs::Transform>(entity))
-        m_registry.get<ecs::Transform>(entity).setPosition(x, y);
-    else
-        m_registry.emplace<ecs::Transform>(entity, x, y);
+    m_registry.emplace<ecs::Transform>(entity, x, y);
     return ScriptEntity(*this, entity);
 }
 
@@ -166,7 +163,7 @@ ecs::IEntityFactory &ScriptWorld::factory() const
 
 void ScriptWorld::kill(const ecs::Entity &entity)
 {
-    if (!m_registry.isAlive(entity) || m_registry.has<ecs::Destroyed>(entity))
+    if (!ecs::Destroyed::isActive(m_registry, entity))
         return;
     m_registry.emplace<ecs::Destroyed>(entity);
     m_deaths.push(ecs::DeathEvent(entity, std::nullopt));

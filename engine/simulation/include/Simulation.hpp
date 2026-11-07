@@ -9,8 +9,8 @@
 
 #include "CleanupSystem.hpp"
 #include "ComponentFactory.hpp"
-#include "DataNode.hpp"
 #include "ConsoleEvent.hpp"
+#include "DataNode.hpp"
 #include "Entity.hpp"
 #include "EntityState.hpp"
 #include "IGameSession.hpp"
@@ -27,8 +27,8 @@
 #include "SystemContext.hpp"
 #include "SystemFactory.hpp"
 #include "SystemManager.hpp"
-#include "WorldValueTable.hpp"
 #include "WorldValues.hpp"
+#include "WorldValueTable.hpp"
 
 namespace engine::simulation {
 

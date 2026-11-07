@@ -12,9 +12,8 @@ namespace engine::client {
 SceneManager::SceneManager(ecs::Registry &registry, scene::PrefabLibrary &prefabs,
     const scene::ComponentFactory &components, const scene::SystemFactory &systems, scene::SystemContext &context,
     audio::IAudio &audio, Vector2 area, scene::DataNode scenes)
-    : m_registry(registry), m_prefabs(prefabs), m_components(components), m_systemFactory(systems),
-      m_context(context), m_audio(audio), m_area(area), m_scenes(std::move(scenes)), m_systems(), m_current(),
-      m_music()
+    : m_registry(registry), m_prefabs(prefabs), m_components(components), m_systemFactory(systems), m_context(context),
+      m_audio(audio), m_area(area), m_scenes(std::move(scenes)), m_systems(), m_current(), m_music()
 {
 }
 

@@ -1,26 +1,26 @@
 #pragma once
 
-#include <functional>
-#include <vector>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "CollisionEvent.hpp"
+#include "ConsoleEvent.hpp"
 #include "DeathEvent.hpp"
 #include "EventQueue.hpp"
 #include "IAudio.hpp"
 #include "IEntityFactory.hpp"
 #include "IRenderer.hpp"
 #include "Registry.hpp"
+#include "SoundEvent.hpp"
 #include "UiActionEvent.hpp"
 #include "UiInput.hpp"
-#include "ConsoleEvent.hpp"
-#include "SoundEvent.hpp"
 #include "UiStore.hpp"
 #include "Vector2.hpp"
-#include "WorldValueTable.hpp"
 #include "WorldValues.hpp"
+#include "WorldValueTable.hpp"
 
 namespace engine::scene {
 

@@ -7,8 +7,8 @@
 namespace engine::render {
 
 Window::Window(unsigned int width, unsigned int height, const std::string &title, Vector2 worldSize)
-    : m_window(sf::VideoMode({width, height}), title), m_stickUp(false), m_stickDown(false), m_padUp(false), m_padDown(false), m_stickLeft(false),
-      m_stickRight(false), m_padLeft(false), m_padRight(false)
+    : m_window(sf::VideoMode({width, height}), title), m_stickUp(false), m_stickDown(false), m_padUp(false),
+      m_padDown(false), m_stickLeft(false), m_stickRight(false), m_padLeft(false), m_padRight(false)
 {
     if (!m_window.isOpen())
         throw RenderError("Window: cannot open the window");
@@ -103,13 +103,13 @@ std::optional<UiKey> Window::uiKeyOf(sf::Keyboard::Key key)
 void Window::handleStick(UiInput &ui, const sf::Event::JoystickMoved &moved)
 {
     if (moved.axis == sf::Joystick::Axis::Y)
-        pressOnce(ui, moved.position < -STICK_THRESHOLD, moved.position > STICK_THRESHOLD, m_stickUp, m_stickDown);
+        pressOnce(ui, moved.position<-STICK_THRESHOLD, moved.position> STICK_THRESHOLD, m_stickUp, m_stickDown);
     else if (moved.axis == sf::Joystick::Axis::PovY)
         pressOnce(ui, moved.position > STICK_THRESHOLD, moved.position < -STICK_THRESHOLD, m_padUp, m_padDown);
     else if (moved.axis == sf::Joystick::Axis::X)
-        pressSideOnce(ui, moved.position < -STICK_THRESHOLD, moved.position > STICK_THRESHOLD, m_stickLeft, m_stickRight);
+        pressSideOnce(ui, moved.position<-STICK_THRESHOLD, moved.position> STICK_THRESHOLD, m_stickLeft, m_stickRight);
     else if (moved.axis == sf::Joystick::Axis::PovX)
-        pressSideOnce(ui, moved.position < -STICK_THRESHOLD, moved.position > STICK_THRESHOLD, m_padLeft, m_padRight);
+        pressSideOnce(ui, moved.position<-STICK_THRESHOLD, moved.position> STICK_THRESHOLD, m_padLeft, m_padRight);
 }
 
 void Window::pressOnce(UiInput &ui, bool up, bool down, bool &wasUp, bool &wasDown)

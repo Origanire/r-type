@@ -26,17 +26,6 @@ DataNode DataNode::fromFile(const std::filesystem::path &path)
     }
 }
 
-DataNode DataNode::fromString(const std::string &text, const std::string &source)
-{
-    try {
-        auto root = std::make_shared<const nlohmann::json>(nlohmann::json::parse(text));
-        const nlohmann::json *node = root.get();
-        return DataNode(std::make_shared<const Impl>(root, node, source));
-    } catch (const nlohmann::json::exception &error) {
-        throw SceneError("DataNode: invalid JSON in " + source + ": " + error.what());
-    }
-}
-
 bool DataNode::has(const std::string &key) const
 {
     return m_impl->node().is_object() && m_impl->node().contains(key);

@@ -18,15 +18,6 @@ UdpTransport::UdpTransport(std::uint16_t port)
 
 UdpTransport::~UdpTransport() = default;
 
-Endpoint UdpTransport::numericEndpoint(const std::string &address, std::uint16_t port)
-{
-    asio::error_code error;
-    const auto ip = asio::ip::make_address_v4(address, error);
-    if (error)
-        throw NetError("UdpTransport: invalid IPv4 address " + address);
-    return Endpoint(ip.to_string(), port);
-}
-
 Endpoint UdpTransport::resolve(const std::string &host, std::uint16_t port)
 {
     asio::error_code error;
@@ -48,7 +39,8 @@ std::optional<std::string> UdpTransport::primaryLocalAddress()
     asio::ip::udp::socket socket(io);
     socket.open(asio::ip::udp::v4(), error);
     if (!error)
-        socket.connect(asio::ip::udp::endpoint(asio::ip::make_address_v4(ROUTE_PROBE_ADDRESS), ROUTE_PROBE_PORT), error);
+        socket.connect(
+            asio::ip::udp::endpoint(asio::ip::make_address_v4(ROUTE_PROBE_ADDRESS), ROUTE_PROBE_PORT), error);
     if (error)
         return std::nullopt;
     const auto local = socket.local_endpoint(error);

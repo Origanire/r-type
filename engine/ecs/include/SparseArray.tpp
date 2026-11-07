@@ -17,12 +17,6 @@ Component &SparseArray<Component>::emplaceAt(std::size_t index, Args &&...args)
 }
 
 template <class Component>
-Component &SparseArray<Component>::insertAt(std::size_t index, Component component)
-{
-    return emplaceAt(index, std::move(component));
-}
-
-template <class Component>
 void SparseArray<Component>::erase(std::size_t index)
 {
     if (index < m_data.size())

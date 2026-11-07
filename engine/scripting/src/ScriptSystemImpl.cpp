@@ -15,8 +15,8 @@ namespace engine::scripting {
 ScriptSystemImpl::ScriptSystemImpl(ScriptEngineImpl &engine, ScriptWorld world,
     const EventQueue<ecs::DeathEvent> &deaths, const EventQueue<ecs::CollisionEvent> &collisions,
     std::filesystem::path directory)
-    : m_engine(engine), m_world(std::move(world)), m_deaths(deaths), m_collisions(collisions), m_directory(std::move(directory)), m_records(),
-      m_entities()
+    : m_engine(engine), m_world(std::move(world)), m_deaths(deaths), m_collisions(collisions),
+      m_directory(std::move(directory)), m_records(), m_entities()
 {
 }
 
@@ -33,7 +33,7 @@ void ScriptSystemImpl::update(float dt)
     ecs::Registry &registry = m_world.registry();
     for (std::size_t i : registry.view<ecs::Script>()) {
         const ecs::Entity entity = registry.entityAt(i);
-        if (registry.isAlive(entity) && !registry.has<ecs::Destroyed>(entity))
+        if (ecs::Destroyed::isActive(registry, entity))
             runEntity(entity, dt);
     }
     notifyContacts();
@@ -53,8 +53,8 @@ void ScriptSystemImpl::runCommands()
             py::object ship = py::none();
             if (const auto found = m_world.playerShip(command.slot()))
                 ship = py::cast(*found);
-            const py::object result = module.attr("run")(
-                py::cast(&m_world, py::return_value_policy::reference), ship, command.text());
+            const py::object result =
+                module.attr("run")(py::cast(&m_world, py::return_value_policy::reference), ship, command.text());
             m_world.reply(command.slot(), prefix + py::str(result).cast<std::string>());
         } catch (const std::exception &error) {
             m_world.reply(command.slot(), prefix + "command failed");
@@ -84,7 +84,7 @@ void ScriptSystemImpl::notifyContacts()
 void ScriptSystemImpl::notifyContact(const ecs::Entity &entity, const ecs::Entity &other)
 {
     const ecs::Registry &registry = m_world.registry();
-    if (!registry.isAlive(entity) || registry.has<ecs::Destroyed>(entity) || !registry.isAlive(other))
+    if (!ecs::Destroyed::isActive(registry, entity) || !registry.isAlive(other))
         return;
     const auto found = m_records.find(keyOf(entity));
     if (found == m_records.end() || found->second.failed())

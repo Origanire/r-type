@@ -9,8 +9,7 @@ namespace engine::scene {
 
 SceneBuilder::SceneBuilder(
     ecs::Registry &registry, PrefabLibrary &prefabs, const ComponentFactory &components, Vector2 area)
-    : m_registry(registry), m_prefabs(prefabs), m_components(components), m_area(area),
-      m_random(std::random_device{}())
+    : m_registry(registry), m_prefabs(prefabs), m_components(components), m_area(area), m_random(std::random_device{}())
 {
 }
 
@@ -41,10 +40,7 @@ void SceneBuilder::scatter(const ecs::Entity &entity)
 {
     const float x = std::uniform_real_distribution<float>(0.f, m_area.x())(m_random);
     const float y = std::uniform_real_distribution<float>(0.f, m_area.y())(m_random);
-    if (m_registry.has<ecs::Transform>(entity))
-        m_registry.get<ecs::Transform>(entity).setPosition(x, y);
-    else
-        m_registry.emplace<ecs::Transform>(entity, x, y);
+    m_registry.emplace<ecs::Transform>(entity, x, y);
 }
 
 } // namespace engine::scene

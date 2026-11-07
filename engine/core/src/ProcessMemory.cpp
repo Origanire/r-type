@@ -1,8 +1,8 @@
 #include "ProcessMemory.hpp"
 
 #ifdef _WIN32
-#include <windows.h>
 #include <psapi.h>
+#include <windows.h>
 #else
 #include <fstream>
 #include <unistd.h>

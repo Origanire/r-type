@@ -11,7 +11,6 @@ public:
     bool step();
 
     float stepSeconds() const;
-    float alpha() const;
 
 private:
     float m_step;

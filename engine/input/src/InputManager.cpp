@@ -30,16 +30,6 @@ bool InputManager::isPressed(Action action) const
     return m_pressed[static_cast<std::size_t>(action)];
 }
 
-std::uint8_t InputManager::toBits() const
-{
-    std::uint8_t bits = 0;
-    for (std::size_t i = 0; i < KeyBindings::ACTION_COUNT; ++i) {
-        if (m_pressed[i])
-            bits = static_cast<std::uint8_t>(bits | (1u << i));
-    }
-    return bits;
-}
-
 KeyBindings &InputManager::bindings()
 {
     return m_bindings;
@@ -62,16 +52,16 @@ bool InputManager::gamepadDown(Action action) const
     const float padX = sf::Joystick::getAxisPosition(GAMEPAD, sf::Joystick::Axis::PovX);
     const float padY = sf::Joystick::getAxisPosition(GAMEPAD, sf::Joystick::Axis::PovY);
     switch (action) {
-        case Action::Up:
-            return stickY < -deadzone || padY > deadzone;
-        case Action::Down:
-            return stickY > deadzone || padY < -deadzone;
-        case Action::Left:
-            return stickX < -deadzone || padX < -deadzone;
-        case Action::Right:
-            return stickX > deadzone || padX > deadzone;
-        default:
-            break;
+    case Action::Up:
+        return stickY < -deadzone || padY > deadzone;
+    case Action::Down:
+        return stickY > deadzone || padY < -deadzone;
+    case Action::Left:
+        return stickX < -deadzone || padX < -deadzone;
+    case Action::Right:
+        return stickX > deadzone || padX > deadzone;
+    default:
+        break;
     }
     const auto button = m_bindings.buttonFor(action);
     return button && sf::Joystick::isButtonPressed(GAMEPAD, *button);

@@ -5,8 +5,7 @@
 
 namespace engine {
 
-CommandLine::CommandLine(
-    int argc, char **argv, std::string_view usage, bool acceptsHost, std::string_view defaultGame)
+CommandLine::CommandLine(int argc, char **argv, std::string_view usage, bool acceptsHost, std::string_view defaultGame)
     : m_host(), m_port(), m_game(defaultGame)
 {
     for (int i = 1; i < argc; ++i) {

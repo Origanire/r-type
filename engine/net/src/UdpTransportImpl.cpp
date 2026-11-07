@@ -32,7 +32,8 @@ void UdpTransport::Impl::send(const Endpoint &peer, std::vector<std::uint8_t> by
         return;
     }
     asio::post(m_io,
-        std::bind_front(&Impl::startSend, this, destination, std::make_shared<std::vector<std::uint8_t>>(std::move(bytes))));
+        std::bind_front(
+            &Impl::startSend, this, destination, std::make_shared<std::vector<std::uint8_t>>(std::move(bytes))));
 }
 
 std::vector<Datagram> UdpTransport::Impl::takeIncoming()

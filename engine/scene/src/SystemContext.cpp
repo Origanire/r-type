@@ -9,8 +9,9 @@ namespace engine::scene {
 SystemContext::SystemContext(ecs::Registry &registry, ecs::IEntityFactory &factory)
     : m_registry(registry), m_factory(factory), m_collisions(), m_deaths(), m_uiActions(),
       m_canSpawn(&SystemContext::alwaysAllowSpawn), m_renderer(nullptr), m_audio(nullptr), m_uiInput(nullptr),
-      m_uiStore(nullptr), m_worldValues(nullptr), m_worldTable(nullptr), m_area(), m_sounds(), m_commands(), m_replies(), m_consoleScript(),
-      m_emptyTable(), m_playerTable(nullptr), m_ruleTable(nullptr), m_ruleValues(), m_flags()
+      m_uiStore(nullptr), m_worldValues(nullptr), m_worldTable(nullptr), m_area(), m_sounds(), m_commands(),
+      m_replies(), m_consoleScript(), m_emptyTable(), m_playerTable(nullptr), m_ruleTable(nullptr), m_ruleValues(),
+      m_flags()
 {
 }
 

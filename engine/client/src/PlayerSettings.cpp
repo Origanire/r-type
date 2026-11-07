@@ -12,8 +12,10 @@ PlayerSettings::PlayerSettings(const scene::DataNode &settings)
                                                         : DEFAULT_ACTION_KEY),
       m_padFire(static_cast<unsigned int>(padSetting(settings, "fire", DEFAULT_PAD_FIRE))),
       m_padAction(static_cast<unsigned int>(padSetting(settings, "action", DEFAULT_PAD_ACTION))),
-      m_padDeadzone(settings.has("gamepad") ? settings.child("gamepad").getFloat("deadzone", input::KeyBindings::DEFAULT_DEADZONE)
-                                             : input::KeyBindings::DEFAULT_DEADZONE), m_toggleFire(settings.getBool("toggleFire", false)),
+      m_padDeadzone(settings.has("gamepad")
+              ? settings.child("gamepad").getFloat("deadzone", input::KeyBindings::DEFAULT_DEADZONE)
+              : input::KeyBindings::DEFAULT_DEADZONE),
+      m_toggleFire(settings.getBool("toggleFire", false)),
       m_showPlayerLabels(settings.getBool("showPlayerLabels", true)),
       m_musicVolume(settings.getFloat("musicVolume", DEFAULT_MUSIC_VOLUME)),
       m_soundVolume(settings.getFloat("soundVolume", DEFAULT_SOUND_VOLUME)),

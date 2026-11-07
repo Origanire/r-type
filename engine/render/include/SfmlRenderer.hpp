@@ -22,8 +22,8 @@ public:
         Color tint) override;
     void setOffset(Vector2 offset) override;
     Vector2 offset() const override;
-    void drawText(const std::string &font, const std::string &text, unsigned int size, Vector2 position,
-        Color color) override;
+    void drawText(
+        const std::string &font, const std::string &text, unsigned int size, Vector2 position, Color color) override;
     void display() override;
 
 private:

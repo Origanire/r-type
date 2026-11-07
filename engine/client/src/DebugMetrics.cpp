@@ -14,8 +14,8 @@ DebugMetrics::DebugMetrics()
 {
 }
 
-void DebugMetrics::frame(ecs::UiStore &store, std::size_t entities, std::uint64_t bytesIn, std::uint64_t bytesOut,
-    std::uint32_t pingMs)
+void DebugMetrics::frame(
+    ecs::UiStore &store, std::size_t entities, std::uint64_t bytesIn, std::uint64_t bytesOut, std::uint32_t pingMs)
 {
     ++m_frames;
     const Time now = std::chrono::steady_clock::now();

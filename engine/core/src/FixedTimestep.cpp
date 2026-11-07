@@ -33,9 +33,4 @@ float FixedTimestep::stepSeconds() const
     return m_step;
 }
 
-float FixedTimestep::alpha() const
-{
-    return m_accumulator / m_step;
-}
-
 } // namespace engine

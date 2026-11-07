@@ -15,7 +15,6 @@ public:
 
     void update(bool windowFocused);
     bool isPressed(Action action) const;
-    std::uint8_t toBits() const;
 
     KeyBindings &bindings();
     void setToggle(Action action, bool toggle);

@@ -19,6 +19,7 @@ public:
     static constexpr float GROUND_PROBE = 2.f;
     static constexpr const char *INPUT_FIRE = "fire";
     static constexpr const char *INPUT_ACTION = "action";
+    static constexpr const char *INPUT_BOMB = "bomb";
 
     ScriptEntity(ScriptWorld &world, ecs::Entity entity);
 
@@ -71,6 +72,8 @@ public:
     std::optional<ScriptEntity> parent() const;
     void setAngle(float degrees);
     void setPlayerValue(const std::string &name, int value);
+    int playerValue(const std::string &name) const;
+    bool operator==(const ScriptEntity &other) const;
 
 private:
     template <class Component>

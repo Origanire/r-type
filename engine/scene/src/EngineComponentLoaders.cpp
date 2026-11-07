@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <functional>
 #include <utility>
+#include <vector>
 
+#include "Background.hpp"
 #include "Bounce.hpp"
 #include "Bounded.hpp"
 #include "BoundText.hpp"
@@ -73,6 +75,7 @@ void EngineComponentLoaders::registerInterface(ComponentFactory &factory)
     factory.add("BoundText", &EngineComponentLoaders::loadBoundText);
     factory.add("ListView", &EngineComponentLoaders::loadListView);
     factory.add("Hidden", &EngineComponentLoaders::loadHidden);
+    factory.add("Background", &EngineComponentLoaders::loadBackground);
     factory.add("Foreground", &EngineComponentLoaders::loadForeground);
     factory.add("ProgressBar", &EngineComponentLoaders::loadProgressBar);
     factory.add("FadeWhen", &EngineComponentLoaders::loadFadeWhen);

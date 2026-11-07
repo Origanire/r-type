@@ -345,6 +345,7 @@ add_library(engine_client
     client/src/DebugMetrics.cpp
     client/src/DevConsole.cpp
     client/src/OnlineClient.cpp
+    client/src/SecretCode.cpp
     client/src/OnlineClientLobby.cpp
     client/src/OnlineClientGame.cpp
     client/src/SnapshotPresenter.cpp

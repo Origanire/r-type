@@ -1,8 +1,15 @@
-"""Carrier: a slow ship that always drops a power-up when destroyed."""
+"""Carrier: a slow ship that drops a power-up when destroyed, unless the "bonuses" room rule is OFF."""
 
 import common
 
-DROPS = (("powerup_double", 3), ("powerup_spread", 2), ("powerup_heal", 3), ("powerup_shield", 2), ("powerup_force", 2))
+DROPS = (
+    ("powerup_double", 3),
+    ("powerup_spread", 2),
+    ("powerup_heal", 3),
+    ("powerup_shield", 2),
+    ("powerup_force", 2),
+    ("powerup_drone", 2),
+)
 
 
 def on_spawn(e):
@@ -14,6 +21,8 @@ def on_update(e, dt):
 
 
 def on_death(e):
+    if e.world.rule("bonuses") == "OFF":
+        return
     roll = e.world.random(0.0, sum(weight for _, weight in DROPS))
     for prefab, weight in DROPS:
         roll -= weight

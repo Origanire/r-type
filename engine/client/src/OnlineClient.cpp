@@ -17,7 +17,8 @@ OnlineClient::OnlineClient(const std::filesystem::path &assetsDirectory, const s
     const std::string &game, const network::NetworkSettings &settings, std::optional<std::string> address)
     : m_view(assetsDirectory, dataDirectory, game), m_presenter(m_view), m_settings(settings), m_network(),
       m_address(address.value_or(m_view.settings().serverAddress())), m_slot(), m_lockedRooms(), m_pendingRoom(0),
-      m_lastRoomList(), m_lastRoomUpdate(), m_noticeUntil(), m_settingsReturn(), m_metrics(), m_console(m_view)
+      m_lastRoomList(), m_lastRoomUpdate(), m_noticeUntil(), m_settingsReturn(), m_metrics(), m_console(m_view),
+      m_secretCode(m_view.secretCode()), m_bombUntil()
 {
     enterScene(m_view.currentScene());
 }
@@ -27,6 +28,7 @@ void OnlineClient::run()
     while (m_view.isOpen()) {
         const Time now = std::chrono::steady_clock::now();
         m_view.processEvents();
+        watchSecretCode(now);
         updateNetwork(now);
         expireNotice(now);
         m_view.frame();
@@ -42,6 +44,12 @@ void OnlineClient::run()
     m_view.close();
     if (m_network)
         m_network->disconnect();
+}
+
+void OnlineClient::watchSecretCode(Time now)
+{
+    if (m_view.currentScene() == GAME_SCENE && m_secretCode.feed(m_view.typedText()))
+        m_bombUntil = now + BOMB_HOLD;
 }
 
 void OnlineClient::updateNetwork(Time now)
@@ -232,6 +240,8 @@ std::uint8_t OnlineClient::buttons() const
         bits |= network::Protocol::BUTTON_FIRE;
     if (m_view.isPressed(Action::Special))
         bits |= network::Protocol::BUTTON_ACTION;
+    if (std::chrono::steady_clock::now() < m_bombUntil)
+        bits |= network::Protocol::BUTTON_BOMB;
     return bits;
 }
 

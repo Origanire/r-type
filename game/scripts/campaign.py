@@ -10,8 +10,10 @@ Attached to an invisible "director" entity. Each stage module gives:
 It publishes the world values shown by the client HUD: stage, phase, progress, bossHealth.
 With the director param "bossRush" set to 1, every stage skips its waves and starts with its boss.
 The "difficulty" room rule scales spawn rates and boss health; boss deaths shake the screen.
+It also runs the secret bomb (see bomb.py).
 """
 
+import bomb
 import common
 import stage1
 import stage2
@@ -40,12 +42,14 @@ def on_update(d, dt):
         return
     if not d.playing:
         d.playing = True
+        bomb.reset(d.world)
         start_stage(d, 0)
     d.timer += dt
     decay_shake(d.world)
     if d.world.get("skip") > 0:
         d.world.set("skip", 0)
         skip(d)
+    bomb.update(d, d.boss if d.state == "boss" else None)
     STATES[d.state](d, dt)
 
 

@@ -13,6 +13,7 @@
 #include "IAudio.hpp"
 #include "IEntityFactory.hpp"
 #include "IRenderer.hpp"
+#include "LayerTable.hpp"
 #include "Registry.hpp"
 #include "SoundEvent.hpp"
 #include "UiActionEvent.hpp"
@@ -57,6 +58,8 @@ public:
     const std::string &consoleScript() const;
     void setPlayerTable(const WorldValueTable &table);
     const WorldValueTable &playerTable() const;
+    void setLayerTable(const LayerTable &layers);
+    const LayerTable &layerTable() const;
     void setRules(const WorldValueTable &table, std::vector<std::uint8_t> values);
     const WorldValueTable &ruleTable() const;
     const std::vector<std::uint8_t> &ruleValues() const;
@@ -85,6 +88,7 @@ private:
     std::string m_consoleScript;
     WorldValueTable m_emptyTable;
     const WorldValueTable *m_playerTable;
+    const LayerTable *m_layerTable;
     const WorldValueTable *m_ruleTable;
     std::vector<std::uint8_t> m_ruleValues;
     std::unordered_map<std::string, bool> m_flags;

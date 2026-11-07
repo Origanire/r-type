@@ -65,6 +65,11 @@ void SfmlAudio::preloadSound(const std::string &name)
 void SfmlAudio::playSound(const std::string &name)
 {
     preloadSound(name);
+    const auto now = std::chrono::steady_clock::now();
+    const auto last = m_lastPlayed.find(name);
+    if (last != m_lastPlayed.end() && now - last->second < REPEAT_GAP)
+        return;
+    m_lastPlayed.insert_or_assign(name, now);
     const auto found = m_buffers.find(name);
     m_playing.remove_if([](const sf::Sound &sound) { return sound.getStatus() == sf::Sound::Status::Stopped; });
     if (m_playing.size() >= MAX_PLAYING_SOUNDS)

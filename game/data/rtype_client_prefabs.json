@@ -21,12 +21,13 @@
   "enemy_missile": {
     "Transform": {},
     "Sprite": {"texture": "enemy_missiles", "frame": [135, 5, 9, 8], "scale": 3},
-    "SpriteAnimation": {"frame": [135, 5, 9, 8], "frameCount": 5, "stepX": 17, "framesPerSecond": 12, "loop": true}
+    "SpriteAnimation": {"frame": [135, 5, 9, 8], "frameCount": 5, "stepX": 17, "framesPerSecond": 12, "loop": true},
+    "SoundCue": {"sound": "shotBydo"}
   },
   "bydo": {
     "Transform": {},
     "Sprite": {"texture": "bydos", "frame": [0, 0, 33, 36], "scale": 2},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_bydo"}
   },
   "explosion": {
     "Transform": {},
@@ -34,6 +35,36 @@
     "SpriteAnimation": {"frame": [1, 99, 64, 64], "frameCount": 10, "stepX": 65, "framesPerSecond": 20},
     "SoundCue": {"sound": "explosion"},
     "ParticleEmitter": {"count": 14, "speed": 260, "lifetime": 0.5, "size": 5, "color": [255, 180, 60, 255]}
+  },
+  "explosion_bydo": {
+    "Transform": {},
+    "Sprite": {"texture": "explosions", "frame": [1, 99, 64, 64], "scale": 1.5},
+    "SpriteAnimation": {"frame": [1, 99, 64, 64], "frameCount": 10, "stepX": 65, "framesPerSecond": 20},
+    "SoundCue": {"sound": "deathBydo"},
+    "ParticleEmitter": {"count": 16, "speed": 220, "lifetime": 0.6, "size": 6, "color": [150, 230, 90, 255]}
+  },
+  "explosion_mech": {
+    "Transform": {},
+    "Sprite": {"texture": "explosions", "frame": [1, 99, 64, 64], "scale": 1.7},
+    "SpriteAnimation": {"frame": [1, 99, 64, 64], "frameCount": 10, "stepX": 65, "framesPerSecond": 20},
+    "SoundCue": {"sound": "deathMech"},
+    "ParticleEmitter": {"count": 18, "speed": 300, "lifetime": 0.5, "size": 4, "color": [255, 200, 120, 255]}
+  },
+  "explosion_boss": {
+    "Transform": {},
+    "Sprite": {"texture": "explosions", "frame": [1, 99, 64, 64], "scale": 4},
+    "SpriteAnimation": {"frame": [1, 99, 64, 64], "frameCount": 10, "stepX": 65, "framesPerSecond": 14},
+    "SoundCue": {"sound": "deathBoss"},
+    "ParticleEmitter": {"count": 60, "speed": 420, "lifetime": 1.0, "size": 7, "color": [255, 150, 50, 255]}
+  },
+  "stage_color": {
+    "Transform": {},
+    "Background": {}
+  },
+  "stage_backdrop": {
+    "Transform": {},
+    "Parallax": {"speed": 60, "wrapWidth": 1920},
+    "Background": {}
   },
   "star_far": {
     "Transform": {},
@@ -104,83 +135,90 @@
     "Transform": {},
     "Sprite": {"texture": "hoppers", "frame": [1, 1, 32, 32], "scale": 2.5},
     "SpriteAnimation": {"frame": [1, 1, 32, 32], "frameCount": 6, "stepX": 33, "framesPerSecond": 10, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_bydo"}
   },
   "pod": {
     "Transform": {},
     "Sprite": {"texture": "pods", "frame": [1, 1, 32, 31], "scale": 2.5},
     "SpriteAnimation": {"frame": [1, 1, 32, 31], "frameCount": 6, "stepX": 33, "framesPerSecond": 10, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_mech"}
   },
   "heavy": {
     "Transform": {},
     "Sprite": {"texture": "heavies", "frame": [1, 1, 63, 48], "scale": 2},
     "SpriteAnimation": {"frame": [1, 1, 63, 48], "frameCount": 6, "stepX": 65, "framesPerSecond": 10, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_mech"}
   },
   "boss_dobkeratops": {
     "Transform": {},
     "Sprite": {"texture": "boss_dobkeratops", "frame": [27, 2, 155, 204], "scale": 2.5},
     "SpriteAnimation": {"frame": [27, 2, 155, 204], "frameCount": 4, "stepX": 162, "framesPerSecond": 6, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_boss"}
   },
   "boss_warship": {
     "Transform": {},
     "Sprite": {"texture": "boss_warship", "frame": [2, 2, 176, 144], "scale": 3},
     "SpriteAnimation": {"frame": [2, 2, 176, 144], "frameCount": 2, "stepX": 189, "framesPerSecond": 4, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_boss"}
   },
   "boss_core": {
     "Transform": {},
     "Sprite": {"texture": "boss_core", "frame": [1, 1, 63, 59], "scale": 5},
     "SpriteAnimation": {"frame": [1, 1, 63, 59], "frameCount": 8, "stepX": 66, "framesPerSecond": 10, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_boss"}
   },
   "boss_missile": {
     "Transform": {},
     "Sprite": {"texture": "boss_missiles", "frame": [1, 3, 32, 28], "scale": 2},
-    "SpriteAnimation": {"frame": [1, 3, 32, 28], "frameCount": 3, "stepX": 34, "framesPerSecond": 12, "loop": true}
+    "SpriteAnimation": {"frame": [1, 3, 32, 28], "frameCount": 3, "stepX": 34, "framesPerSecond": 12, "loop": true},
+    "SoundCue": {"sound": "shotBoss"}
   },
   "chaser": {
     "Transform": {},
     "Sprite": {"texture": "chasers", "frame": [1, 3, 32, 29], "scale": 2.5},
     "SpriteAnimation": {"frame": [1, 3, 32, 29], "frameCount": 8, "stepX": 33, "framesPerSecond": 10, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_bydo"}
   },
   "turret": {
     "Transform": {},
     "Sprite": {"texture": "turrets", "frame": [1, 2, 32, 29], "scale": 2.5},
     "SpriteAnimation": {"frame": [1, 2, 32, 29], "frameCount": 4, "stepX": 33, "framesPerSecond": 6, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_mech"}
   },
   "splitter": {
     "Transform": {},
     "Sprite": {"texture": "splitters", "frame": [9, 9, 48, 48], "scale": 2},
     "SpriteAnimation": {"frame": [9, 9, 48, 48], "frameCount": 5, "stepX": 65, "framesPerSecond": 10, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_bydo"}
   },
   "splitter_small": {
     "Transform": {},
     "Sprite": {"texture": "splitter_smalls", "frame": [1, 2, 16, 14], "scale": 3},
     "SpriteAnimation": {"frame": [1, 2, 16, 14], "frameCount": 12, "stepX": 17, "framesPerSecond": 14, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_bydo"}
   },
   "mine": {
     "Transform": {},
     "Sprite": {"texture": "mines", "frame": [2, 1, 30, 32], "scale": 2.5},
     "SpriteAnimation": {"frame": [2, 1, 30, 32], "frameCount": 4, "stepX": 33, "framesPerSecond": 6, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_mech"}
   },
   "enemy_bullet": {
     "Transform": {},
     "Sprite": {"texture": "enemy_missiles", "frame": [136, 6, 7, 6], "scale": 3},
-    "SpriteAnimation": {"frame": [136, 6, 7, 6], "frameCount": 8, "stepX": 17, "framesPerSecond": 14, "loop": true}
+    "SpriteAnimation": {"frame": [136, 6, 7, 6], "frameCount": 8, "stepX": 17, "framesPerSecond": 14, "loop": true},
+    "SoundCue": {"sound": "shotMech"}
   },
-  "boss_orb": {"Transform": {}, "Sprite": {"texture": "enemy_missiles", "frame": [151, 21, 11, 9], "scale": 3}},
+  "boss_orb": {
+    "Transform": {},
+    "Sprite": {"texture": "enemy_missiles", "frame": [151, 21, 11, 9], "scale": 3},
+    "SoundCue": {"sound": "shotBoss"}
+  },
   "boss_laser": {
     "Transform": {},
     "Sprite": {"texture": "enemy_missiles", "frame": [1, 41, 48, 4], "scale": 2},
-    "SpriteAnimation": {"frame": [1, 41, 48, 4], "frameCount": 8, "stepX": 50, "framesPerSecond": 16, "loop": true}
+    "SpriteAnimation": {"frame": [1, 41, 48, 4], "frameCount": 8, "stepX": 50, "framesPerSecond": 16, "loop": true},
+    "SoundCue": {"sound": "shotBoss"}
   },
   "boss_beam": {"Transform": {}, "Sprite": {"texture": "player_missiles", "frame": [185, 170, 80, 16], "scale": 3}},
   "warning": {
@@ -190,68 +228,37 @@
   },
   "powerup_double": {
     "Transform": {},
-    "Sprite": {"texture": "pickups", "frame": [229, 452, 16, 16], "scale": 3},
-    "SpriteAnimation": {
-      "frame": [229, 452, 16, 16],
-      "frameCount": 8,
-      "stepX": 18,
-      "framesPerSecond": 10,
-      "loop": true
-    },
-    "Text": {"font": "hud", "size": 26, "color": [255, 255, 255, 255], "content": "D", "offsetX": 16, "offsetY": 6},
+    "Sprite": {"texture": "powerups", "frame": [0, 0, 48, 48], "scale": 1.2},
     "Foreground": {}
   },
   "powerup_spread": {
     "Transform": {},
-    "Sprite": {"texture": "pickups", "frame": [229, 452, 16, 16], "scale": 3},
-    "SpriteAnimation": {
-      "frame": [229, 452, 16, 16],
-      "frameCount": 8,
-      "stepX": 18,
-      "framesPerSecond": 10,
-      "loop": true
-    },
-    "Text": {"font": "hud", "size": 26, "color": [255, 255, 255, 255], "content": "S", "offsetX": 16, "offsetY": 6},
+    "Sprite": {"texture": "powerups", "frame": [48, 0, 48, 48], "scale": 1.2},
     "Foreground": {}
   },
   "powerup_heal": {
     "Transform": {},
-    "Sprite": {"texture": "pickups", "frame": [229, 452, 16, 16], "scale": 3},
-    "SpriteAnimation": {
-      "frame": [229, 452, 16, 16],
-      "frameCount": 8,
-      "stepX": 18,
-      "framesPerSecond": 10,
-      "loop": true
-    },
-    "Text": {"font": "hud", "size": 26, "color": [255, 255, 255, 255], "content": "+", "offsetX": 16, "offsetY": 6},
+    "Sprite": {"texture": "powerups", "frame": [96, 0, 48, 48], "scale": 1.2},
     "Foreground": {}
   },
   "powerup_shield": {
     "Transform": {},
-    "Sprite": {"texture": "pickups", "frame": [229, 452, 16, 16], "scale": 3},
-    "SpriteAnimation": {
-      "frame": [229, 452, 16, 16],
-      "frameCount": 8,
-      "stepX": 18,
-      "framesPerSecond": 10,
-      "loop": true
-    },
-    "Text": {"font": "hud", "size": 26, "color": [255, 255, 255, 255], "content": "O", "offsetX": 16, "offsetY": 6},
+    "Sprite": {"texture": "powerups", "frame": [144, 0, 48, 48], "scale": 1.2},
     "Foreground": {}
   },
   "powerup_force": {
     "Transform": {},
-    "Sprite": {"texture": "pickups", "frame": [229, 452, 16, 16], "scale": 3},
-    "SpriteAnimation": {
-      "frame": [229, 452, 16, 16],
-      "frameCount": 8,
-      "stepX": 18,
-      "framesPerSecond": 10,
-      "loop": true
-    },
-    "Text": {"font": "hud", "size": 26, "color": [255, 255, 255, 255], "content": "F", "offsetX": 16, "offsetY": 6},
+    "Sprite": {"texture": "powerups", "frame": [192, 0, 48, 48], "scale": 1.2},
     "Foreground": {}
+  },
+  "powerup_drone": {
+    "Transform": {},
+    "Sprite": {"texture": "powerups", "frame": [240, 0, 48, 48], "scale": 1.2},
+    "Foreground": {}
+  },
+  "drone": {
+    "Transform": {},
+    "Sprite": {"texture": "pickups", "frame": [173, 342, 29, 32], "scale": 1.6}
   },
   "force": {
     "Transform": {},
@@ -266,27 +273,27 @@
     "Transform": {},
     "Sprite": {"texture": "carriers", "frame": [1, 2, 31, 25], "scale": 2.5},
     "SpriteAnimation": {"frame": [1, 2, 31, 25], "frameCount": 12, "stepX": 33, "framesPerSecond": 12, "loop": true},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_mech"}
   },
   "snake_head": {
     "Transform": {},
     "Sprite": {"texture": "snakes", "frame": [42, 37, 31, 32], "scale": 2},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_bydo"}
   },
   "snake_segment": {
     "Transform": {},
     "Sprite": {"texture": "snakes", "frame": [146, 37, 23, 32], "scale": 2},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_bydo"}
   },
   "ground_turret": {
     "Transform": {},
     "Sprite": {"texture": "turrets", "frame": [2, 67, 30, 32], "scale": 2.5},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_mech"}
   },
   "tile_wall": {"Transform": {}, "RectShape": {"width": 80, "height": 80, "color": [70, 70, 95, 255]}},
   "tile_break": {
     "Transform": {},
     "RectShape": {"width": 80, "height": 80, "color": [140, 90, 50, 255]},
-    "DeathEffect": {"prefab": "explosion"}
+    "DeathEffect": {"prefab": "explosion_mech"}
   }
 }

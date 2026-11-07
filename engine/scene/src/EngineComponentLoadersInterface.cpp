@@ -3,8 +3,11 @@
 #include <cmath>
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <utility>
+#include <vector>
 
+#include "Background.hpp"
 #include "Bounce.hpp"
 #include "Bounded.hpp"
 #include "BoundText.hpp"
@@ -89,13 +92,19 @@ void EngineComponentLoaders::loadTextField(ecs::Registry &registry, const ecs::E
 
 void EngineComponentLoaders::loadVisibleWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
 {
-    if (!data.has("unless")) {
-        registry.emplace<ecs::VisibleWhen>(entity, data.getString("key"), data.getString("value"));
-        return;
+    std::vector<ecs::VisibleWhen::Condition> also;
+    if (data.has("and")) {
+        for (const DataNode &condition : data.child("and").items())
+            also.emplace_back(condition.getString("key"), condition.getString("value"));
     }
-    const DataNode unless = data.child("unless");
-    registry.emplace<ecs::VisibleWhen>(
-        entity, data.getString("key"), data.getString("value"), unless.getString("key"), unless.getString("value"));
+    std::string unlessKey;
+    std::string unlessValue;
+    if (data.has("unless")) {
+        unlessKey = data.child("unless").getString("key");
+        unlessValue = data.child("unless").getString("value");
+    }
+    registry.emplace<ecs::VisibleWhen>(entity, data.getString("key"), data.getString("value"), std::move(also),
+        std::move(unlessKey), std::move(unlessValue));
 }
 
 void EngineComponentLoaders::loadBoundText(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
@@ -118,6 +127,11 @@ void EngineComponentLoaders::loadListView(ecs::Registry &registry, const ecs::En
 void EngineComponentLoaders::loadHidden(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &)
 {
     registry.emplace<ecs::Hidden>(entity);
+}
+
+void EngineComponentLoaders::loadBackground(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &)
+{
+    registry.emplace<ecs::Background>(entity);
 }
 
 void EngineComponentLoaders::loadForeground(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &)

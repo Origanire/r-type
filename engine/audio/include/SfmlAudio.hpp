@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <list>
 #include <memory>
@@ -19,6 +20,7 @@ class SfmlAudio : public IAudio
 public:
     static constexpr std::size_t MAX_PLAYING_SOUNDS = 32;
     static constexpr float MAX_VOLUME = 100.f;
+    static constexpr std::chrono::milliseconds REPEAT_GAP{40};
 
     void declareSound(const std::string &name, const std::string &path);
     void declareMusic(const std::string &name, const std::string &path);
@@ -37,6 +39,7 @@ private:
     std::unordered_map<std::string, sf::SoundBuffer> m_buffers;
     std::unordered_map<std::string, std::string> m_soundPaths;
     std::unordered_map<std::string, std::string> m_musicPaths;
+    std::unordered_map<std::string, std::chrono::steady_clock::time_point> m_lastPlayed;
     std::list<sf::Sound> m_playing;
     std::unique_ptr<sf::Music> m_music;
     float m_soundVolume = MAX_VOLUME;

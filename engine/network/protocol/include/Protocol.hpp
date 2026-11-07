@@ -61,7 +61,8 @@ public:
     static constexpr std::uint8_t BUTTON_RIGHT = 0x08;
     static constexpr std::uint8_t BUTTON_FIRE = 0x10;
     static constexpr std::uint8_t BUTTON_ACTION = 0x20;
-    static constexpr std::uint8_t RESERVED_BUTTONS = 0xC0;
+    static constexpr std::uint8_t BUTTON_BOMB = 0x40;
+    static constexpr std::uint8_t RESERVED_BUTTONS = 0x80;
 
     static constexpr std::uint8_t REJECT_SERVER_FULL = 1;
     static constexpr std::uint8_t REJECT_VERSION_MISMATCH = 2;

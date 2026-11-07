@@ -93,6 +93,8 @@ public:
     void resetSettings();
     void reloadPlugins();
     std::vector<std::string> pluginList() const;
+    const std::string &typedText() const;
+    std::string secretCode() const;
     std::size_t entityCount() const;
     void close();
 

@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
 #include "ScriptEntity.hpp"
@@ -35,6 +36,7 @@ void ScriptEngineImpl::bindApi()
         .def("height", &ScriptWorld::height)
         .def("log", &ScriptWorld::log, py::arg("text"))
         .def("players", &ScriptWorld::players)
+        .def("in_layer", &ScriptWorld::inLayer, py::arg("layer"))
         .def("rule", &ScriptWorld::rule, py::arg("name"))
         .def("play_sound", &ScriptWorld::playSound, py::arg("name"));
 
@@ -85,6 +87,8 @@ void ScriptEngineImpl::bindApi()
         .def("parent", &ScriptEntity::parent)
         .def("set_angle", &ScriptEntity::setAngle, py::arg("degrees"))
         .def("set_player_value", &ScriptEntity::setPlayerValue, py::arg("name"), py::arg("value"))
+        .def("player_value", &ScriptEntity::playerValue, py::arg("name"))
+        .def(py::self == py::self)
         .def_property_readonly("world", &ScriptEntity::world, py::return_value_policy::reference);
 
     py::module_::import("sys").attr("modules")[MODULE_NAME] = api;

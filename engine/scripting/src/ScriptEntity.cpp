@@ -319,6 +319,8 @@ bool ScriptEntity::inputPressed(const std::string &name) const
         return false;
     if (name == INPUT_ACTION)
         return control->actionPressed();
+    if (name == INPUT_BOMB)
+        return control->bombPressed();
     if (name == INPUT_FIRE)
         return control->firing();
     throw ScriptError("ScriptEntity: unknown input " + name);
@@ -367,6 +369,16 @@ void ScriptEntity::setAngle(float degrees)
 void ScriptEntity::setPlayerValue(const std::string &name, int value)
 {
     m_world->setPlayerValue(m_entity, name, value);
+}
+
+int ScriptEntity::playerValue(const std::string &name) const
+{
+    return m_world->playerValue(m_entity, name);
+}
+
+bool ScriptEntity::operator==(const ScriptEntity &other) const
+{
+    return m_entity == other.m_entity;
 }
 
 } // namespace engine::scripting

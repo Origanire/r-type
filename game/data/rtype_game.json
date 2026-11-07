@@ -33,20 +33,24 @@
     {"name": "progress"},
     {"name": "bossHealth"},
     {"name": "shake"},
-    {"name": "skip"}
+    {"name": "skip"},
+    {"name": "bomb", "labels": ["READY", "ARMED", "FLASH", "USED"]}
   ],
   "playerValues": [
     {"name": "weapon", "labels": ["SINGLE", "DOUBLE", "SPREAD"]},
     {"name": "force", "labels": ["", "FORCE", "FORCE OUT"]},
+    {"name": "drone", "labels": ["", "DRONE"]},
     {"name": "charge"}
   ],
   "rules": [
     {"name": "difficulty", "labels": ["NORMAL", "HARD", "EASY"]},
     {"name": "friendlyFire", "labels": ["OFF", "ON"]},
-    {"name": "cheats", "labels": ["OFF", "ON"]}
+    {"name": "cheats", "labels": ["OFF", "ON"]},
+    {"name": "bonuses", "labels": ["ON", "OFF"]}
   ],
   "consoleRule": "cheats",
-  "eventSounds": ["warning", "powerup", "bossDeath"],
+  "eventSounds": ["warning", "powerup", "bossDeath", "bomb"],
+  "secretCode": "EPITECH",
   "playerPrefab": "player",
   "serverScene": [{"prefab": "match"}, {"prefab": "director"}],
   "serverSystems": [
@@ -88,7 +92,11 @@
     "mines": "sprites/enemies/r-typesheet25.gif",
     "carriers": "sprites/enemies/r-typesheet10.gif",
     "snakes": "sprites/enemies/r-typesheet16.gif",
-    "pickups": "sprites/players/r-typesheet2.gif"
+    "pickups": "sprites/players/r-typesheet2.gif",
+    "powerups": "sprites/pickups/powerups.png",
+    "bg_paradise": "backgrounds/stage1_paradise.png",
+    "bg_sky": "backgrounds/stage2_sky.png",
+    "bg_hell": "backgrounds/stage3_hell.png"
   },
   "fonts": {"hud": "fonts/bytebounce.medium.ttf"},
   "sounds": {
@@ -98,9 +106,23 @@
     "click": "sounds/CLICK.mp3",
     "warning": "sounds/SURVOL_CLICK.mp3",
     "powerup": "sounds/CLICK.mp3",
-    "bossDeath": "sounds/EXPLOSION.mp3"
+    "bossDeath": "sounds/EXPLOSION.mp3",
+    "bomb": "sounds/DEATH_BOSS.ogg",
+    "deathBydo": "sounds/DEATH_BYDO.ogg",
+    "deathMech": "sounds/DEATH_MECH.ogg",
+    "deathBoss": "sounds/DEATH_BOSS.ogg",
+    "shotBydo": "sounds/SHOT_BYDO.ogg",
+    "shotMech": "sounds/SHOT_MECH.ogg",
+    "shotBoss": "sounds/SHOT_BOSS.ogg"
   },
-  "music": {"main": "music/MAIN_THEME.mp3", "title": "music/TITLE_THEME.mp3", "boss": "music/MAIN_THEME.mp3"},
+  "music": {
+    "main": "music/MAIN_THEME.mp3",
+    "title": "music/TITLE_THEME.mp3",
+    "boss": "music/BOSS_THEME.mp3",
+    "stage1": "music/STAGE1_PARADISE.ogg",
+    "stage2": "music/STAGE2_SKY.mp3",
+    "stage3": "music/STAGE3_HELL.mp3"
+  },
   "kinds": {
     "1": "ship",
     "2": "player_missile",
@@ -135,7 +157,9 @@
     "31": "snake_segment",
     "32": "ground_turret",
     "33": "tile_wall",
-    "34": "tile_break"
+    "34": "tile_break",
+    "35": "drone",
+    "36": "powerup_drone"
   },
   "startScene": "menu",
   "loadingScene": "loading",
@@ -161,6 +185,7 @@
     "carriers",
     "snakes",
     "pickups",
+    "powerups",
     "shot",
     "explosion",
     "hover",
@@ -718,7 +743,7 @@
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 690},
+            "Transform": {"x": 1100, "y": 730},
             "RectShape": {"width": 700, "height": 80, "color": [20, 30, 70, 230]},
             "Text": {
               "font": "hud",
@@ -738,14 +763,14 @@
               "hoverSound": "hover",
               "clickSound": "click"
             },
-            "Focusable": {"order": 5},
+            "Focusable": {"order": 6},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         },
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 800},
+            "Transform": {"x": 1100, "y": 830},
             "RectShape": {"width": 700, "height": 80, "color": [20, 30, 70, 230]},
             "Text": {
               "font": "hud",
@@ -765,14 +790,14 @@
               "hoverSound": "hover",
               "clickSound": "click"
             },
-            "Focusable": {"order": 6},
+            "Focusable": {"order": 7},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         },
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 910},
+            "Transform": {"x": 1100, "y": 930},
             "RectShape": {"width": 700, "height": 80, "color": [20, 30, 70, 230]},
             "Text": {
               "font": "hud",
@@ -792,7 +817,7 @@
               "hoverSound": "hover",
               "clickSound": "click"
             },
-            "Focusable": {"order": 7},
+            "Focusable": {"order": 8},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         },
@@ -905,7 +930,7 @@
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 410},
+            "Transform": {"x": 1100, "y": 400},
             "RectShape": {"width": 700, "height": 70, "color": [20, 30, 70, 230]},
             "Text": {"font": "hud", "size": 32, "color": [255, 255, 255, 255], "offsetX": 20, "offsetY": 16},
             "BoundText": {"format": "DIFFICULTY  < {field.rule.difficulty} >"},
@@ -927,7 +952,7 @@
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 500},
+            "Transform": {"x": 1100, "y": 480},
             "RectShape": {"width": 700, "height": 70, "color": [20, 30, 70, 230]},
             "Text": {"font": "hud", "size": 32, "color": [255, 255, 255, 255], "offsetX": 20, "offsetY": 16},
             "BoundText": {"format": "FRIENDLY FIRE  < {field.rule.friendlyFire} >"},
@@ -943,6 +968,28 @@
             },
             "Choice": {"name": "rule.friendlyFire", "options": ["OFF", "ON"]},
             "Focusable": {"order": 3},
+            "VisibleWhen": {"key": "lobby.popup", "value": "no"}
+          }
+        },
+        {
+          "prefab": "ui_element",
+          "components": {
+            "Transform": {"x": 1100, "y": 560},
+            "RectShape": {"width": 700, "height": 70, "color": [20, 30, 70, 230]},
+            "Text": {"font": "hud", "size": 32, "color": [255, 255, 255, 255], "offsetX": 20, "offsetY": 16},
+            "BoundText": {"format": "BONUS  < {field.rule.bonuses} >"},
+            "Button": {
+              "action": "",
+              "width": 700,
+              "height": 70,
+              "normal": [20, 30, 70, 230],
+              "hover": [40, 80, 170, 240],
+              "pressed": [80, 200, 255, 255],
+              "hoverSound": "hover",
+              "clickSound": "click"
+            },
+            "Choice": {"name": "rule.bonuses", "options": ["ON", "OFF"]},
+            "Focusable": {"order": 4},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         },
@@ -1298,7 +1345,7 @@
         {
           "prefab": "ui_element",
           "components": {
-            "Transform": {"x": 1100, "y": 590},
+            "Transform": {"x": 1100, "y": 640},
             "RectShape": {"width": 700, "height": 70, "color": [20, 30, 70, 230]},
             "Text": {"font": "hud", "size": 32, "color": [255, 255, 255, 255], "offsetX": 20, "offsetY": 16},
             "BoundText": {"format": "CHEATS  < {field.rule.cheats} >"},
@@ -1313,7 +1360,7 @@
               "clickSound": "click"
             },
             "Choice": {"name": "rule.cheats", "options": ["OFF", "ON"]},
-            "Focusable": {"order": 4},
+            "Focusable": {"order": 5},
             "VisibleWhen": {"key": "lobby.popup", "value": "no"}
           }
         }
@@ -1946,7 +1993,7 @@
     "game": {
       "escapeAction": "pause",
       "systems": [
-        "Parallax",
+        {"system": "Parallax", "boostKey": "world.phase", "boostValue": "clear", "boost": 6},
         "TiltAnimation",
         "SpriteAnimation",
         "DeathEffect",
@@ -1972,13 +2019,33 @@
       ],
       "entities": [
         {"prefab": "hud_line", "components": {"MusicWhen": {"key": "world.phase", "value": "boss", "music": "boss"}}},
+        {"prefab": "hud_line", "components": {"MusicWhen": {"key": "world.stage", "value": "1", "music": "stage1"}}},
+        {"prefab": "hud_line", "components": {"MusicWhen": {"key": "world.stage", "value": "2", "music": "stage2"}}},
+        {"prefab": "hud_line", "components": {"MusicWhen": {"key": "world.stage", "value": "3", "music": "stage3"}}},
         {
           "prefab": "hud_line",
           "components": {"MusicWhen": {"key": "game.phase", "value": "playing", "music": "main"}}
         },
+        {"prefab": "stage_color", "components": {"RectShape": {"width": 1920, "height": 1080, "color": [92, 74, 60, 255]}, "FadeWhen": {"key": "world.stage", "value": "1", "seconds": 1.5}}},
+        {"prefab": "stage_backdrop", "components": {"Transform": {"x": 0, "y": 0}, "Sprite": {"texture": "bg_paradise", "frame": [0, 0, 1920, 1080]}, "FadeWhen": {"key": "world.stage", "value": "1", "seconds": 1.5}}},
+        {"prefab": "stage_backdrop", "components": {"Transform": {"x": 1920, "y": 0}, "Sprite": {"texture": "bg_paradise", "frame": [0, 0, 1920, 1080]}, "FadeWhen": {"key": "world.stage", "value": "1", "seconds": 1.5}}},
+        {"prefab": "stage_color", "components": {"RectShape": {"width": 1920, "height": 1080, "color": [28, 58, 104, 255]}, "FadeWhen": {"key": "world.stage", "value": "2", "seconds": 1.5}}},
+        {"prefab": "stage_backdrop", "components": {"Transform": {"x": 0, "y": 0}, "Sprite": {"texture": "bg_sky", "frame": [0, 0, 1920, 1080]}, "FadeWhen": {"key": "world.stage", "value": "2", "seconds": 1.5}}},
+        {"prefab": "stage_backdrop", "components": {"Transform": {"x": 1920, "y": 0}, "Sprite": {"texture": "bg_sky", "frame": [0, 0, 1920, 1080]}, "FadeWhen": {"key": "world.stage", "value": "2", "seconds": 1.5}}},
+        {"prefab": "stage_color", "components": {"RectShape": {"width": 1920, "height": 1080, "color": [26, 4, 3, 255]}, "FadeWhen": {"key": "world.stage", "value": "3", "seconds": 1.5}}},
+        {"prefab": "stage_backdrop", "components": {"Transform": {"x": 0, "y": 0}, "Sprite": {"texture": "bg_hell", "frame": [0, 0, 1920, 1080]}, "FadeWhen": {"key": "world.stage", "value": "3", "seconds": 1.5}}},
+        {"prefab": "stage_backdrop", "components": {"Transform": {"x": 1920, "y": 0}, "Sprite": {"texture": "bg_hell", "frame": [0, 0, 1920, 1080]}, "FadeWhen": {"key": "world.stage", "value": "3", "seconds": 1.5}}},
         {"prefab": "star_far", "count": 120, "scatter": true},
         {"prefab": "star_mid", "count": 60, "scatter": true},
         {"prefab": "star_near", "count": 25, "scatter": true},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 12, "y": 4}, "RectShape": {"width": 440, "height": 122, "color": [5, 5, 20, 150]}, "VisibleWhen": {"key": "player0.present", "value": "yes"}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 12, "y": 4}, "RectShape": {"width": 440, "height": 3, "color": [80, 200, 255, 255]}, "VisibleWhen": {"key": "player0.present", "value": "yes"}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 472, "y": 4}, "RectShape": {"width": 440, "height": 122, "color": [5, 5, 20, 150]}, "VisibleWhen": {"key": "player1.present", "value": "yes"}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 472, "y": 4}, "RectShape": {"width": 440, "height": 3, "color": [255, 90, 200, 255]}, "VisibleWhen": {"key": "player1.present", "value": "yes"}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 932, "y": 4}, "RectShape": {"width": 440, "height": 122, "color": [5, 5, 20, 150]}, "VisibleWhen": {"key": "player2.present", "value": "yes"}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 932, "y": 4}, "RectShape": {"width": 440, "height": 3, "color": [120, 255, 120, 255]}, "VisibleWhen": {"key": "player2.present", "value": "yes"}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1392, "y": 4}, "RectShape": {"width": 440, "height": 122, "color": [5, 5, 20, 150]}, "VisibleWhen": {"key": "player3.present", "value": "yes"}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1392, "y": 4}, "RectShape": {"width": 440, "height": 3, "color": [255, 170, 60, 255]}, "VisibleWhen": {"key": "player3.present", "value": "yes"}, "Foreground": {}}},
         {
           "prefab": "hud_line",
           "components": {
@@ -2150,7 +2217,7 @@
           "components": {
             "Transform": {"x": 0, "y": 0},
             "RectShape": {"width": 1920, "height": 1080, "color": [0, 0, 0, 0]},
-            "FadeWhen": {"key": "world.phase", "value": "intro", "seconds": 0.6},
+            "FadeWhen": {"key": "world.phase", "value": "victory", "seconds": 1.0},
             "Foreground": {}
           }
         },
@@ -2158,11 +2225,13 @@
           "prefab": "hud_line",
           "components": {
             "Transform": {"x": 0, "y": 0},
-            "RectShape": {"width": 1920, "height": 1080, "color": [0, 0, 0, 0]},
-            "FadeWhen": {"key": "world.phase", "value": "victory", "seconds": 1.0},
+            "RectShape": {"width": 1920, "height": 1080, "color": [255, 250, 230, 0]},
+            "FadeWhen": {"key": "world.bomb", "value": "FLASH", "seconds": 0.25},
             "Foreground": {}
           }
         },
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1290, "y": 1036}, "RectShape": {"width": 110, "height": 30, "color": [255, 200, 60, 235]}, "Text": {"font": "hud", "size": 20, "color": [30, 10, 0, 255], "content": "BOMB", "offsetX": 26, "offsetY": 4}, "VisibleWhen": {"key": "world.bomb", "value": "READY", "and": [{"key": "game.phase", "value": "playing"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1290, "y": 1036}, "RectShape": {"width": 110, "height": 30, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 20, "color": [110, 110, 140, 255], "content": "BOMB", "offsetX": 26, "offsetY": 4}, "VisibleWhen": {"key": "world.bomb", "value": "USED", "and": [{"key": "game.phase", "value": "playing"}]}, "Foreground": {}}},
         {
           "prefab": "hud_line",
           "components": {
@@ -2191,16 +2260,14 @@
             "Foreground": {}
           }
         },
-        {
-          "prefab": "hud_line",
-          "components": {
-            "Transform": {"x": 334, "y": 44},
-            "Text": {"font": "hud", "size": 20, "color": [80, 200, 255, 255]},
-            "BoundText": {"format": "{player0.weapon} {player0.force}"},
-            "VisibleWhen": {"key": "player0.alive", "value": "yes"},
-            "Foreground": {}
-          }
-        },
+        {"prefab": "hud_line", "components": {"Transform": {"x": 24, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "SINGLE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player0.weapon", "value": "SINGLE", "and": [{"key": "player0.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 24, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [80, 200, 255, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "DOUBLE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player0.weapon", "value": "DOUBLE", "and": [{"key": "player0.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 24, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [80, 200, 255, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "SPREAD", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player0.weapon", "value": "SPREAD", "and": [{"key": "player0.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 160, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "FORCE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player0.force", "value": "", "and": [{"key": "player0.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 160, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [80, 200, 255, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "FORCE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player0.force", "value": "FORCE", "and": [{"key": "player0.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 160, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [80, 200, 255, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "FORCE >>", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player0.force", "value": "FORCE OUT", "and": [{"key": "player0.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 296, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "DRONE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player0.drone", "value": "", "and": [{"key": "player0.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 296, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [80, 200, 255, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "DRONE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player0.drone", "value": "DRONE", "and": [{"key": "player0.present", "value": "yes"}]}, "Foreground": {}}},
         {
           "prefab": "hud_line",
           "components": {
@@ -2211,16 +2278,14 @@
             "Foreground": {}
           }
         },
-        {
-          "prefab": "hud_line",
-          "components": {
-            "Transform": {"x": 794, "y": 44},
-            "Text": {"font": "hud", "size": 20, "color": [255, 90, 200, 255]},
-            "BoundText": {"format": "{player1.weapon} {player1.force}"},
-            "VisibleWhen": {"key": "player1.alive", "value": "yes"},
-            "Foreground": {}
-          }
-        },
+        {"prefab": "hud_line", "components": {"Transform": {"x": 484, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "SINGLE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player1.weapon", "value": "SINGLE", "and": [{"key": "player1.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 484, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 90, 200, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "DOUBLE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player1.weapon", "value": "DOUBLE", "and": [{"key": "player1.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 484, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 90, 200, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "SPREAD", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player1.weapon", "value": "SPREAD", "and": [{"key": "player1.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 620, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "FORCE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player1.force", "value": "", "and": [{"key": "player1.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 620, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 90, 200, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "FORCE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player1.force", "value": "FORCE", "and": [{"key": "player1.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 620, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 90, 200, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "FORCE >>", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player1.force", "value": "FORCE OUT", "and": [{"key": "player1.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 756, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "DRONE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player1.drone", "value": "", "and": [{"key": "player1.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 756, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 90, 200, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "DRONE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player1.drone", "value": "DRONE", "and": [{"key": "player1.present", "value": "yes"}]}, "Foreground": {}}},
         {
           "prefab": "hud_line",
           "components": {
@@ -2231,16 +2296,14 @@
             "Foreground": {}
           }
         },
-        {
-          "prefab": "hud_line",
-          "components": {
-            "Transform": {"x": 1254, "y": 44},
-            "Text": {"font": "hud", "size": 20, "color": [120, 255, 120, 255]},
-            "BoundText": {"format": "{player2.weapon} {player2.force}"},
-            "VisibleWhen": {"key": "player2.alive", "value": "yes"},
-            "Foreground": {}
-          }
-        },
+        {"prefab": "hud_line", "components": {"Transform": {"x": 944, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "SINGLE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player2.weapon", "value": "SINGLE", "and": [{"key": "player2.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 944, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [120, 255, 120, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "DOUBLE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player2.weapon", "value": "DOUBLE", "and": [{"key": "player2.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 944, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [120, 255, 120, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "SPREAD", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player2.weapon", "value": "SPREAD", "and": [{"key": "player2.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1080, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "FORCE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player2.force", "value": "", "and": [{"key": "player2.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1080, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [120, 255, 120, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "FORCE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player2.force", "value": "FORCE", "and": [{"key": "player2.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1080, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [120, 255, 120, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "FORCE >>", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player2.force", "value": "FORCE OUT", "and": [{"key": "player2.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1216, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "DRONE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player2.drone", "value": "", "and": [{"key": "player2.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1216, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [120, 255, 120, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "DRONE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player2.drone", "value": "DRONE", "and": [{"key": "player2.present", "value": "yes"}]}, "Foreground": {}}},
         {
           "prefab": "hud_line",
           "components": {
@@ -2251,16 +2314,14 @@
             "Foreground": {}
           }
         },
-        {
-          "prefab": "hud_line",
-          "components": {
-            "Transform": {"x": 1714, "y": 44},
-            "Text": {"font": "hud", "size": 20, "color": [255, 170, 60, 255]},
-            "BoundText": {"format": "{player3.weapon} {player3.force}"},
-            "VisibleWhen": {"key": "player3.alive", "value": "yes"},
-            "Foreground": {}
-          }
-        },
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1404, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "SINGLE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player3.weapon", "value": "SINGLE", "and": [{"key": "player3.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1404, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 170, 60, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "DOUBLE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player3.weapon", "value": "DOUBLE", "and": [{"key": "player3.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1404, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 170, 60, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "SPREAD", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player3.weapon", "value": "SPREAD", "and": [{"key": "player3.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1540, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "FORCE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player3.force", "value": "", "and": [{"key": "player3.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1540, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 170, 60, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "FORCE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player3.force", "value": "FORCE", "and": [{"key": "player3.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1540, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 170, 60, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "FORCE >>", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player3.force", "value": "FORCE OUT", "and": [{"key": "player3.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1676, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [30, 30, 48, 220]}, "Text": {"font": "hud", "size": 18, "color": [110, 110, 140, 255], "content": "DRONE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player3.drone", "value": "", "and": [{"key": "player3.present", "value": "yes"}]}, "Foreground": {}}},
+        {"prefab": "hud_line", "components": {"Transform": {"x": 1676, "y": 84}, "RectShape": {"width": 128, "height": 28, "color": [255, 170, 60, 235]}, "Text": {"font": "hud", "size": 18, "color": [10, 10, 30, 255], "content": "DRONE", "offsetX": 10, "offsetY": 5}, "VisibleWhen": {"key": "player3.drone", "value": "DRONE", "and": [{"key": "player3.present", "value": "yes"}]}, "Foreground": {}}},
         {
           "prefab": "hud_line",
           "components": {

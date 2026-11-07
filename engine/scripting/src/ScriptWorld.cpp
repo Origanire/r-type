@@ -3,6 +3,7 @@
 #include <iostream>
 #include <utility>
 
+#include "Collider.hpp"
 #include "Destroyed.hpp"
 #include "Match.hpp"
 #include "MatchSystem.hpp"
@@ -188,6 +189,19 @@ std::vector<ScriptEntity> ScriptWorld::players()
     return ships;
 }
 
+std::vector<ScriptEntity> ScriptWorld::inLayer(const std::string &layer)
+{
+    const std::uint32_t bit = m_context.layerTable().bit(layer);
+    const auto &colliders = m_registry.getComponents<ecs::Collider>();
+    std::vector<ScriptEntity> found;
+    for (std::size_t i : m_registry.view<ecs::Collider>()) {
+        const ecs::Entity entity = m_registry.entityAt(i);
+        if (colliders.at(i).layer() == bit && !m_registry.has<ecs::Destroyed>(entity))
+            found.emplace_back(*this, entity);
+    }
+    return found;
+}
+
 std::string ScriptWorld::rule(const std::string &name) const
 {
     const scene::WorldValueTable &rules = m_context.ruleTable();
@@ -238,6 +252,19 @@ std::optional<ScriptEntity> ScriptWorld::playerShip(std::size_t slot)
             return ship;
     }
     return std::nullopt;
+}
+
+int ScriptWorld::playerValue(const ecs::Entity &avatar, const std::string &name) const
+{
+    const auto index = m_context.playerTable().index(name);
+    if (!index)
+        throw ScriptError("ScriptWorld: unknown player value " + name);
+    if (!m_registry.isAlive(avatar) || !m_registry.has<ecs::Owner>(avatar))
+        return 0;
+    const ecs::Entity owner = m_registry.get<ecs::Owner>(avatar).owner();
+    if (!m_registry.isAlive(owner) || !m_registry.has<ecs::PlayerValues>(owner))
+        return 0;
+    return m_registry.get<ecs::PlayerValues>(owner).values().at(*index);
 }
 
 } // namespace engine::scripting

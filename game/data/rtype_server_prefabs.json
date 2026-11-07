@@ -239,6 +239,24 @@
     "DespawnOffscreen": {"minX": 0, "minY": 0, "maxX": 1920, "maxY": 1080},
     "Replicated": {"kind": 2}
   },
+  "player_missile_back": {
+    "Transform": {},
+    "Velocity": {"x": -1500, "y": 0},
+    "Rotation": {"degrees": 180},
+    "Collider": {"width": 48, "height": 12, "layer": "player_missile", "hits": ["enemy"]},
+    "ContactDamage": {"amount": 1, "destroyOnHit": true},
+    "DespawnOffscreen": {"minX": 0, "minY": 0, "maxX": 1920, "maxY": 1080},
+    "Replicated": {"kind": 2}
+  },
+  "player_missile_back_ff": {
+    "Transform": {},
+    "Velocity": {"x": -1500, "y": 0},
+    "Rotation": {"degrees": 180},
+    "Collider": {"width": 48, "height": 12, "layer": "player_missile", "hits": ["enemy", "player"]},
+    "ContactDamage": {"amount": 1, "destroyOnHit": true},
+    "DespawnOffscreen": {"minX": 0, "minY": 0, "maxX": 1920, "maxY": 1080},
+    "Replicated": {"kind": 2}
+  },
   "player_missile_charged": {
     "Transform": {},
     "Velocity": {"x": 1300, "y": 0},
@@ -286,6 +304,20 @@
     "Script": {"file": "powerup.py", "params": {"effect": "force"}},
     "DespawnOffscreen": {"minX": -500, "minY": -400, "maxX": 2500, "maxY": 1480},
     "Replicated": {"kind": 26}
+  },
+  "powerup_drone": {
+    "Transform": {},
+    "Velocity": {"x": 0, "y": 0},
+    "Collider": {"width": 48, "height": 48, "layer": "pickup", "hits": ["player"]},
+    "Script": {"file": "powerup.py", "params": {"effect": "drone"}},
+    "DespawnOffscreen": {"minX": -500, "minY": -400, "maxX": 2500, "maxY": 1480},
+    "Replicated": {"kind": 36}
+  },
+  "drone": {
+    "Transform": {},
+    "Velocity": {"x": 0, "y": 0},
+    "Script": {"file": "drone.py"},
+    "Replicated": {"kind": 35}
   },
   "force": {
     "Transform": {},

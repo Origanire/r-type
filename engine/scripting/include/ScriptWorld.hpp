@@ -46,6 +46,7 @@ public:
     float height() const;
     void log(const std::string &text) const;
     std::vector<ScriptEntity> players();
+    std::vector<ScriptEntity> inLayer(const std::string &layer);
     std::string rule(const std::string &name) const;
     void playSound(const std::string &name);
     void setPlayerValue(const ecs::Entity &avatar, const std::string &name, int value);
@@ -53,6 +54,7 @@ public:
     void reply(std::size_t slot, const std::string &text);
     const std::string &consoleScript() const;
     std::optional<ScriptEntity> playerShip(std::size_t slot);
+    int playerValue(const ecs::Entity &avatar, const std::string &name) const;
 
     ecs::Registry &registry() const;
     ecs::IEntityFactory &factory() const;

@@ -117,7 +117,7 @@ void EngineSystemBuilders::registerRules(SystemFactory &factory)
 
 void EngineSystemBuilders::registerPresentation(SystemFactory &factory)
 {
-    factory.add("Parallax", &EngineSystemBuilders::buildSimple<ecs::ParallaxSystem>);
+    factory.add("Parallax", &EngineSystemBuilders::buildParallax);
     factory.add("TiltAnimation", &EngineSystemBuilders::buildSimple<ecs::TiltAnimationSystem>);
     factory.add("SpriteAnimation", &EngineSystemBuilders::buildSimple<ecs::SpriteAnimationSystem>);
     factory.add("Anchor", &EngineSystemBuilders::buildSimple<ecs::AnchorSystem>);
@@ -177,6 +177,14 @@ std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildTilemap(SystemContext &
 std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildMusic(SystemContext &context, const DataNode &)
 {
     return std::make_unique<ecs::MusicSystem>(context.registry(), context.uiStore(), context.audio());
+}
+
+std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildParallax(SystemContext &context, const DataNode &entry)
+{
+    if (!entry.has("boostKey"))
+        return std::make_unique<ecs::ParallaxSystem>(context.registry());
+    return std::make_unique<ecs::ParallaxSystem>(context.registry(), context.uiStore(), entry.getString("boostKey"),
+        entry.getString("boostValue"), entry.getFloat("boost"));
 }
 
 std::unique_ptr<ecs::ISystem> EngineSystemBuilders::buildShake(SystemContext &context, const DataNode &entry)

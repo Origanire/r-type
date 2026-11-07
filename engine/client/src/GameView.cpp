@@ -256,6 +256,16 @@ bool GameView::debugPressed() const
     return m_uiInput.keyPressed(UiKey::Debug);
 }
 
+const std::string &GameView::typedText() const
+{
+    return m_uiInput.typedText();
+}
+
+std::string GameView::secretCode() const
+{
+    return m_game.has("secretCode") ? m_game.getString("secretCode") : std::string();
+}
+
 std::size_t GameView::entityCount() const
 {
     return m_registry.view<ecs::Transform>().size();

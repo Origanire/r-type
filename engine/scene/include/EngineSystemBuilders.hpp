@@ -43,6 +43,7 @@ private:
     static std::unique_ptr<ecs::ISystem> buildListView(SystemContext &context, const DataNode &entry);
     static std::unique_ptr<ecs::ISystem> buildTilemap(SystemContext &context, const DataNode &entry);
     static std::unique_ptr<ecs::ISystem> buildMusic(SystemContext &context, const DataNode &entry);
+    static std::unique_ptr<ecs::ISystem> buildParallax(SystemContext &context, const DataNode &entry);
     static std::unique_ptr<ecs::ISystem> buildShake(SystemContext &context, const DataNode &entry);
     static std::unique_ptr<ecs::ISystem> buildChoice(SystemContext &context, const DataNode &entry);
     static std::unique_ptr<ecs::ISystem> buildKeyBind(SystemContext &context, const DataNode &entry);

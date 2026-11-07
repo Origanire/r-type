@@ -77,6 +77,7 @@ private:
     static void loadBoundText(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadListView(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadHidden(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
+    static void loadBackground(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadForeground(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadProgressBar(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);
     static void loadFadeWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data);

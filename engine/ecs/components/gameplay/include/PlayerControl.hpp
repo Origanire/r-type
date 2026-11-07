@@ -18,6 +18,8 @@ public:
     void setAction(bool action);
     bool action() const;
     bool actionPressed() const;
+    void setBomb(bool bomb);
+    bool bombPressed() const;
     float fireHeld() const;
     float fireReleased() const;
     void advance(float dt);
@@ -30,6 +32,9 @@ private:
     bool m_action;
     bool m_previousAction;
     bool m_actionPressed;
+    bool m_bomb;
+    bool m_previousBomb;
+    bool m_bombPressed;
     float m_fireHeld;
     float m_fireReleased;
 };

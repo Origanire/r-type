@@ -84,8 +84,7 @@ bool ClientConnection::handlePacket(const Packet &packet)
     if (packet.holds<SnapshotMessage>()) {
         if (!handleSnapshot(packet.as<SnapshotMessage>()))
             return false;
-    } else if (packet.reliableId() == 0 && m_serverSequence
-        && !Codec::isNewer(packet.sequence(), *m_serverSequence)) {
+    } else if (packet.reliableId() == 0 && m_serverSequence && !Codec::isNewer(packet.sequence(), *m_serverSequence)) {
         return false;
     }
     if (packet.type() == MessageType::ServerShutdown)

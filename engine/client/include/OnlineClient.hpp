@@ -18,6 +18,7 @@
 #include "Packet.hpp"
 #include "RoomListMessage.hpp"
 #include "RoomUpdateMessage.hpp"
+#include "SecretCode.hpp"
 #include "SnapshotMessage.hpp"
 #include "SnapshotPresenter.hpp"
 
@@ -30,6 +31,7 @@ public:
     static constexpr std::chrono::seconds ROOM_SILENCE_LIMIT{4};
     static constexpr std::chrono::seconds NOTICE_DURATION{4};
     static constexpr const char *NOTICE_KEY = "game.notice";
+    static constexpr std::chrono::milliseconds BOMB_HOLD{300};
     static constexpr const char *MENU_SCENE = "menu";
     static constexpr const char *LOBBY_SCENE = "lobby";
     static constexpr const char *ROOM_SCENE = "room";
@@ -50,6 +52,7 @@ private:
     using Time = std::chrono::steady_clock::time_point;
 
     void updateNetwork(Time now);
+    void watchSecretCode(Time now);
     void handleActions();
     void handleConsole();
     void setPaused(bool paused);
@@ -91,6 +94,8 @@ private:
     std::string m_settingsReturn;
     DebugMetrics m_metrics;
     DevConsole m_console;
+    SecretCode m_secretCode;
+    Time m_bombUntil;
 };
 
 } // namespace engine::client

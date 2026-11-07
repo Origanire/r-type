@@ -54,6 +54,7 @@ Simulation::Simulation(const std::filesystem::path &dataDirectory, const std::st
     m_context.setCanSpawn(std::bind_front(&Simulation::canSpawn, this));
     m_context.setWorldValues(m_worldValues, m_worldTable);
     m_context.setPlayerTable(m_playerTable);
+    m_context.setLayerTable(m_layers);
     m_context.setRules(m_ruleTable, rules);
     if (m_game.child("files").has("console"))
         m_context.setConsoleScript(m_game.child("files").getString("console"));
@@ -94,6 +95,7 @@ void Simulation::setInput(std::size_t slot, std::uint8_t buttons)
         buttons & network::Protocol::BUTTON_LEFT, buttons & network::Protocol::BUTTON_RIGHT);
     control.setFiring(buttons & network::Protocol::BUTTON_FIRE);
     control.setAction(buttons & network::Protocol::BUTTON_ACTION);
+    control.setBomb(buttons & network::Protocol::BUTTON_BOMB);
 }
 
 void Simulation::update(float dt)

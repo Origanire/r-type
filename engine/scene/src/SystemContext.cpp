@@ -10,8 +10,8 @@ SystemContext::SystemContext(ecs::Registry &registry, ecs::IEntityFactory &facto
     : m_registry(registry), m_factory(factory), m_collisions(), m_deaths(), m_uiActions(),
       m_canSpawn(&SystemContext::alwaysAllowSpawn), m_renderer(nullptr), m_audio(nullptr), m_uiInput(nullptr),
       m_uiStore(nullptr), m_worldValues(nullptr), m_worldTable(nullptr), m_area(), m_sounds(), m_commands(),
-      m_replies(), m_consoleScript(), m_emptyTable(), m_playerTable(nullptr), m_ruleTable(nullptr), m_ruleValues(),
-      m_flags()
+      m_replies(), m_consoleScript(), m_emptyTable(), m_playerTable(nullptr), m_layerTable(nullptr),
+      m_ruleTable(nullptr), m_ruleValues(), m_flags()
 {
 }
 
@@ -159,6 +159,18 @@ void SystemContext::setPlayerTable(const WorldValueTable &table)
 const WorldValueTable &SystemContext::playerTable() const
 {
     return m_playerTable ? *m_playerTable : m_emptyTable;
+}
+
+void SystemContext::setLayerTable(const LayerTable &layers)
+{
+    m_layerTable = &layers;
+}
+
+const LayerTable &SystemContext::layerTable() const
+{
+    if (!m_layerTable)
+        throw SceneError("SystemContext: this program has no layer table");
+    return *m_layerTable;
 }
 
 void SystemContext::setRules(const WorldValueTable &table, std::vector<std::uint8_t> values)

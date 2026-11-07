@@ -1,6 +1,7 @@
 """Power-up: floats to the left; the first player who touches it gets its effect.
 
-Param effect: "double", "spread", "heal", "shield" or "force".
+Param effect: "double", "spread", "heal", "shield", "force" or "drone".
+A second drone for the same ship heals instead.
 """
 
 import common
@@ -8,6 +9,8 @@ import player
 
 FORCE_OFFSET_X = 100.0
 FORCE_OFFSET_Y = 0.0
+DRONE_OFFSET_X = -110.0
+DRONE_OFFSET_Y = 10.0
 
 
 def on_spawn(e):
@@ -40,5 +43,9 @@ def apply(effect, ship):
         force = world.spawn("force", ship.x() + FORCE_OFFSET_X, ship.y())
         force.attach_to(ship, FORCE_OFFSET_X, FORCE_OFFSET_Y)
         ship.set_player_value("force", 1)
+    elif effect == "drone" and ship.player_value("drone") == 0:
+        drone = world.spawn("drone", ship.x() + DRONE_OFFSET_X, ship.y() + DRONE_OFFSET_Y)
+        drone.attach_to(ship, DRONE_OFFSET_X, DRONE_OFFSET_Y)
+        ship.set_player_value("drone", 1)
     else:
         ship.heal(30)

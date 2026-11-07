@@ -2,6 +2,7 @@
 
 #include "Anchor.hpp"
 #include "Attachment.hpp"
+#include "Background.hpp"
 #include "Bounce.hpp"
 #include "Bounded.hpp"
 #include "BoundText.hpp"
@@ -104,6 +105,7 @@ void registerEngineComponents(Registry &registry)
     registry.registerComponent<TextField>();
     registry.registerComponent<VisibleWhen>();
     registry.registerComponent<FadeWhen>();
+    registry.registerComponent<Background>();
     registry.registerComponent<Foreground>();
     registry.registerComponent<ProgressBar>();
     registry.registerComponent<Script>();

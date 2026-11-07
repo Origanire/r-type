@@ -95,6 +95,7 @@ Shots fired by an entity are owned by it: a kill by the shot credits the shooter
 | `e.nearest_player()` | `(x, y)` of the center of the nearest player avatar, or `None` |
 | `e.angle_to_player()` | Angle toward the nearest player, `180` if there is none |
 | `e.set_player_value(name, value)` | Sets a value of `playerValues` for the owner (`weapon`, `charge`...) |
+| `e.player_value(name)` | Reads back a value of `playerValues` (0 when the entity has no player) |
 
 ### Inputs (player avatars only)
 
@@ -104,6 +105,8 @@ Shots fired by an entity are owned by it: a kill by the shot credits the shooter
 | `e.input_held("action")` | `1.0` while action is held, else `0` |
 | `e.input_pressed("fire")` | `True` while fire is held |
 | `e.input_pressed("action")` | `True` only on the tick action was pressed |
+| `a == b` | `True` when two handles point to the same entity |
+| `e.input_pressed("bomb")` | `True` on the tick the player finished typing the game's `secretCode` |
 | `e.input_released("fire")` | On the tick fire is released: how long it was held. Otherwise `0` |
 
 ## World (`e.world`)
@@ -135,6 +138,7 @@ Shots fired by an entity are owned by it: a kill by the shot credits the shooter
 | `world.can_spawn()` | `False` when the entity limit is reached or no match is playing |
 | `world.count_scripted(file)` | Number of living entities running that script |
 | `world.players()` | Handles of the living player avatars |
+| `world.in_layer(layer)` | Handles of the living entities whose collider is in that layer (`"enemy"`...) |
 | `world.players_alive()` | Number of living player avatars |
 | `world.match_phase()` | `"waiting"`, `"playing"` or `"over"` |
 | `world.end_match()` | Ends the match now (victory) |

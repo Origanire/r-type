@@ -79,7 +79,6 @@ private:
     std::vector<std::optional<ClientSession>> m_clients;
     std::map<std::uint16_t, GameRoom> m_rooms;
     std::mt19937 m_random;
-    std::uint32_t m_sequence;
     std::uint16_t m_nextRoomId;
     Time m_rateWindow;
     Time m_lastRoomUpdate;

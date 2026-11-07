@@ -9,7 +9,7 @@ namespace engine::network {
 
 GameServer::GameServer(std::uint16_t port, const NetworkSettings &settings, ISessionFactory &factory)
     : m_settings(settings), m_codec(settings), m_transport(port), m_factory(factory), m_clients(settings.maxClients()),
-      m_rooms(), m_random(std::random_device{}()), m_sequence(0), m_nextRoomId(1), m_rateWindow(), m_lastRoomUpdate(),
+      m_rooms(), m_random(std::random_device{}()), m_nextRoomId(1), m_rateWindow(), m_lastRoomUpdate(),
       m_connectRequests(0)
 {
     std::cout << "Server listening on UDP port " << port << std::endl;
@@ -26,6 +26,12 @@ void GameServer::poll()
     }
     for (const net::Datagram &datagram : m_transport.poll())
         receive(datagram, now);
+    for (std::size_t client = 0; client < m_clients.size(); ++client) {
+        if (!m_clients[client])
+            continue;
+        for (Packet &packet : m_clients[client]->sender().expired(now))
+            sendTo(client, std::move(packet));
+    }
 }
 
 void GameServer::tick(float dt)
@@ -62,6 +68,16 @@ void GameServer::receive(const net::Datagram &datagram, Time now)
     const auto client = findClient(datagram.sender());
     if (!client || tokenOf(*packet) != m_clients[*client]->token())
         return;
+    ClientSession &session = *m_clients[*client];
+    session.receiver().receive(packet->sequence());
+    session.sender().acknowledge(packet->ack(), packet->ackBits(), now);
+    if (packet->reliableId() != 0) {
+        if (session.receiver().isDuplicate(packet->reliableId())) {
+            session.markSeen(now);
+            return;
+        }
+        session.receiver().remember(packet->reliableId());
+    }
     handleSessionPacket(*client, *packet, now);
 }
 
@@ -78,10 +94,8 @@ void GameServer::handleConnect(const net::Datagram &datagram, const Packet &pack
         return;
     }
     std::optional<std::size_t> client = findClient(datagram.sender());
-    if (client) {
-        if (now - m_clients[*client]->lastAccept() < ACCEPT_REPEAT_DELAY)
-            return;
-    } else {
+    const bool known = client.has_value();
+    if (!known) {
         client = findFreeClient();
         if (!client) {
             reject(datagram.sender(), Protocol::REJECT_SERVER_FULL);
@@ -89,8 +103,11 @@ void GameServer::handleConnect(const net::Datagram &datagram, const Packet &pack
         }
         m_clients[*client].emplace(datagram.sender(), newToken(), now);
     }
+    m_clients[*client]->receiver().receive(packet.sequence());
+    if (known && now - m_clients[*client]->lastAccept() < ACCEPT_REPEAT_DELAY)
+        return;
     m_clients[*client]->markAccepted(now);
-    send(datagram.sender(), Packet(AcceptMessage(m_clients[*client]->token(), static_cast<std::uint8_t>(*client))));
+    sendTo(*client, Packet(AcceptMessage(m_clients[*client]->token(), static_cast<std::uint8_t>(*client))));
 }
 
 void GameServer::handleSessionPacket(std::size_t client, const Packet &packet, Time now)
@@ -193,13 +210,21 @@ void GameServer::tickRoom(GameRoom &room, float dt, Time now)
 
 void GameServer::sendTo(std::size_t client, Packet packet)
 {
-    if (m_clients[client])
-        send(m_clients[client]->peer(), std::move(packet));
+    if (!m_clients[client])
+        return;
+    ClientSession &session = *m_clients[client];
+    if (packet.reliableId() == 0 && Protocol::isReliable(packet.type()))
+        packet.setReliableId(session.sender().nextReliableId());
+    packet.setSequence(session.nextOutgoingSequence());
+    packet.setAck(session.receiver().ack());
+    packet.setAckBits(session.receiver().ackBits());
+    if (packet.reliableId() != 0)
+        session.sender().track(packet.sequence(), packet, std::chrono::steady_clock::now());
+    m_transport.send(session.peer(), m_codec.encode(packet));
 }
 
 void GameServer::send(const net::Endpoint &peer, Packet packet)
 {
-    packet.setSequence(m_sequence++);
     m_transport.send(peer, m_codec.encode(packet));
 }
 

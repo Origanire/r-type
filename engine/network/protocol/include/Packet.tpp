@@ -8,7 +8,8 @@ namespace engine::network {
 
 template <class Message>
 Packet::Packet(Message message, std::uint32_t sequence, std::uint8_t version)
-    : m_type(Message::TYPE), m_version(version), m_sequence(sequence), m_body(std::move(message))
+    : m_type(Message::TYPE), m_version(version), m_sequence(sequence), m_ack(0), m_ackBits(0), m_reliableId(0),
+      m_body(std::move(message))
 {
 }
 

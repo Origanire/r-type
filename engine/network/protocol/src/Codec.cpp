@@ -27,6 +27,9 @@ std::vector<std::uint8_t> Codec::encode(const Packet &packet) const
     writer.writeU8(packet.version());
     writer.writeU8(static_cast<std::uint8_t>(packet.type()));
     writer.writeU32(packet.sequence());
+    writer.writeU32(packet.ack());
+    writer.writeU32(packet.ackBits());
+    writer.writeU16(packet.reliableId());
     writer.writeU16(0);
     writeBody(writer, packet);
     writer.patchU16(PAYLOAD_SIZE_OFFSET, static_cast<std::uint16_t>(writer.size() - Protocol::HEADER_SIZE));
@@ -48,11 +51,17 @@ std::optional<Packet> Codec::decode(std::span<const std::uint8_t> bytes, Receive
             return std::nullopt;
         const auto type = static_cast<MessageType>(rawType);
         const std::uint32_t sequence = reader.readU32();
+        const std::uint32_t ack = reader.readU32();
+        const std::uint32_t ackBits = reader.readU32();
+        const std::uint16_t reliableId = reader.readU16();
         if (reader.readU16() != bytes.size() - Protocol::HEADER_SIZE)
             return std::nullopt;
         if (version != Protocol::VERSION && type != MessageType::Connect && type != MessageType::Reject)
             return std::nullopt;
         Packet packet = readBody(reader, type, sequence, version);
+        packet.setAck(ack);
+        packet.setAckBits(ackBits);
+        packet.setReliableId(reliableId);
         if (reader.remaining() != 0 || !isValid(packet))
             return std::nullopt;
         return packet;

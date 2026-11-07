@@ -255,6 +255,10 @@ add_library(engine_network
     network/protocol/src/Codec.cpp
     network/protocol/src/PacketVisitors.cpp
     network/protocol/src/Packet.cpp
+    network/protocol/src/Protocol.cpp
+    network/protocol/src/PendingMessage.cpp
+    network/protocol/src/ReliableReceiver.cpp
+    network/protocol/src/ReliableSender.cpp
     network/messages/game/src/PlayerStatus.cpp
     network/messages/game/src/EntityState.cpp
     network/messages/connection/src/ConnectMessage.cpp

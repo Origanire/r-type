@@ -29,13 +29,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
-# Each target below is commented out until its sources exist: uncomment a
-# block when the first files of that module are written.
-#
-# Rules [p.12][p.15]:
-#   - engine targets never link anything from game/
-#   - r-type_server never links engine_render, engine_audio, engine_input or engine_ui
-
 # The engine is a standalone project; R-Type is only data (game/data), Python scripts (game/scripts) and assets.
 add_subdirectory(engine)
 
@@ -45,3 +38,9 @@ engine_add_game(rtype
     DATA game/data
     SCRIPTS game/scripts
     ASSETS assets)
+
+engine_add_game(skyhop
+    LOCAL skyhop
+    DATA game2/data
+    SCRIPTS game2/scripts
+    ASSETS game2/assets)

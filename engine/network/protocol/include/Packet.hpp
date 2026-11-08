@@ -4,6 +4,8 @@
 #include <variant>
 
 #include "AcceptMessage.hpp"
+#include "ChatBroadcastMessage.hpp"
+#include "ChatMessage.hpp"
 #include "ConnectMessage.hpp"
 #include "ConsoleCommandMessage.hpp"
 #include "ConsoleTextMessage.hpp"
@@ -32,6 +34,7 @@
 #include "RoomRejectedMessage.hpp"
 #include "RoomUpdateMessage.hpp"
 #include "ServerShutdownMessage.hpp"
+#include "SnapshotDeltaMessage.hpp"
 #include "SnapshotMessage.hpp"
 #include "StartGameMessage.hpp"
 
@@ -45,7 +48,8 @@ public:
         PlayerKilledMessage, PlayerLeftMessage, ServerShutdownMessage, ListRoomsMessage, CreateRoomMessage,
         JoinRoomMessage, LeaveRoomMessage, StartGameMessage, KickPlayerMessage, DeleteRoomMessage, RoomListMessage,
         RoomJoinedMessage, RoomRejectedMessage, RoomUpdateMessage, GameStartedMessage, KickedMessage, RoomClosedMessage,
-        PlaySoundMessage, ConsoleCommandMessage, ConsoleTextMessage>;
+        PlaySoundMessage, ConsoleCommandMessage, ConsoleTextMessage, SnapshotDeltaMessage, ChatMessage,
+        ChatBroadcastMessage>;
 
     template <class Message>
     explicit Packet(Message message, std::uint32_t sequence = 0, std::uint8_t version = Protocol::VERSION);

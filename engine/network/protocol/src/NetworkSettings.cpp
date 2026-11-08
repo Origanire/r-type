@@ -33,6 +33,9 @@ NetworkSettings::NetworkSettings(const scene::DataNode &game, const scene::DataN
       m_maxRooms(static_cast<std::size_t>(readBounded(network, "maxRooms", MAX_ROOM_LIMIT))),
       m_roomNameMaxLength(static_cast<std::size_t>(readBounded(network, "roomNameMaxLength", MAX_TEXT_LIMIT))),
       m_roomCodeMaxLength(static_cast<std::size_t>(readBounded(network, "roomCodeMaxLength", MAX_TEXT_LIMIT))),
+      m_chatMaxLength(static_cast<std::size_t>(readBounded(network, "chatMaxLength", MAX_CHAT_LIMIT))),
+      m_playerNameMaxLength(static_cast<std::size_t>(readBounded(network, "playerNameMaxLength", MAX_TEXT_LIMIT))),
+      m_chatInterval(readDuration(network, "chatIntervalMs")),
       m_maxJoinAttempts(static_cast<unsigned>(readBounded(network, "maxJoinAttempts", MAX_COUNT))),
       m_worldValueCount(game.has("worldValues") ? game.child("worldValues").items().size() : 0),
       m_playerValueCount(game.has("playerValues") ? game.child("playerValues").items().size() : 0),
@@ -61,6 +64,21 @@ std::size_t NetworkSettings::roomNameMaxLength() const
 std::size_t NetworkSettings::roomCodeMaxLength() const
 {
     return m_roomCodeMaxLength;
+}
+
+std::size_t NetworkSettings::chatMaxLength() const
+{
+    return m_chatMaxLength;
+}
+
+std::size_t NetworkSettings::playerNameMaxLength() const
+{
+    return m_playerNameMaxLength;
+}
+
+std::chrono::milliseconds NetworkSettings::chatInterval() const
+{
+    return m_chatInterval;
 }
 
 std::size_t NetworkSettings::playerValueCount() const

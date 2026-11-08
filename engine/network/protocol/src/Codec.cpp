@@ -143,6 +143,12 @@ Packet Codec::readBody(net::ByteReader &reader, MessageType type, std::uint32_t 
         return readAs<ConsoleCommandMessage>(reader, sequence, version);
     case MessageType::ConsoleText:
         return readAs<ConsoleTextMessage>(reader, sequence, version);
+    case MessageType::SnapshotDelta:
+        return readAs<SnapshotDeltaMessage>(reader, sequence, version);
+    case MessageType::Chat:
+        return readAs<ChatMessage>(reader, sequence, version);
+    case MessageType::ChatBroadcast:
+        return readAs<ChatBroadcastMessage>(reader, sequence, version);
     }
     throw net::NetError("Codec: unknown message type");
 }

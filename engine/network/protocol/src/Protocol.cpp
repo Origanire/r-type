@@ -11,6 +11,8 @@ bool Protocol::isReliable(MessageType type)
     case MessageType::StartGame:
     case MessageType::KickPlayer:
     case MessageType::DeleteRoom:
+    case MessageType::Chat:
+    case MessageType::ChatBroadcast:
     case MessageType::EntityDestroyed:
     case MessageType::PlayerJoined:
     case MessageType::PlayerKilled:

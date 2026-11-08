@@ -19,6 +19,7 @@ enum class MessageType : std::uint8_t
     KickPlayer = 0x0A,
     DeleteRoom = 0x0B,
     ConsoleCommand = 0x0C,
+    Chat = 0x0D,
     Accept = 0x81,
     Reject = 0x82,
     Snapshot = 0x83,
@@ -36,7 +37,9 @@ enum class MessageType : std::uint8_t
     Kicked = 0x8F,
     RoomClosed = 0x90,
     PlaySound = 0x91,
-    ConsoleText = 0x92
+    ConsoleText = 0x92,
+    SnapshotDelta = 0x93,
+    ChatBroadcast = 0x94
 };
 
 enum class Receiver
@@ -51,7 +54,7 @@ public:
     static bool isReliable(MessageType type);
 
     static constexpr std::uint16_t MAGIC = 0x454E;
-    static constexpr std::uint8_t VERSION = 8;
+    static constexpr std::uint8_t VERSION = 9;
     static constexpr std::size_t HEADER_SIZE = 20;
     static constexpr std::size_t MAX_PACKET_BYTES = 1200;
 

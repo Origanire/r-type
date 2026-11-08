@@ -21,6 +21,7 @@ public:
     static constexpr int MAX_CLIENT_LIMIT = 255;
     static constexpr int MAX_ROOM_LIMIT = 255;
     static constexpr int MAX_TEXT_LIMIT = 32;
+    static constexpr int MAX_CHAT_LIMIT = 128;
 
     static NetworkSettings fromGame(const scene::DataNode &game);
 
@@ -39,6 +40,9 @@ public:
     std::size_t maxRooms() const;
     std::size_t roomNameMaxLength() const;
     std::size_t roomCodeMaxLength() const;
+    std::size_t chatMaxLength() const;
+    std::size_t playerNameMaxLength() const;
+    std::chrono::milliseconds chatInterval() const;
     unsigned maxJoinAttempts() const;
     std::size_t worldValueCount() const;
     std::size_t playerValueCount() const;
@@ -73,6 +77,9 @@ private:
     std::size_t m_maxRooms;
     std::size_t m_roomNameMaxLength;
     std::size_t m_roomCodeMaxLength;
+    std::size_t m_chatMaxLength;
+    std::size_t m_playerNameMaxLength;
+    std::chrono::milliseconds m_chatInterval;
     unsigned m_maxJoinAttempts;
     std::size_t m_worldValueCount;
     std::size_t m_playerValueCount;

@@ -4,10 +4,11 @@
 
 namespace engine::ecs {
 
-TextField::TextField(
-    std::string name, std::size_t maxLength, bool masked, std::string placeholder, float width, float height)
+TextField::TextField(std::string name, std::size_t maxLength, bool masked, std::string placeholder, float width,
+    float height, std::string submit)
     : m_name(std::move(name)), m_content(), m_maxLength(maxLength), m_masked(masked),
-      m_placeholder(std::move(placeholder)), m_width(width), m_height(height), m_active(false)
+      m_placeholder(std::move(placeholder)), m_submit(std::move(submit)), m_width(width), m_height(height),
+      m_active(false)
 {
 }
 
@@ -45,6 +46,11 @@ void TextField::erase()
 const std::string &TextField::placeholder() const
 {
     return m_placeholder;
+}
+
+const std::string &TextField::submit() const
+{
+    return m_submit;
 }
 
 bool TextField::active() const

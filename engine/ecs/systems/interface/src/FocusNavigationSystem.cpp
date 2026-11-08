@@ -27,8 +27,13 @@ void FocusNavigationSystem::update(float)
     const auto current = UiFocus::hovered(m_registry);
     if (current && m_registry.has<Button>(*current))
         UiFocus::press(m_registry, *current, m_actions);
-    else if (current && m_registry.has<TextField>(*current))
-        moveFocus(1);
+    else if (current && m_registry.has<TextField>(*current)) {
+        const std::string &submit = m_registry.get<TextField>(*current).submit();
+        if (submit.empty())
+            moveFocus(1);
+        else
+            m_actions.push(UiActionEvent(submit));
+    }
 }
 
 std::vector<Entity> FocusNavigationSystem::focusOrder() const

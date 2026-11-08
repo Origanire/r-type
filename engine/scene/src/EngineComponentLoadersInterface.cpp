@@ -87,7 +87,7 @@ void EngineComponentLoaders::loadTextField(ecs::Registry &registry, const ecs::E
         throw SceneError("EngineComponentLoaders: " + data.path() + ".maxLength must be positive");
     registry.emplace<ecs::TextField>(entity, data.getString("name"), static_cast<std::size_t>(maxLength),
         data.getBool("masked", false), readOptionalString(data, "placeholder"), data.getFloat("width"),
-        data.getFloat("height"));
+        data.getFloat("height"), readOptionalString(data, "submit"));
 }
 
 void EngineComponentLoaders::loadVisibleWhen(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)

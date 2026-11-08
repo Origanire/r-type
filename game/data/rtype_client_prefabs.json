@@ -94,6 +94,11 @@
     "Focusable": {"order": 100},
     "VisibleWhen": {"key": "lobby.popup", "value": "no"}
   },
+  "chat_row": {
+    "Transform": {},
+    "Text": {"font": "hud", "size": 28, "color": [200, 210, 230, 255]},
+    "BoundText": {"format": "{author} : {text}"}
+  },
   "member_row": {
     "Transform": {},
     "RectShape": {"width": 700, "height": 80, "color": [10, 10, 35, 240]},

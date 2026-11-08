@@ -20,6 +20,7 @@ public:
     void setPhase(Phase phase);
     float timer() const;
     void startTimer();
+    void startTimer(float seconds);
     void elapse(float dt);
 
 private:

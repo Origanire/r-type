@@ -10,4 +10,4 @@ def on_spawn(e):
 def on_update(e, dt):
     common.sine(e, 220.0, 2.0)
     if common.cooldown(e, "shot", 2.0, 3.5):
-        e.fire_at_player("enemy_bullet", 520.0)
+        common.shoot_at_player(e, 520.0)

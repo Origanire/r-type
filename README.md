@@ -79,7 +79,7 @@ On a local network, start the server on one machine: it prints the address to us
 |---|---|---|
 | Move | Arrow keys | Left stick or D-pad |
 | Fire (hold to charge) | Space | A |
-| Action (R-Type: launch or recall the Force) | Left Shift | B |
+| Action (R-Type: launch or recall the Force; it docks in front or behind, behind it fires backwards) | Left Shift | B |
 | Pause | Escape | Select |
 | Console / debug overlay | F1 / F3 | - |
 

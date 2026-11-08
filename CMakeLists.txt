@@ -37,7 +37,7 @@ engine_add_game(rtype
     SERVER r-type_server
     DATA game/data
     SCRIPTS game/scripts
-    ASSETS assets)
+    ASSETS game/assets)
 
 engine_add_plugin(wobble
     SOURCES plugins/wobble/src/WobbleSystem.cpp plugins/wobble/src/WobblePlugin.cpp

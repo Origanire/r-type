@@ -10,9 +10,8 @@ Where to look for what. Paths are relative to the repository root.
 ├── vcpkg.json              dependencies
 ├── mkdocs.yml              documentation website
 ├── engine/                 the engine (C++)
-├── game/                   R-Type: data/ and scripts/
+├── game/                   R-Type: data/, scripts/, assets/rtype/
 ├── game2/                  Skyhop: data/, scripts/skyhop/, assets/skyhop/
-├── assets/                 R-Type assets
 ├── docs/                   this documentation
 └── scripts/play.sh         builds and starts a server and N clients
 ```
@@ -76,7 +75,7 @@ engine/
 | Player settings | `game/data/rtype_settings.json` |
 | Stage order, intro, boss, victory | `game/scripts/campaign.py` |
 | Stages | `game/scripts/stage1.py`, `stage2.py`, `stage3.py` |
-| Bosses | `dobkeratops.py`, `warship.py`, `core.py`, `boss_common.py` |
+| Bosses | `dobkeratops.py`, `warship.py`, `vessel.py`, `boss_common.py` |
 | Enemies | `bydo.py`, `pod.py`, `hopper.py`, `heavy.py`, `chaser.py`, `turret.py`, `splitter.py`, `mine.py`, `carrier.py`, `snake.py`, `ground_turret.py` |
 | Player, power-ups, Force | `player.py`, `powerup.py`, `force.py` |
 | Shared helpers | `common.py` |

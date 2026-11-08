@@ -4,7 +4,7 @@
 
 | Game | Source folder | Copied to |
 |---|---|---|
-| R-Type | `assets/` (`sprites/`, `sounds/`, `music/`, `fonts/`) | `<build>/bin/assets/` |
+| R-Type | `game/assets/rtype/` (`sprites/`, `backgrounds/`, `sounds/`, `music/`, `fonts/`) | `<build>/bin/assets/rtype/` |
 | Skyhop | `game2/assets/skyhop/` | `<build>/bin/assets/skyhop/` |
 
 `engine_add_game` copies the `ASSETS` folder next to the executables at every build. Paths in the game file are

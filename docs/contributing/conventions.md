@@ -90,7 +90,7 @@ void GameServer::poll()
 
 ## Data and scripts
 
-- One prefab per entity type, named in `snake_case` (`bydo_sine`, `boss_core`).
+- One prefab per entity type, named in `snake_case` (`bydo_sine`, `boss_vessel`).
 - Python scripts start with a docstring that explains the behaviour and its params; module-level values are
   constants only.
 - New assets come with their license file ([Assets](../guides/assets.md)).

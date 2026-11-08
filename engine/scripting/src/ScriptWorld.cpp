@@ -126,15 +126,33 @@ std::string ScriptWorld::matchPhase() const
     return "waiting";
 }
 
-void ScriptWorld::endMatch()
+void ScriptWorld::endMatch(float delay)
 {
     auto &matches = m_registry.getComponents<ecs::Match>();
     for (std::size_t i : m_registry.view<ecs::Match>()) {
         if (matches.at(i).phase() != ecs::Match::Phase::Playing)
             continue;
         matches.at(i).setPhase(ecs::Match::Phase::Over);
-        matches.at(i).startTimer();
+        if (delay > 0.f)
+            matches.at(i).startTimer(delay);
+        else
+            matches.at(i).startTimer();
     }
+}
+
+void ScriptWorld::finishGame()
+{
+    m_context.setFlag(FINISHED_FLAG, true);
+}
+
+int ScriptWorld::playerCount() const
+{
+    int count = 0;
+    for (std::size_t i : m_registry.view<ecs::Player>()) {
+        if (!m_registry.has<ecs::Destroyed>(m_registry.entityAt(i)))
+            ++count;
+    }
+    return count;
 }
 
 float ScriptWorld::width() const

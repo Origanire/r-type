@@ -22,7 +22,8 @@ const std::vector<bool> &RoomUpdateMessage::occupied() const
 
 bool RoomUpdateMessage::isValid(const NetworkSettings &settings) const
 {
-    return m_occupied.size() == settings.maxPlayers() && m_ownerSlot < m_occupied.size() && m_occupied[m_ownerSlot];
+    return !m_occupied.empty() && m_occupied.size() <= settings.maxPlayers() && m_ownerSlot < m_occupied.size()
+        && m_occupied[m_ownerSlot];
 }
 
 void RoomUpdateMessage::write(net::ByteWriter &writer) const

@@ -34,7 +34,7 @@ Defined in `game/scripts/console.py`:
 | `god` | Turns invulnerability on, or off when it is already on |
 | `heal` | Restores your ship's health |
 | `give <double\|spread\|heal\|shield\|force>` | Gives a power-up |
-| `spawn <prefab>` | Spawns any server prefab in front of you (`spawn boss_core`) |
+| `spawn <prefab>` | Spawns any server prefab in front of you (`spawn boss_vessel`) |
 | `skip` | Skips to the next step of the stage (boss, then next stage) |
 
 ## Writing commands for a game
@@ -43,8 +43,14 @@ The game file names the console script and the rule that enables it:
 
 ```json
 "files": {"...": "...", "console": "console.py"},
-"consoleRule": "cheats"
+"consoleRule": "cheats",
+"freeCommands": ["help", "next", "restart"]
 ```
+
+When the room's `consoleRule` is OFF the server refuses every command except the ones listed in
+`freeCommands`. R-Type uses them for the end-of-stage panel: a UI button whose action is
+`command:<text>` sends `<text>` like a typed command (`"action": "command:next"`), and only the room
+owner's commands are accepted.
 
 The script defines one function, called for every command:
 

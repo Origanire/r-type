@@ -19,7 +19,7 @@ void GameServer::handleCreateRoom(std::size_t client, const CreateRoomMessage &r
     }
     const std::uint16_t id = newRoomId();
     GameRoom &room = m_rooms
-                         .try_emplace(id, id, request.name(), request.code(), m_settings.maxPlayers(),
+                         .try_emplace(id, id, request.name(), request.code(), m_settings.roomCapacity(request.rules()),
                              m_factory.createSession(request.rules()), request.rules())
                          .first->second;
     seatClient(client, room, GameRoom::OWNER_SLOT);
@@ -90,7 +90,8 @@ void GameServer::handleConsole(std::size_t client, const ConsoleCommandMessage &
         sendTo(client, Packet(ConsoleTextMessage("server commands are reserved to the room owner")));
         return;
     }
-    if (const auto rule = m_settings.consoleRule(); rule && room->rule(*rule) == 0) {
+    const auto rule = m_settings.consoleRule();
+    if (rule && room->rule(*rule) == 0 && !m_settings.isFreeCommand(request.text())) {
         sendTo(client, Packet(ConsoleTextMessage("server commands are disabled in this room (cheats OFF)")));
         return;
     }

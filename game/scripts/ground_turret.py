@@ -1,4 +1,7 @@
-"""Ground turret: scrolls with the terrain, turns its cannon toward the closest player and fires."""
+"""Ground turret: a cannon fixed on the floor or the ceiling of the stage 2 tunnel.
+
+It scrolls with the terrain and fires bursts of lasers at the closest player.
+"""
 
 import common
 
@@ -10,6 +13,5 @@ def on_spawn(e):
 
 
 def on_update(e, dt):
-    e.set_angle(e.angle_to_player() + 90.0)
-    if common.cooldown(e, "shot", 1.2, 2.0):
-        e.fire_at_player("enemy_bullet", 480.0)
+    if e.x() < 1800.0 and common.cooldown(e, "shot", 2.0, 3.2):
+        common.shoot_at_player(e, 520.0)

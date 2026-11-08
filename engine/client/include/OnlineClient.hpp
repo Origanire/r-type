@@ -42,6 +42,7 @@ public:
     static constexpr const char *NO = "no";
     static constexpr const char *RULE_PREFIX = "rule.";
     static constexpr const char *PAUSE_KEY = "pause.visible";
+    static constexpr const char *COMMAND_PREFIX = "command:";
 
     OnlineClient(const std::filesystem::path &assetsDirectory, const std::filesystem::path &dataDirectory,
         const std::string &game, const network::NetworkSettings &settings, std::optional<std::string> address);
@@ -57,6 +58,7 @@ private:
     void handleConsole();
     void setPaused(bool paused);
     void openSettings();
+    void restartGame();
     void closeSettings();
     bool paused();
     void handleAction(const std::string &action);

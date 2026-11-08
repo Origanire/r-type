@@ -28,6 +28,8 @@ void OnlineClient::run()
     while (m_view.isOpen()) {
         const Time now = std::chrono::steady_clock::now();
         m_view.processEvents();
+        if (const std::string action = m_view.anyKeyAction(); !action.empty())
+            handleAction(action);
         watchSecretCode(now);
         updateNetwork(now);
         expireNotice(now);
@@ -100,6 +102,8 @@ void OnlineClient::handleAction(const std::string &action)
 {
     if (action == "quit")
         m_view.closeWindow();
+    else if (action == "restart_game")
+        restartGame();
     else if (action == "pause")
         setPaused(!paused());
     else if (action == "resume")
@@ -118,6 +122,8 @@ void OnlineClient::handleAction(const std::string &action)
         enterScene(action.substr(std::string("scene:").size()));
     else if (!m_network)
         return;
+    else if (startsWith(action, COMMAND_PREFIX))
+        m_network->sendCommand(action.substr(std::string(COMMAND_PREFIX).size()));
     else if (action == "refresh_rooms")
         m_network->listRooms();
     else if (action == "create_room")
@@ -151,7 +157,7 @@ void OnlineClient::handleEvent(const network::Packet &event, Time now)
         m_lastRoomUpdate = now;
         store.setValue("room.name", joined.name());
         store.setValue("lobby.error", {});
-        if (m_view.currentScene() != ROOM_SCENE && m_view.currentScene() != GAME_SCENE)
+        if (m_view.currentScene() != ROOM_SCENE)
             enterScene(ROOM_SCENE);
     } else if (event.holds<network::RoomRejectedMessage>()) {
         handleRejection(event.as<network::RoomRejectedMessage>().reason());
@@ -192,6 +198,15 @@ void OnlineClient::connect()
     }
     m_lastRoomList = Time();
     enterScene(LOBBY_SCENE);
+}
+
+void OnlineClient::restartGame()
+{
+    if (m_network)
+        m_network->disconnect();
+    m_network.reset();
+    m_slot.reset();
+    m_view.replayIntro();
 }
 
 void OnlineClient::disconnect(const std::string &errorKey)

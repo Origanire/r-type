@@ -56,6 +56,7 @@ private:
     void seatClient(std::size_t client, GameRoom &room, std::size_t slot);
     void leaveRoom(std::size_t client, std::uint8_t reason = Protocol::LEFT_QUIT);
     void closeRoom(std::uint16_t roomId);
+    void returnToRoom(GameRoom &room);
     GameRoom *roomOf(std::size_t client);
     std::optional<std::size_t> ownedRoomSlot(std::size_t client, GameRoom *room);
     std::uint16_t newRoomId();

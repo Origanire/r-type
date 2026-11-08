@@ -32,10 +32,10 @@ def on_contact(e, other):
 def apply(effect, ship):
     world = ship.world
     if effect == "double":
-        ship.set_weapon(player.missile(world), 0.25, 2, 4.0)
+        ship.set_weapon(player.weapon(ship), 0.25, 2, 4.0)
         ship.set_player_value("weapon", 1)
     elif effect == "spread":
-        ship.set_weapon(player.missile(world), 0.3, 3, 20.0)
+        ship.set_weapon(player.weapon(ship), 0.3, 3, 20.0)
         ship.set_player_value("weapon", 2)
     elif effect == "shield":
         ship.set_invulnerable(3.0)

@@ -1,5 +1,8 @@
 #include "NetworkSettings.hpp"
 
+#include <algorithm>
+#include <utility>
+
 #include "NetError.hpp"
 #include "Protocol.hpp"
 #include "RoomInfo.hpp"
@@ -35,7 +38,8 @@ NetworkSettings::NetworkSettings(const scene::DataNode &game, const scene::DataN
       m_playerValueCount(game.has("playerValues") ? game.child("playerValues").items().size() : 0),
       m_ruleCount(game.has("rules") ? game.child("rules").items().size() : 0),
       m_eventSoundCount(game.has("eventSounds") ? game.child("eventSounds").items().size() : 0),
-      m_consoleRule(findRule(game))
+      m_consoleRule(findRule(game)), m_freeCommands(readFreeCommands(game)),
+      m_ruleCapacities(readRuleCapacities(game))
 {
 }
 
@@ -85,6 +89,58 @@ std::optional<std::size_t> NetworkSettings::findRule(const scene::DataNode &game
             return index;
     }
     return std::nullopt;
+}
+
+std::size_t NetworkSettings::roomCapacity(const std::vector<std::uint8_t> &rules) const
+{
+    std::size_t capacity = m_maxPlayers;
+    for (std::size_t rule = 0; rule < rules.size() && rule < m_ruleCapacities.size(); ++rule) {
+        const std::vector<std::size_t> &seats = m_ruleCapacities[rule];
+        if (rules[rule] < seats.size())
+            capacity = std::min(capacity, seats[rules[rule]]);
+    }
+    return capacity;
+}
+
+std::vector<std::vector<std::size_t>> NetworkSettings::readRuleCapacities(const scene::DataNode &game) const
+{
+    std::vector<std::vector<std::size_t>> capacities;
+    if (!game.has("rules"))
+        return capacities;
+    for (const scene::DataNode &rule : game.child("rules").items()) {
+        std::vector<std::size_t> seats;
+        if (rule.has("maxPlayers")) {
+            for (const scene::DataNode &value : rule.child("maxPlayers").items()) {
+                const int count = value.asInt();
+                if (count <= 0 || static_cast<std::size_t>(count) > m_maxPlayers)
+                    throw net::NetError("NetworkSettings: " + rule.path() + ".maxPlayers must be between 1 and "
+                        + std::to_string(m_maxPlayers));
+                seats.push_back(static_cast<std::size_t>(count));
+            }
+        }
+        capacities.push_back(std::move(seats));
+    }
+    return capacities;
+}
+
+bool NetworkSettings::isFreeCommand(const std::string &text) const
+{
+    const std::string name = text.substr(0, text.find(' '));
+    for (const std::string &command : m_freeCommands) {
+        if (command == name)
+            return true;
+    }
+    return false;
+}
+
+std::vector<std::string> NetworkSettings::readFreeCommands(const scene::DataNode &game)
+{
+    std::vector<std::string> commands;
+    if (game.has("freeCommands")) {
+        for (const scene::DataNode &command : game.child("freeCommands").items())
+            commands.push_back(command.asString());
+    }
+    return commands;
 }
 
 std::size_t NetworkSettings::eventSoundCount() const

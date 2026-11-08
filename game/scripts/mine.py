@@ -29,4 +29,4 @@ def explode(e):
     if getattr(e, "exploded", False):
         return
     e.exploded = True
-    common.ring(e, "enemy_bullet", 12, 340.0)
+    common.stage_ring(e, 12, 340.0)

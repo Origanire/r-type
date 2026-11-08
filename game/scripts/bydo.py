@@ -19,4 +19,4 @@ def on_update(e, dt):
     elif e.pattern == "zigzag":
         common.bounce(e, e.number("vertical", 250.0))
     if e.number("shoots", 1.0) > 0.0 and common.cooldown(e, "shot", 1.5, 3.0):
-        e.fire("enemy_missile", common.LEFT, 600.0)
+        common.shoot(e, common.LEFT, 600.0)

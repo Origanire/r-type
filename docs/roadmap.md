@@ -9,7 +9,7 @@
 | Network | Binary UDP protocol v7, sessions, heartbeats, timeouts, rooms with codes and rules, kicks, console messages, sounds |
 | Client | Menus, lobby, room and game scenes in JSON, HUD bound to values, pause menu, F1 console, F3 metrics, loading screen, gamepad |
 | Solo mode | `LocalClient`, `LOCAL` games |
-| R-Type | Three stages, waves, three bosses, power-ups, the Force, charged shot, terrain, difficulty and friendly fire rules |
+| R-Type | Three themed stages (a warship corridor, a giant vessel hunting the players), three bosses, power-ups, the Force (front or back, free, super-charged shots), charged shot, level choice, difficulty, friendly fire and bonus rules |
 | Second game | Skyhop, solo, Kenney CC0 assets |
 | Platforms | Linux, Windows, LAN play |
 | Documentation | Architecture, references, guides, RFC, comparative study, accessibility, team processes |

@@ -63,6 +63,7 @@ public:
     void heal(int amount);
     void setHealth(int points, int maximum);
     void setWeapon(const std::string &prefab, float cooldown, int count, float spread);
+    void setWeaponOffset(float dx, float dy);
     float inputHeld(const std::string &name) const;
     bool inputPressed(const std::string &name) const;
     float inputReleased(const std::string &name) const;

@@ -9,6 +9,7 @@ import math
 
 import boss_common
 import common
+import difficulty
 
 
 def on_update(e, dt):
@@ -19,11 +20,11 @@ def on_update(e, dt):
     rage = current == 3
     boss_common.burst(e, "aimed", 4, 0.12 if rage else 0.18, 1.2 if rage else 1.8, 2.4, aimed_shot)
     if current >= 2 and common.cooldown(e, "fan", 1.6 if rage else 2.6, 3.2):
-        e.fire_spread("boss_orb", 13 if rage else 9, 110.0, common.LEFT, 380.0)
+        e.fire_spread("boss_orb", 13 if rage else 9, 110.0, common.LEFT, difficulty.speed(e, 380.0))
     if current >= 2 and common.cooldown(e, "help", 6.0, 8.0) and e.world.can_spawn():
         for offset in (-200.0, 200.0):
             e.world.spawn("pod", e.x() - 80.0, e.center_y() + offset)
 
 
 def aimed_shot(e):
-    e.fire_at_player("boss_missile", 650.0)
+    e.fire_at_player("boss_missile", difficulty.speed(e, 650.0))

@@ -26,6 +26,11 @@ void Match::startTimer()
     m_timer = m_restartDelay;
 }
 
+void Match::startTimer(float seconds)
+{
+    m_timer = seconds;
+}
+
 void Match::elapse(float dt)
 {
     m_timer -= dt;

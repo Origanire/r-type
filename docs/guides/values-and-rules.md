@@ -77,3 +77,28 @@ The first label is the default. In solo mode every rule has its default.
 
 Both sides read the same game file, so nothing else changes. Adding values changes the snapshot size: the
 server checks at start that it still fits in a datagram.
+
+## R-Type difficulty
+
+The `difficulty` rule is read in one place, `game/scripts/difficulty.py`, by every script that
+fires, waits or spawns. Changing a number there rebalances the whole game:
+
+| Setting | EASY | NORMAL | HARD |
+|---|---|---|---|
+| Enemy projectile speed | ×0.55 | ×0.8 | ×1.15 |
+| Delay between enemy attacks | ×2 | ×1.35 | ×0.8 |
+| Delay between random enemies | ×1.7 | ×1.25 | ×0.8 |
+| Boss health | ×0.6 | ×0.85 | ×1.3 |
+| Player ship health | 220 | 140 | 90 |
+| Homing missiles turn speed | ×0.35 | ×0.7 | ×1.2 |
+| Vessel laser charge (stage 3) | 2.6 s | 2.2 s | 1.8 s |
+
+In the coop mode the game also adapts to the number of players in the room (`PLAYERS` in
+`difficulty.py`), on top of the rule above:
+
+| Players | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| Enemy health | ×1 | ×1.25 | ×1.5 | ×1.75 |
+| Random enemies | ×1 | ×1.15 more often | ×1.3 | ×1.45 |
+| Enemies per wave | +0 % | +25 % | +50 % | +75 % |
+| Boss health | ×1 | ×1.5 | ×2 | ×2.5 |

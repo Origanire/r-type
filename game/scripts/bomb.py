@@ -41,6 +41,8 @@ def detonate(world, boss):
     for enemy in world.in_layer("enemy"):
         if not on_screen(world, enemy):
             continue
+        if enemy.number("bombProof", 0.0) > 0.0 and not (boss is not None and enemy == boss):
+            continue
         if boss is not None and enemy == boss:
             hurt_boss(enemy)
         else:

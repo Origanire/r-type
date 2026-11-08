@@ -51,6 +51,7 @@ public:
     void command(std::size_t slot, const std::string &text) override;
     void update(float dt) override;
     std::uint32_t tick() const override;
+    bool finished() const override;
     network::SnapshotMessage snapshot() const override;
     std::vector<network::Packet> takeEvents() override;
 

@@ -23,6 +23,8 @@ class ScriptEntity;
 class ScriptWorld
 {
 public:
+    static constexpr const char *FINISHED_FLAG = "finished";
+
     explicit ScriptWorld(scene::SystemContext &context);
 
     void advance(float dt);
@@ -40,8 +42,10 @@ public:
     bool canSpawn() const;
     int countScripted(const std::string &file) const;
     int playersAlive() const;
+    int playerCount() const;
     std::string matchPhase() const;
-    void endMatch();
+    void endMatch(float delay);
+    void finishGame();
     float width() const;
     float height() const;
     void log(const std::string &text) const;

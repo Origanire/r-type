@@ -300,6 +300,12 @@ void ScriptEntity::setWeapon(const std::string &prefab, float cooldown, int coun
         weapon->configure(prefab, cooldown, count, spread);
 }
 
+void ScriptEntity::setWeaponOffset(float dx, float dy)
+{
+    if (auto *weapon = liveComponent<ecs::Weapon>())
+        weapon->setOffset(dx, dy);
+}
+
 float ScriptEntity::inputHeld(const std::string &name) const
 {
     const auto *control = alive() ? component<ecs::PlayerControl>() : nullptr;

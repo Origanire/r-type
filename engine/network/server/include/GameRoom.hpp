@@ -29,6 +29,8 @@ public:
     void queueCommand(std::size_t slot, std::string text);
     std::vector<std::pair<std::size_t, std::string>> takeCommands();
     IGameSession &session();
+    void resetSession(std::unique_ptr<IGameSession> session);
+    const std::vector<std::uint8_t> &rules() const;
     std::uint8_t rule(std::size_t index) const;
 
     std::size_t capacity() const;

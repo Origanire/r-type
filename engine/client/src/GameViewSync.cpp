@@ -41,6 +41,8 @@ void GameView::syncEntity(std::uint16_t networkId, std::uint8_t kind, float x, f
     if (found == m_networkEntities.end())
         found = m_networkEntities.emplace(networkId, createRemote(prefab->second, x, y)).first;
     const ecs::Entity entity = found->second;
+    if (!m_registry.isAlive(entity) || !m_registry.has<ecs::Transform>(entity))
+        return;
     ecs::Transform &transform = m_registry.get<ecs::Transform>(entity);
     if (m_registry.has<ecs::TiltAnimation>(entity))
         m_registry.get<ecs::TiltAnimation>(entity).setDirection(verticalDirection(transform.y(), y));

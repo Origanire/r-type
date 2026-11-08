@@ -50,6 +50,16 @@ IGameSession &GameRoom::session()
     return *m_session;
 }
 
+void GameRoom::resetSession(std::unique_ptr<IGameSession> session)
+{
+    m_session = std::move(session);
+}
+
+const std::vector<std::uint8_t> &GameRoom::rules() const
+{
+    return m_rules;
+}
+
 std::size_t GameRoom::capacity() const
 {
     return m_seats.size();

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the stage backgrounds in assets/backgrounds/.
+"""Generates the stage backgrounds in game/assets/rtype/backgrounds/.
 
 Each image is a 1920x1080 RGBA layer drawn over the stage's plain background colour and under the
 starfield. The noise is filtered in the Fourier domain, so it is periodic: the left and right edges
@@ -17,7 +17,7 @@ from PIL import Image
 
 WIDTH = 1920
 HEIGHT = 1080
-OUTPUT = Path(__file__).resolve().parent.parent / "assets" / "backgrounds"
+OUTPUT = Path(__file__).resolve().parent.parent / "game" / "assets" / "rtype" / "backgrounds"
 
 
 def fractal_noise(seed, roughness, scale=1.0):

@@ -4,6 +4,7 @@ Params: stop_x (where it parks), stay (seconds before leaving).
 """
 
 import common
+import difficulty
 
 BURST_SIZE = 3
 BURST_GAP = 0.15
@@ -27,5 +28,5 @@ def on_update(e, dt):
     if e.burst_left == 0 and common.cooldown(e, "burst", 1.8, 2.6):
         e.burst_left = BURST_SIZE
     if e.burst_left > 0 and e.every("burst_gap", BURST_GAP):
-        e.fire_at_player("enemy_bullet", 600.0)
+        e.fire_at_player(common.shot(e), difficulty.speed(e, 600.0))
         e.burst_left -= 1

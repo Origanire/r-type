@@ -206,6 +206,18 @@ void GameServer::tickRoom(GameRoom &room, float dt, Time now)
         broadcastRoom(room, event);
     if (room.session().tick() % m_settings.snapshotEveryTicks() == 0)
         broadcastRoom(room, Packet(room.session().snapshot()));
+    if (room.session().finished())
+        returnToRoom(room);
+}
+
+void GameServer::returnToRoom(GameRoom &room)
+{
+    room.setPlaying(false);
+    room.resetSession(m_factory.createSession(room.rules()));
+    for (std::size_t client : room.clients())
+        sendRoomJoined(client, room);
+    sendRoomUpdate(room);
+    std::cout << "Room " << room.id() << " finished its game" << std::endl;
 }
 
 void GameServer::sendTo(std::size_t client, Packet packet)

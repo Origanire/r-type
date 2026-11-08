@@ -14,7 +14,7 @@ For a game called `<game>` (R-Type: `rtype`, Skyhop: `skyhop`):
 | `data/<game>_client_prefabs.json` | client | Templates of how each entity looks (sprites, animations, sounds) and of UI elements |
 | `data/<game>_settings.json` | client | Player settings: controls, gamepad, volumes, text scale |
 | `scripts/*.py` | simulation | Python behaviours attached with `Script` components |
-| `assets/` | client | Images, sounds, music, fonts |
+| `assets/` | client | Images, sounds, music, fonts (R-Type: `game/assets/rtype/`) |
 
 The file names of the prefabs, settings and scripts folder are given in the `files` block of the game file, so a
 game may organise them differently. Every key of the game file is described in the

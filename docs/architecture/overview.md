@@ -48,7 +48,7 @@ flowchart TB
 | `engine/` | The engine: one CMake library per module, plus the generic launchers in `engine/apps/` |
 | `game/` | R-Type: `data/` (JSON), `scripts/` (Python) |
 | `game2/` | Skyhop: `data/`, `scripts/skyhop/`, `assets/skyhop/` |
-| `assets/` | R-Type sprites, sounds, music and font |
+| `game/assets/rtype/` | R-Type sprites, backgrounds, sounds, music and fonts |
 | `docs/` | This documentation (MkDocs website) |
 | `scripts/` | Helper shell scripts (`play.sh`) |
 

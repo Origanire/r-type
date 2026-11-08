@@ -20,7 +20,7 @@ def on_damage(e, amount):
         e.enraged = True
         e.stop_until = e.age() + STOP_SECONDS
         e.set_velocity(0.0, 0.0)
-        common.ring(e, "enemy_bullet", 10, 380.0)
+        common.stage_ring(e, 10, 380.0)
 
 
 def on_update(e, dt):
@@ -29,4 +29,4 @@ def on_update(e, dt):
     if e.enraged and e.vx() == 0.0:
         e.set_velocity(-220.0, 0.0)
     if common.cooldown(e, "fan", 1.0, 1.6):
-        e.fire_spread("enemy_bullet", 3, 30.0, e.angle_to_player(), 450.0)
+        common.spread(e, 3, 30.0, e.angle_to_player(), 450.0)

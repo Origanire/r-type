@@ -25,6 +25,7 @@
 #include "Rotation.hpp"
 #include "SceneBuilder.hpp"
 #include "Score.hpp"
+#include "ScriptWorld.hpp"
 #include "SimulationError.hpp"
 #include "SoundEvent.hpp"
 #include "Transform.hpp"
@@ -116,6 +117,11 @@ void Simulation::update(float dt)
 std::uint32_t Simulation::tick() const
 {
     return m_tick;
+}
+
+bool Simulation::finished() const
+{
+    return m_context.flag(scripting::ScriptWorld::FINISHED_FLAG, false);
 }
 
 std::vector<network::Packet> Simulation::takeEvents()

@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Game definition (entities, scenes, HUD, rules) | `data/<game>_*.json` | JSON | Files, read at start |
 | Behaviours | `scripts/*.py` | Python source | Files, read at first use |
-| Assets | `assets/` | PNG, GIF, OGG, MP3, WAV, TTF | Files, read on demand and cached |
+| Assets | `game/assets/rtype/`, `game2/assets/skyhop/` | PNG, GIF, OGG, MP3, WAV, TTF | Files, read on demand and cached |
 | Player settings | `data/<game>_settings.json` | JSON | File, read at start |
 | Live game state (entities, lives, scores) | Server memory | ECS registry | Lost when a room closes: a round is a short arcade session |
 | Client state | Client memory | ECS registry, UI store | Rebuilt from snapshots |

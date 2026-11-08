@@ -92,6 +92,8 @@ public:
     void setSoundVolume(float volume);
     void resetSettings();
     void reloadPlugins();
+    void replayIntro();
+    std::string anyKeyAction() const;
     std::vector<std::string> pluginList() const;
     const std::string &typedText() const;
     std::string secretCode() const;

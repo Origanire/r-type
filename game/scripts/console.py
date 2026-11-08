@@ -1,11 +1,14 @@
 """Server console commands, typed by the room owner in the in-game console (F1).
 
-Cheats only work when the room was created with CHEATS set to ON.
+Cheats only work when the room was created with CHEATS set to ON. "next" and "restart" are the
+choices of the end-of-stage panel: they are listed in "freeCommands" of the game file, so the server
+lets them through even with CHEATS OFF, and the campaign applies them (see campaign.py).
 """
 
 import powerup
 
 GOD_SECONDS = 100000.0
+CHOICES = {"next": 1, "restart": 2}
 HELP = "help, god, heal, give <double|spread|heal|shield|force>, spawn <prefab>, skip"
 
 
@@ -14,6 +17,9 @@ def run(world, ship, text):
     name, args = words[0], words[1:]
     if name == "help":
         return HELP
+    if name in CHOICES:
+        world.set("choice", CHOICES[name])
+        return name
     if world.rule("cheats") != "ON":
         return "cheats are OFF for this room"
     if name == "skip":

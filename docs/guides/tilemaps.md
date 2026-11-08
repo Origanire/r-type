@@ -1,14 +1,14 @@
 # Tilemaps and terrain
 
 A `Tilemap` draws a level as rows of characters. Each character is a prefab, and the map scrolls to the left.
-R-Type's stage 3 uses it for its walls.
+R-Type's stage 2 uses it for a short tunnel, with cannons fixed on its floor and ceiling.
 
 ## Writing a map
 
 Shortened from `game/data/rtype_server_prefabs.json` (the real map has 13 rows, 11 of them empty):
 
 ```json
-"terrain_stage3": {
+"terrain_stage2": {
     "Transform": {},
     "Tilemap": {
         "rows": [
@@ -36,7 +36,7 @@ Empty rows (`""`) are allowed. Rows may have different lengths.
 Spawn the map like any prefab, from a script or the server scene:
 
 ```python
-world.spawn("terrain_stage3", 1920.0, 0.0)
+world.spawn("terrain_stage2", 1920.0, 0.0)
 ```
 
 ## How it runs

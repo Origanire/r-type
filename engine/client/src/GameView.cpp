@@ -256,6 +256,30 @@ bool GameView::debugPressed() const
     return m_uiInput.keyPressed(UiKey::Debug);
 }
 
+void GameView::replayIntro()
+{
+    if (!m_game.has("loadingScene")) {
+        m_scenes->switchTo(m_game.getString("startScene"));
+        return;
+    }
+    m_loading = true;
+    m_loadingClock.restart();
+    m_scenes->switchTo(m_game.getString("loadingScene"));
+}
+
+std::string GameView::anyKeyAction() const
+{
+    if (!m_uiInput.rawKey())
+        return {};
+    const scene::DataNode scene = m_game.child("scenes").child(m_scenes->current());
+    if (!scene.has("anyKey"))
+        return {};
+    const scene::DataNode rule = scene.child("anyKey");
+    if (m_uiStore.value(rule.getString("key")) != rule.getString("value"))
+        return {};
+    return rule.getString("action");
+}
+
 const std::string &GameView::typedText() const
 {
     return m_uiInput.typedText();

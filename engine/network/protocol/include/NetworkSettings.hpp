@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "DataNode.hpp"
 
@@ -42,11 +43,15 @@ public:
     std::size_t worldValueCount() const;
     std::size_t playerValueCount() const;
     std::size_t ruleCount() const;
+    std::size_t roomCapacity(const std::vector<std::uint8_t> &rules) const;
     std::size_t eventSoundCount() const;
     std::optional<std::size_t> consoleRule() const;
+    bool isFreeCommand(const std::string &text) const;
 
 private:
     static std::optional<std::size_t> findRule(const scene::DataNode &game);
+    static std::vector<std::string> readFreeCommands(const scene::DataNode &game);
+    std::vector<std::vector<std::size_t>> readRuleCapacities(const scene::DataNode &game) const;
     NetworkSettings(const scene::DataNode &game, const scene::DataNode &network);
 
     void checkPacketFits(const std::string &source) const;
@@ -74,6 +79,8 @@ private:
     std::size_t m_ruleCount;
     std::size_t m_eventSoundCount;
     std::optional<std::size_t> m_consoleRule;
+    std::vector<std::string> m_freeCommands;
+    std::vector<std::vector<std::size_t>> m_ruleCapacities;
 };
 
 } // namespace engine::network

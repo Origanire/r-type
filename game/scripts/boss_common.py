@@ -1,4 +1,4 @@
-"""Helpers shared by the three bosses: entering the screen and choosing a phase from health."""
+"""Helpers shared by the bosses: entering the screen, choosing a phase from health, warning signs."""
 
 import common
 
@@ -32,3 +32,9 @@ def burst(e, name, size, gap, every_min, every_max, shoot):
     if getattr(e, left, 0) > 0 and e.every(name + "_gap", gap):
         shoot(e)
         setattr(e, left, getattr(e, left) - 1)
+
+
+def warn(e, prefab="warning"):
+    """Shows a blinking "!" in front of the boss; it follows the boss and disappears by itself."""
+    sign = e.world.spawn(prefab, e.x() - 120.0, e.center_y() - 90.0)
+    sign.attach_to(e, -120.0, e.height() / 2.0 - 90.0)

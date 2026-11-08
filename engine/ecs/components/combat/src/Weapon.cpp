@@ -59,4 +59,10 @@ void Weapon::configure(std::string prefab, float cooldown, int count, float spre
     m_spread = spread;
 }
 
+void Weapon::setOffset(float offsetX, float offsetY)
+{
+    m_offsetX = offsetX;
+    m_offsetY = offsetY;
+}
+
 } // namespace engine::ecs

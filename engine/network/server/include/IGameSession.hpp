@@ -23,6 +23,7 @@ public:
     virtual std::uint32_t tick() const = 0;
     virtual SnapshotMessage snapshot() const = 0;
     virtual std::vector<Packet> takeEvents() = 0;
+    virtual bool finished() const = 0;
 };
 
 } // namespace engine::network

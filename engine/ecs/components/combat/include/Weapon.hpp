@@ -17,6 +17,7 @@ public:
     int count() const;
     float spread() const;
     void configure(std::string prefab, float cooldown, int count, float spread);
+    void setOffset(float offsetX, float offsetY);
     void elapse(float dt);
     bool ready() const;
     void trigger();

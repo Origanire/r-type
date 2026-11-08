@@ -2,7 +2,8 @@
 
 namespace engine::ecs {
 
-RectShape::RectShape(float width, float height, Color color) : m_width(width), m_height(height), m_color(color)
+RectShape::RectShape(float width, float height, Color color, Color outline, float thickness)
+    : m_width(width), m_height(height), m_color(color), m_outline(outline), m_thickness(thickness)
 {
 }
 
@@ -19,6 +20,16 @@ float RectShape::height() const
 Color RectShape::color() const
 {
     return m_color;
+}
+
+Color RectShape::outline() const
+{
+    return m_outline;
+}
+
+float RectShape::thickness() const
+{
+    return m_thickness;
 }
 
 void RectShape::setColor(Color color)

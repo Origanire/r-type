@@ -17,7 +17,7 @@ public:
     void setTextScale(float scale);
 
     void clear(Color color) override;
-    void drawRect(Vector2 position, Vector2 size, Color color) override;
+    void drawRect(Vector2 position, Vector2 size, Color color, Color outline, float thickness) override;
     void drawTexture(const std::string &texture, IntRect source, Vector2 position, Vector2 scale, float rotation,
         Color tint) override;
     void setOffset(Vector2 offset) override;

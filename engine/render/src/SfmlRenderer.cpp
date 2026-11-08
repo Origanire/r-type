@@ -31,11 +31,15 @@ void SfmlRenderer::clear(Color color)
     m_window.native().clear(toSfml(color));
 }
 
-void SfmlRenderer::drawRect(Vector2 position, Vector2 size, Color color)
+void SfmlRenderer::drawRect(Vector2 position, Vector2 size, Color color, Color outline, float thickness)
 {
     sf::RectangleShape rect({size.x(), size.y()});
     rect.setPosition({position.x() + m_offset.x(), position.y() + m_offset.y()});
     rect.setFillColor(toSfml(color));
+    if (thickness > 0.f) {
+        rect.setOutlineColor(toSfml(outline));
+        rect.setOutlineThickness(thickness);
+    }
     m_window.native().draw(rect);
 }
 

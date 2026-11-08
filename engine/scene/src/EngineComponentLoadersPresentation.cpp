@@ -81,8 +81,13 @@ void EngineComponentLoaders::loadSprite(ecs::Registry &registry, const ecs::Enti
 
 void EngineComponentLoaders::loadRectShape(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)
 {
-    registry.emplace<ecs::RectShape>(
-        entity, data.getFloat("width"), data.getFloat("height"), DataReaders::readColor(data, "color"));
+    if (!data.has("outline")) {
+        registry.emplace<ecs::RectShape>(
+            entity, data.getFloat("width"), data.getFloat("height"), DataReaders::readColor(data, "color"));
+        return;
+    }
+    registry.emplace<ecs::RectShape>(entity, data.getFloat("width"), data.getFloat("height"),
+        DataReaders::readColor(data, "color"), DataReaders::readColor(data, "outline"), data.getFloat("thickness", 1.f));
 }
 
 void EngineComponentLoaders::loadParallax(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)

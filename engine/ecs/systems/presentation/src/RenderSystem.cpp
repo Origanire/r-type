@@ -42,9 +42,10 @@ void RenderSystem::drawLayer(Layer layer)
             continue;
         const Transform &transform = transforms.at(i);
         const RectShape &shape = shapes.at(i);
-        if (shape.color().a() == 0)
+        if (shape.color().a() == 0 && shape.thickness() <= 0.f)
             continue;
-        m_renderer.drawRect({transform.x(), transform.y()}, {shape.width(), shape.height()}, shape.color());
+        m_renderer.drawRect({transform.x(), transform.y()}, {shape.width(), shape.height()}, shape.color(),
+            shape.outline(), shape.thickness());
     }
     for (std::size_t i : m_registry.view<Transform, Sprite>()) {
         if (isHidden(i) || layerOf(i) != layer)

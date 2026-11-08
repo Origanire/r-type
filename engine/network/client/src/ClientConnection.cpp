@@ -8,10 +8,10 @@
 
 namespace engine::network {
 
-ClientConnection::ClientConnection(net::Endpoint server, const NetworkSettings &settings)
-    : m_settings(settings), m_codec(settings), m_server(std::move(server)), m_sequence(1), m_sender(), m_receiver(),
-      m_token(0), m_attempts(0), m_lastConnect(), m_lastInput(), m_lastHeartbeat(), m_lastReceive(), m_lastTick(),
-      m_serverSequence(), m_snapshot(), m_events(), m_bytesReceived(0), m_bytesSent(0), m_ping(0)
+ClientConnection::ClientConnection(net::Endpoint server, const NetworkSettings &settings, std::string name)
+    : m_settings(settings), m_codec(settings), m_server(std::move(server)), m_name(std::move(name)), m_sequence(1), m_sender(), m_receiver(), m_token(0),
+      m_attempts(0), m_lastConnect(), m_lastInput(), m_lastHeartbeat(), m_lastReceive(), m_lastTick(),
+      m_serverSequence(), m_snapshot(), m_applied(), m_events(), m_bytesReceived(0), m_bytesSent(0), m_ping(0)
 {
 }
 
@@ -84,16 +84,23 @@ bool ClientConnection::handlePacket(const Packet &packet)
     if (packet.holds<SnapshotMessage>()) {
         if (!handleSnapshot(packet.as<SnapshotMessage>()))
             return false;
-    } else if (packet.reliableId() == 0 && m_serverSequence && !Codec::isNewer(packet.sequence(), *m_serverSequence)) {
+    } else if (packet.holds<SnapshotDeltaMessage>()) {
+        if (!handleDelta(packet.as<SnapshotDeltaMessage>()))
+            return false;
+    } else if (packet.reliableId() == 0 && m_serverSequence
+        && !Codec::isNewer(packet.sequence(), *m_serverSequence)) {
         return false;
     }
     if (packet.type() == MessageType::ServerShutdown)
         throw net::NetError("ClientConnection: server stopped");
     if (packet.holds<HeartbeatAckMessage>())
         m_ping = nowMs(std::chrono::steady_clock::now()) - packet.as<HeartbeatAckMessage>().timestamp();
-    if (packet.holds<RoomJoinedMessage>() || packet.holds<GameStartedMessage>())
+    if (packet.holds<RoomJoinedMessage>() || packet.holds<GameStartedMessage>()) {
         m_lastTick.reset();
-    if (!packet.holds<SnapshotMessage>() && !packet.holds<HeartbeatAckMessage>())
+        m_applied.clear();
+    }
+    if (!packet.holds<SnapshotMessage>() && !packet.holds<SnapshotDeltaMessage>()
+        && !packet.holds<HeartbeatAckMessage>())
         m_events.push_back(packet);
     if (!m_serverSequence || Codec::isNewer(packet.sequence(), *m_serverSequence))
         m_serverSequence = packet.sequence();
@@ -114,6 +121,12 @@ void ClientConnection::createRoom(
 void ClientConnection::joinRoom(std::uint16_t roomId, const std::string &code)
 {
     sendIfConnected(Packet(JoinRoomMessage(m_token, roomId, code)));
+}
+
+void ClientConnection::sendChat(const std::string &text)
+{
+    if (connected() && !text.empty())
+        send(Packet(ChatMessage(m_token, text)));
 }
 
 void ClientConnection::leaveRoom()
@@ -141,8 +154,24 @@ bool ClientConnection::handleSnapshot(const SnapshotMessage &snapshot)
     if (m_lastTick && !Codec::isNewer(snapshot.tick(), *m_lastTick))
         return false;
     m_lastTick = snapshot.tick();
+    rememberSnapshot(snapshot);
     m_snapshot = snapshot;
     return true;
+}
+
+bool ClientConnection::handleDelta(const SnapshotDeltaMessage &delta)
+{
+    const auto base = m_applied.find(delta.baselineTick());
+    if (base == m_applied.end())
+        return false;
+    return handleSnapshot(SnapshotDiff::apply(base->second, delta));
+}
+
+void ClientConnection::rememberSnapshot(const SnapshotMessage &snapshot)
+{
+    if (m_applied.size() >= APPLIED_HISTORY)
+        m_applied.erase(m_applied.begin());
+    m_applied.insert_or_assign(snapshot.tick(), snapshot);
 }
 
 bool ClientConnection::handleConnectionReply(const Packet &packet)
@@ -167,7 +196,7 @@ void ClientConnection::retryConnect(Time now)
         return;
     if (m_attempts >= m_settings.connectAttempts())
         throw net::NetError("ClientConnection: connection timed out, the server never answered");
-    send(Packet(ConnectMessage()));
+    send(Packet(ConnectMessage(m_name)));
     ++m_attempts;
     m_lastConnect = now;
 }

@@ -24,6 +24,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started:
+      - Quick start: getting-started/quick-start.md
       - Installation: getting-started/installation.md
       - Building: getting-started/building.md
       - Running: getting-started/running.md

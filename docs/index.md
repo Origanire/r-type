@@ -12,7 +12,7 @@ input, scripting, a binary UDP protocol with an authoritative server, and a solo
 
 | You want to... | Read |
 |---|---|
-| Build and play | [Installation](getting-started/installation.md), [Building](getting-started/building.md), [Running](getting-started/running.md), [Playing on a network](getting-started/network-play.md) |
+| Build and play | [Quick start](getting-started/quick-start.md), [Installation](getting-started/installation.md), [Building](getting-started/building.md), [Running](getting-started/running.md), [Playing on a network](getting-started/network-play.md) |
 | Join the team | [Onboarding](contributing/onboarding.md) |
 | Understand the architecture | [Overview](architecture/overview.md), [Engine modules](architecture/engine-modules.md), [ECS](architecture/ecs.md) |
 | Make content without C++ | [Create a game](guides/content/create-a-game.md), [Add an enemy](guides/content/add-an-enemy.md), [Scripting reference](reference/scripting-api.md) |

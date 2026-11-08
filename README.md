@@ -104,6 +104,7 @@ mkdocs serve          # then open http://127.0.0.1:8000
 
 | I want to... | Read |
 |---|---|
+| Build and run in a few commands | [Quick start](docs/getting-started/quick-start.md) |
 | Understand the project | [Architecture overview](docs/architecture/overview.md) |
 | Join the team | [Onboarding](docs/contributing/onboarding.md) |
 | Create a new game | [Create a game from scratch](docs/guides/content/create-a-game.md) |

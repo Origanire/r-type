@@ -92,7 +92,7 @@ void OnlineClient::showMembers(const network::RoomUpdateMessage &update)
             tag += m_view.message("youTag");
         const bool canKick = owner && occupied && slot != *m_slot;
         rows.push_back({{"slot", std::to_string(slot)}, {"number", std::to_string(slot + 1)},
-            {"name", occupied ? "P" + std::to_string(slot + 1) : m_view.message("emptySlot")}, {"tag", tag},
+            {"name", occupied ? playerName(update, slot) : m_view.message("emptySlot")}, {"tag", tag},
             {"canKick", canKick ? YES : NO}});
     }
     m_view.uiStore().setValue("room.isOwner", owner ? YES : NO);
@@ -108,6 +108,41 @@ std::vector<std::uint8_t> OnlineClient::ruleValues()
         values.push_back(static_cast<std::uint8_t>(value.value_or(0)));
     }
     return values;
+}
+
+void OnlineClient::sendChat()
+{
+    const std::string text = field("chatInput");
+    if (text.empty())
+        return;
+    m_network->sendChat(text);
+    m_view.setFieldText("chatInput", {});
+}
+
+void OnlineClient::showChat(const network::ChatBroadcastMessage &message)
+{
+    const bool mine = m_slot && *m_slot == message.slot();
+    const std::string author = message.slot() < m_names.size() && !m_names[message.slot()].empty()
+        ? m_names[message.slot()]
+        : "P" + std::to_string(message.slot() + 1);
+    m_chat.push_back({{"author", author}, {"text", message.text()}, {"mine", mine ? YES : NO}});
+    if (m_chat.size() > CHAT_HISTORY)
+        m_chat.pop_front();
+    m_view.uiStore().setList("chat", std::vector<ecs::UiStore::Row>(m_chat.begin(), m_chat.end()));
+}
+
+void OnlineClient::clearChat()
+{
+    m_chat.clear();
+    m_view.uiStore().setList("chat", {});
+    m_view.setFieldText("chatInput", {});
+}
+
+std::string OnlineClient::playerName(const network::RoomUpdateMessage &update, std::size_t slot) const
+{
+    if (slot < update.names().size() && !update.names()[slot].empty())
+        return update.names()[slot];
+    return "P" + std::to_string(slot + 1);
 }
 
 } // namespace engine::client

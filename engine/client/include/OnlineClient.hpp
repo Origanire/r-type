@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <deque>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -43,6 +44,7 @@ public:
     static constexpr const char *RULE_PREFIX = "rule.";
     static constexpr const char *PAUSE_KEY = "pause.visible";
     static constexpr const char *COMMAND_PREFIX = "command:";
+    static constexpr std::size_t CHAT_HISTORY = 5;
 
     OnlineClient(const std::filesystem::path &assetsDirectory, const std::filesystem::path &dataDirectory,
         const std::string &game, const network::NetworkSettings &settings, std::optional<std::string> address);
@@ -77,6 +79,10 @@ private:
     void enterScene(const std::string &scene);
     void showRoomList(const network::RoomListMessage &list);
     void showMembers(const network::RoomUpdateMessage &update);
+    std::string playerName(const network::RoomUpdateMessage &update, std::size_t slot) const;
+    void sendChat();
+    void showChat(const network::ChatBroadcastMessage &message);
+    void clearChat();
     void applySnapshot(const network::SnapshotMessage &snapshot);
     std::uint8_t buttons() const;
     std::string field(const std::string &name);
@@ -98,6 +104,8 @@ private:
     DevConsole m_console;
     SecretCode m_secretCode;
     Time m_bombUntil;
+    std::deque<ecs::UiStore::Row> m_chat;
+    std::vector<std::string> m_names;
 };
 
 } // namespace engine::client

@@ -137,6 +137,7 @@ void OnlineClient::handleAction(const std::string &action)
     else if (action == "leave_room") {
         m_network->leaveRoom();
         m_slot.reset();
+        clearChat();
         enterScene(LOBBY_SCENE);
     } else if (action == "start_game")
         m_network->startGame();
@@ -144,6 +145,8 @@ void OnlineClient::handleAction(const std::string &action)
         m_network->kickPlayer(static_cast<std::uint8_t>(std::stoul(action.substr(std::string("kick:").size()))));
     else if (action == "delete_room")
         m_network->deleteRoom();
+    else if (action == "send_chat")
+        sendChat();
 }
 
 void OnlineClient::handleEvent(const network::Packet &event, Time now)
@@ -157,13 +160,20 @@ void OnlineClient::handleEvent(const network::Packet &event, Time now)
         m_lastRoomUpdate = now;
         store.setValue("room.name", joined.name());
         store.setValue("lobby.error", {});
-        if (m_view.currentScene() != ROOM_SCENE)
+        if (m_view.currentScene() != ROOM_SCENE) {
+            if (m_view.currentScene() != GAME_SCENE)
+                clearChat();
             enterScene(ROOM_SCENE);
+        }
+    } else if (event.holds<network::ChatBroadcastMessage>()) {
+        showChat(event.as<network::ChatBroadcastMessage>());
     } else if (event.holds<network::RoomRejectedMessage>()) {
         handleRejection(event.as<network::RoomRejectedMessage>().reason());
     } else if (event.holds<network::RoomUpdateMessage>()) {
         m_lastRoomUpdate = now;
-        showMembers(event.as<network::RoomUpdateMessage>());
+        const network::RoomUpdateMessage &update = event.as<network::RoomUpdateMessage>();
+        m_names.assign(update.names().begin(), update.names().end());
+        showMembers(update);
     } else if (event.holds<network::GameStartedMessage>()) {
         m_lastRoomUpdate = now;
         enterScene(GAME_SCENE);
@@ -191,7 +201,8 @@ void OnlineClient::connect()
         const std::string host = colon == std::string::npos ? m_address : m_address.substr(0, colon);
         const std::uint16_t port =
             colon == std::string::npos ? m_settings.defaultPort() : PortOption::parse(m_address.substr(colon + 1));
-        m_network = std::make_unique<network::ClientConnection>(net::UdpTransport::resolve(host, port), m_settings);
+        m_network = std::make_unique<network::ClientConnection>(
+            net::UdpTransport::resolve(host, port), m_settings, field("playerName"));
     } catch (const EngineError &) {
         m_view.uiStore().setValue("menu.error", m_view.message("invalidAddress"));
         return;

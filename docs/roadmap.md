@@ -19,12 +19,30 @@
 
 ## Next
 
-| Item | Track | Why |
-|---|---|---|
-| Colorblind palettes, option to disable shake and flashes | Accessibility | See [Accessibility](accessibility.md) |
-| Client-side prediction and interpolation | Network | Remove the round-trip delay on the local ship |
-| Delta snapshots | Network | Less bandwidth, more entities |
-| Generic message bus between systems and scripts | Architecture | Fewer dedicated event queues |
-| Automated tests of the simulation and the codec | Architecture | See [Testing](guides/testing.md) |
+| Track | Topics |
+|---|---|
+| Advanced architecture | Standalone engine project, second sample game, audio and UI modules, resource management, developer console, metrics |
+| Advanced gameplay | Enemy variety, bosses, the Force, power-ups, levels, data-driven content in JSON, content creation guides |
+| Advanced networking | Done: reliable messages, delta snapshots, data packing, multi-instance load, Linux `netem` measurements. Remaining: interpolation, client prediction |
 
-Each item becomes a GitHub issue and is developed on its own branch ([Git workflow](contributing/git-workflow.md)).
+Each feature is tracked as a GitHub issue and developed on its own branch.
+
+## Part 2 — Advanced networking track
+
+| Feature | Status |
+|---|---|
+| Per-client packet sequencing | Done |
+| Acknowledgements with a 32-bit bitfield, retransmission of reliable messages | Done |
+| Round-trip time measured per client, server side | Done |
+| Delta snapshots against an acknowledged baseline | Done |
+| Compact entity encoding, field masks, `int8` position deltas | Done |
+| Protocol reference rewritten for version 8 | Done |
+| Headless protocol probe with simulated loss (`scripts/protocol_probe.py`) | Done |
+| Load generator and scaling measurements (`scripts/load_test.py`) | Done |
+| Room and client limits raised to the protocol ceiling (48 / 192) | Done |
+| Text chat per room | Done |
+| Player identities, persistent sessions, reconnection | To do |
+| Global scoreboard | To do |
+| Server administration console | To do |
+| Measurements under `netem` and `clumsy` | Linux `netem`: [measured with two production clients](measurements/netem-2026-11-08/rapport.md). Windows `clumsy`: not run |
+| Entity interpolation, client prediction with reconciliation | Out of the chosen scope, analysed in the [comparative study](comparative-study/networking.md) |

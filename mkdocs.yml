@@ -45,6 +45,9 @@ nav:
   - Create content:
       - Create a game from scratch: guides/create-a-game.md
       - Prefabs and scenes: guides/prefabs-and-scenes.md
+  - Network protocol: protocol.md
+  - Guides:
+      - Scripting reference: guides/scripting.md
       - Add an enemy: guides/add-an-enemy.md
       - Add a level or a boss: guides/add-a-level.md
       - Tilemaps and terrain: guides/tilemaps.md

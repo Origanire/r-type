@@ -13,6 +13,15 @@ r-type_client
 *.exe
 *.pdb
 
+# Python bytecode caches
+__pycache__/
+*.py[cod]
+
+# Local raw netem outputs (keep reports and test scripts versionable)
+/docs/measurements/**/*.log
+/docs/measurements/**/*.qdisc.txt
+/docs/measurements/**/results.json
+
 # Documentation site (mkdocs build)
 site/
 
@@ -25,3 +34,9 @@ site/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Working notes for the networking track: not deliverables
+PLAN_RESEAU.md
+trackNet.md
+netemTest.md
+/doc_perso.md

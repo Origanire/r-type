@@ -17,6 +17,11 @@ float Collider::height() const
     return m_height;
 }
 
+std::uint32_t Collider::layer() const
+{
+    return m_layer;
+}
+
 bool Collider::canHit(const Collider &other) const
 {
     return (m_hitMask & other.m_layer) != 0;

@@ -14,6 +14,7 @@ public:
 
     float width() const;
     float height() const;
+    std::uint32_t layer() const;
     bool canHit(const Collider &other) const;
     physics::Aabb boundsAt(float x, float y) const;
 

@@ -14,8 +14,8 @@ public:
     static constexpr char MASK_CHARACTER = '*';
     static constexpr char CARET_CHARACTER = '_';
 
-    TextField(std::string name, std::size_t maxLength, bool masked, std::string placeholder, float width,
-        float height, std::string submit = {});
+    TextField(std::string name, std::size_t maxLength, bool masked, std::string placeholder, float width, float height,
+        std::string submit = {});
 
     const std::string &name() const;
     const std::string &content() const;

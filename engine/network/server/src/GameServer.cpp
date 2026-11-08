@@ -252,17 +252,16 @@ void GameServer::sendSnapshot(std::size_t client, const SnapshotMessage &snapsho
     SnapshotHistory &history = m_clients[client]->snapshots();
     const SnapshotMessage *base = history.baseline();
     const std::uint32_t staleAfter = FULL_SNAPSHOT_SECONDS * static_cast<std::uint32_t>(m_settings.tickRate());
-    const bool fresh = base != nullptr && Codec::isNewer(snapshot.tick(), base->tick())
-        && snapshot.tick() - base->tick() < staleAfter;
+    const bool fresh =
+        base != nullptr && Codec::isNewer(snapshot.tick(), base->tick()) && snapshot.tick() - base->tick() < staleAfter;
     const std::optional<std::uint32_t> lastFull = history.lastFull();
     const std::uint32_t keyframeAfter = KEYFRAME_SECONDS * static_cast<std::uint32_t>(m_settings.tickRate());
     const bool overdue = !lastFull || snapshot.tick() - *lastFull >= keyframeAfter;
     const bool differential = fresh && base->tick() != 0 && !overdue;
     if (!differential)
         history.markFull(snapshot.tick());
-    const std::uint32_t sequence = differential
-        ? sendTo(client, Packet(SnapshotDiff::build(*base, snapshot)))
-        : sendTo(client, Packet(snapshot));
+    const std::uint32_t sequence =
+        differential ? sendTo(client, Packet(SnapshotDiff::build(*base, snapshot))) : sendTo(client, Packet(snapshot));
     if (sequence != 0)
         history.remember(sequence, snapshot);
 }

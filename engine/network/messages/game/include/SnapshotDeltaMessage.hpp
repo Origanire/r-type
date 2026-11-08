@@ -24,9 +24,8 @@ public:
     using WorldChanges = std::vector<std::pair<std::uint8_t, std::uint16_t>>;
     using PlayerChanges = std::vector<std::pair<std::uint8_t, PlayerStatus>>;
 
-    SnapshotDeltaMessage(std::uint32_t tick, std::uint32_t baselineTick, std::uint8_t gameState,
-        WorldChanges world, PlayerChanges players, std::vector<EntityChange> entities,
-        std::vector<std::uint16_t> removed);
+    SnapshotDeltaMessage(std::uint32_t tick, std::uint32_t baselineTick, std::uint8_t gameState, WorldChanges world,
+        PlayerChanges players, std::vector<EntityChange> entities, std::vector<std::uint16_t> removed);
 
     std::uint32_t tick() const;
     std::uint32_t baselineTick() const;

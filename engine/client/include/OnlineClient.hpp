@@ -1,8 +1,8 @@
 #pragma once
 
 #include <chrono>
-#include <deque>
 #include <cstdint>
+#include <deque>
 #include <filesystem>
 #include <memory>
 #include <optional>

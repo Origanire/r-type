@@ -21,8 +21,8 @@ public:
     static constexpr std::int32_t MIN_STEP = -128;
     static constexpr std::int32_t MAX_STEP = 127;
 
-    EntityChange(std::uint16_t id, std::uint8_t fields, std::int16_t x, std::int16_t y, std::uint8_t kind,
-        std::uint8_t visual);
+    EntityChange(
+        std::uint16_t id, std::uint8_t fields, std::int16_t x, std::int16_t y, std::uint8_t kind, std::uint8_t visual);
 
     static EntityChange created(const EntityState &entity);
     static std::optional<EntityChange> between(const EntityState &base, const EntityState &current);

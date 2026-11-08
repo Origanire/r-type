@@ -43,8 +43,8 @@ SnapshotDeltaMessage SnapshotDiff::build(const SnapshotMessage &base, const Snap
         if (!find(current, entity.id()))
             removed.push_back(entity.id());
     }
-    return SnapshotDeltaMessage(current.tick(), base.tick(), current.gameState(), std::move(world),
-        std::move(players), std::move(entities), std::move(removed));
+    return SnapshotDeltaMessage(current.tick(), base.tick(), current.gameState(), std::move(world), std::move(players),
+        std::move(entities), std::move(removed));
 }
 
 SnapshotMessage SnapshotDiff::apply(const SnapshotMessage &base, const SnapshotDeltaMessage &delta)
@@ -72,8 +72,7 @@ SnapshotMessage SnapshotDiff::apply(const SnapshotMessage &base, const SnapshotD
         if (const auto resolved = change.resolve(find(base, change.id())))
             entities.push_back(*resolved);
     }
-    return SnapshotMessage(
-        delta.tick(), delta.gameState(), std::move(values), std::move(players), std::move(entities));
+    return SnapshotMessage(delta.tick(), delta.gameState(), std::move(values), std::move(players), std::move(entities));
 }
 
 } // namespace engine::network

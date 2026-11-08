@@ -87,7 +87,8 @@ void EngineComponentLoaders::loadRectShape(ecs::Registry &registry, const ecs::E
         return;
     }
     registry.emplace<ecs::RectShape>(entity, data.getFloat("width"), data.getFloat("height"),
-        DataReaders::readColor(data, "color"), DataReaders::readColor(data, "outline"), data.getFloat("thickness", 1.f));
+        DataReaders::readColor(data, "color"), DataReaders::readColor(data, "outline"),
+        data.getFloat("thickness", 1.f));
 }
 
 void EngineComponentLoaders::loadParallax(ecs::Registry &registry, const ecs::Entity &entity, const DataNode &data)

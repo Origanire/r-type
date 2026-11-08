@@ -5,9 +5,9 @@
 namespace engine::network {
 
 ClientSession::ClientSession(net::Endpoint peer, std::uint32_t token, Time now)
-    : m_peer(std::move(peer)), m_token(token), m_name(), m_confirmed(false), m_lastSeen(now), m_lastInput(now), m_lastAccept(), m_lastChat(),
-      m_inputSequence(), m_heartbeatSequence(), m_outgoingSequence(1), m_sender(), m_receiver(), m_snapshots(), m_roomId(),
-      m_failedJoins(0)
+    : m_peer(std::move(peer)), m_token(token), m_name(), m_confirmed(false), m_lastSeen(now), m_lastInput(now),
+      m_lastAccept(), m_lastChat(), m_inputSequence(), m_heartbeatSequence(), m_outgoingSequence(1), m_sender(),
+      m_receiver(), m_snapshots(), m_roomId(), m_failedJoins(0)
 {
 }
 

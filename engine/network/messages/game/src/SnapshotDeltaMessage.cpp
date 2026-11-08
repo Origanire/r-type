@@ -134,8 +134,8 @@ SnapshotDeltaMessage SnapshotDeltaMessage::read(net::ByteReader &reader)
     removed.reserve(removedCount);
     for (std::size_t i = 0; i < removedCount; ++i)
         removed.push_back(reader.readU16());
-    return SnapshotDeltaMessage(tick, baselineTick, gameState, std::move(world), std::move(players),
-        std::move(entities), std::move(removed));
+    return SnapshotDeltaMessage(
+        tick, baselineTick, gameState, std::move(world), std::move(players), std::move(entities), std::move(removed));
 }
 
 } // namespace engine::network

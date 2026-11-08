@@ -41,8 +41,7 @@ NetworkSettings::NetworkSettings(const scene::DataNode &game, const scene::DataN
       m_playerValueCount(game.has("playerValues") ? game.child("playerValues").items().size() : 0),
       m_ruleCount(game.has("rules") ? game.child("rules").items().size() : 0),
       m_eventSoundCount(game.has("eventSounds") ? game.child("eventSounds").items().size() : 0),
-      m_consoleRule(findRule(game)), m_freeCommands(readFreeCommands(game)),
-      m_ruleCapacities(readRuleCapacities(game))
+      m_consoleRule(findRule(game)), m_freeCommands(readFreeCommands(game)), m_ruleCapacities(readRuleCapacities(game))
 {
 }
 

@@ -6,8 +6,7 @@
 
 namespace engine::network {
 
-ChatBroadcastMessage::ChatBroadcastMessage(std::uint8_t slot, std::string text)
-    : m_slot(slot), m_text(std::move(text))
+ChatBroadcastMessage::ChatBroadcastMessage(std::uint8_t slot, std::string text) : m_slot(slot), m_text(std::move(text))
 {
 }
 

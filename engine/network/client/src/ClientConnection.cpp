@@ -9,9 +9,10 @@
 namespace engine::network {
 
 ClientConnection::ClientConnection(net::Endpoint server, const NetworkSettings &settings, std::string name)
-    : m_settings(settings), m_codec(settings), m_server(std::move(server)), m_name(std::move(name)), m_sequence(1), m_sender(), m_receiver(), m_token(0),
-      m_attempts(0), m_lastConnect(), m_lastInput(), m_lastHeartbeat(), m_lastReceive(), m_lastTick(),
-      m_serverSequence(), m_snapshot(), m_applied(), m_events(), m_bytesReceived(0), m_bytesSent(0), m_ping(0)
+    : m_settings(settings), m_codec(settings), m_server(std::move(server)), m_name(std::move(name)), m_sequence(1),
+      m_sender(), m_receiver(), m_token(0), m_attempts(0), m_lastConnect(), m_lastInput(), m_lastHeartbeat(),
+      m_lastReceive(), m_lastTick(), m_serverSequence(), m_snapshot(), m_applied(), m_events(), m_bytesReceived(0),
+      m_bytesSent(0), m_ping(0)
 {
 }
 
@@ -87,8 +88,7 @@ bool ClientConnection::handlePacket(const Packet &packet)
     } else if (packet.holds<SnapshotDeltaMessage>()) {
         if (!handleDelta(packet.as<SnapshotDeltaMessage>()))
             return false;
-    } else if (packet.reliableId() == 0 && m_serverSequence
-        && !Codec::isNewer(packet.sequence(), *m_serverSequence)) {
+    } else if (packet.reliableId() == 0 && m_serverSequence && !Codec::isNewer(packet.sequence(), *m_serverSequence)) {
         return false;
     }
     if (packet.type() == MessageType::ServerShutdown)

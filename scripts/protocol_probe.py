@@ -20,7 +20,7 @@ reports:
     reliable message was lost;
   - how many of the ignored packets carried a reliable message.
 
-See docs/protocol.md for the wire format.
+See docs/reference/protocol.md for the wire format.
 """
 import random
 import socket

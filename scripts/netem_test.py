@@ -37,42 +37,39 @@ def command(*args, check=True):
 
 def report(output, data):
     (output / "results.json").write_text(json.dumps(data, indent=2) + "\n")
-    lines = ["# Mesures Linux netem", "", f"Date UTC : {data['utc']}", "",
-             "Deux clients sans interface graphique utilisent le ClientConnection C++ de production,",
-             "le codec et le transport réels. Un serveur neuf est lancé pour chaque scénario.",
-             "Création d'une salle, arrivée du second joueur, démarrage, puis tirs pendant la mesure.",
-             "Les commandes créer/rejoindre/démarrer sont envoyées une seule fois par le test :",
-             "les répétitions éventuelles sont assurées par le mécanisme fiable du projet.", "",
-             "netem est appliqué à lo dans un espace réseau jetable, dans les deux sens.",
-             "Un délai de 100 ms affecte chaque trajet, donc ajoute environ 200 ms au RTT.",
-             "Le débit configuré est partagé par les paquets passant sur cette interface.", "",
-             "| Scénario | Verdict | RTT médian A/B (ms) | Snapshots/s A/B | Réception A/B (KiB/s) | Intervalle max A/B (s) |",
+    lines = ["# Linux netem measurements", "", f"UTC date: {data['utc']}", "",
+             "Two headless clients use the production C++ `ClientConnection`, the real codec and the real",
+             "transport. A fresh server is started for each scenario. One client creates a room, the second",
+             "joins, the game starts, then both fire during the measurement. The create, join and start",
+             "commands are sent only once by the test: any repetition is done by the reliability layer.", "",
+             "netem is applied to `lo` in a disposable network namespace, in both directions.",
+             "A 100 ms delay affects each way, so it adds about 200 ms to the round trip.",
+             "The configured rate is shared by every packet on that interface.", "",
+             "| Scenario | Verdict | Median RTT A/B (ms) | Snapshots/s A/B | Received A/B (KiB/s) | Max gap A/B (s) |",
              "|---|---|---|---|---|---|"]
     for case in data["cases"]:
         r = case["result"]
         clients = r.get("clients", [])
         def values(key, scale=1):
-            return " / ".join(f"{p[key] / scale:.2f}" for p in clients) or "—"
+            return " / ".join(f"{p[key] / scale:.2f}" for p in clients) or "-"
         lines.append(f"| {case['name']} | {'PASS' if r.get('passed') else 'FAIL'} | "
                      f"{values('ping_median_ms')} | {values('snapshots_per_second')} | "
                      f"{values('rx_bytes_per_second', 1024)} | {values('max_snapshot_gap_seconds')} |")
         if r.get("error"):
-            lines.extend(["", f"Erreur {case['name']} : `{r['error']}`", ""])
-    lines.extend(["", "## Critères et limites", "",
-                  "PASS : les deux clients rejoignent et démarrent, chacun reçoit au moins 10 snapshots",
-                  "pendant la mesure, aucun tick appliqué ne recule, aucun doublon de ROOM_JOINED ou",
-                  "GAME_STARTED n'est livré à l'application, et aucun silence des snapshots n'atteint 5 s.",
-                  "Une exception ou un dépassement du délai du processus fait échouer le scénario.", "",
-                  "Le RTT est celui du heartbeat, échantillonné chaque seconde ; une valeur peut être",
-                  "réutilisée si la réponse suivante est perdue. Il ne mesure pas le délai entre une touche",
-                  "et son affichage. Le débit compte les octets applicatifs, en-tête du protocole inclus,",
-                  "sans en-têtes UDP/IP/Ethernet. La cadence des snapshots compte les états effectivement",
-                  "fournis par le client, après filtrage et reconstruction des deltas.", "",
-                  "Un passage par scénario, deux clients, une salle : ces essais ne prouvent ni la tenue",
-                  "sous charge maximale, ni la livraison de tous les événements de jeu. Les pourcentages",
-                  "netem sont des paramètres aléatoires, pas des taux de pertes applicatifs mesurés.",
-                  "Consulter les fichiers *.qdisc.txt, *.server.log, *.client.log et results.json pour les preuves.", ""])
-    (output / "rapport.md").write_text("\n".join(lines))
+            lines.extend(["", f"Error in {case['name']}: `{r['error']}`", ""])
+    lines.extend(["", "## Criteria and limits", "",
+                  "PASS means: both clients join and start, each one receives at least 10 snapshots during",
+                  "the measurement, no applied tick goes backwards, no duplicate `ROOM_JOINED` or `GAME_STARTED`",
+                  "reaches the application, and snapshots never stop for 5 seconds.",
+                  "An exception or a process timeout fails the scenario.", "",
+                  "The RTT is the heartbeat one, sampled every second; a value can be reused if the next answer",
+                  "is lost. It does not measure the delay between a key press and its display. The rate counts",
+                  "application bytes, protocol header included, without UDP, IP or Ethernet headers. The snapshot",
+                  "rate counts the states actually delivered by the client, after filtering and delta reconstruction.", "",
+                  "One pass per scenario, two clients, one room: these runs prove neither behaviour under maximum",
+                  "load nor the delivery of every game event. netem percentages are random parameters, not measured",
+                  "application loss rates. See the *.qdisc.txt, *.server.log, *.client.log files and results.json.", ""])
+    (output / "report.md").write_text("\n".join(lines))
 
 
 def main():

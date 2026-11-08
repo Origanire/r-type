@@ -36,8 +36,9 @@ int main(int argc, char **argv)
         const auto port = static_cast<std::uint16_t>(std::stoi(argv[2]));
         const double duration = std::stod(argv[3]);
         Player players[2];
-        for (auto &p : players)
-            p.connection = std::make_unique<ClientConnection>(engine::net::Endpoint("127.0.0.1", port), settings);
+        for (std::size_t index = 0; index < 2; ++index)
+            players[index].connection = std::make_unique<ClientConnection>(
+                engine::net::Endpoint("127.0.0.1", port), settings, "probe" + std::to_string(index + 1));
         const auto origin = Clock::now();
         auto elapsed = [&] { return std::chrono::duration<double>(Clock::now() - origin).count(); };
         bool created = false, joinSent = false, startSent = false;

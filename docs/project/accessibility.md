@@ -56,7 +56,7 @@ game.
 - Text documentation in Markdown, rendered as a website with search and navigation, readable by screen readers.
 - Clear heading hierarchy, tables instead of text in images.
 - Diagrams written as Mermaid text, so their content is readable in the source and by assistive tools.
-- Short pages, one topic per page, a [glossary](reference/glossary.md) and a [FAQ](faq.md).
+- Short pages, one topic per page, a [glossary](../reference/glossary.md) and a [FAQ](../getting-started/faq.md).
 - The MkDocs Material theme supports keyboard navigation and has a high-contrast color scheme.
 
 ## For developers
@@ -64,4 +64,4 @@ game.
 - Remapping goes through `engine::input::KeyBindings`: game code reads actions, never physical keys.
 - Visual options belong to client systems and the renderer, never to gameplay components.
 - Any new sound that carries information must have a visual equivalent (a HUD text, an icon or a flash).
-- Any new setting is added to the [Settings file reference](reference/game-file.md#settings-file-reference).
+- Any new setting is added to the [Settings file reference](../reference/game-file.md#settings-file-reference).

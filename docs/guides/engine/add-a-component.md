@@ -64,7 +64,7 @@ float Gravity::force() const
 ```
 
 Rules: a class (no struct), derives from `IComponent`, members prefixed with `m_`, no function body in the
-header, no comment in the code (see [Coding conventions](../contributing/conventions.md)).
+header, no comment in the code (see [Coding conventions](../../contributing/conventions.md)).
 
 ## 3. Register the type
 
@@ -112,7 +112,7 @@ Add the source to `engine_ecs` in `engine/CMakeLists.txt`, in its category:
 
 ## 6. Document it
 
-Add a row to the [Component reference](../reference/components.md) with its fields and defaults.
+Add a row to the [Component reference](../../reference/components.md) with its fields and defaults.
 
 ## Sending it to clients
 

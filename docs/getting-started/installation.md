@@ -35,7 +35,7 @@ git clone https://github.com/microsoft/vcpkg.git .vcpkg
 CMake detects `.vcpkg/` automatically. A vcpkg installed elsewhere also works, see [Building](building.md).
 
 Under WSL 2, the windows open through WSLg on Windows 11. To play on a LAN from WSL, see
-[Network play](../guides/network-play.md#4-wsl).
+[Network play](network-play.md#4-wsl).
 
 ## Windows
 

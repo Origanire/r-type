@@ -52,8 +52,8 @@ Common value formats:
 | `Respawn` | S | `prefab`, `delay` = 0, `invulnerability` = 0, `x`, `y`, `spacingX` = 0, `spacingY` = 0 | Spawns the player's avatar, and again after its death while lives remain. Player N appears at `x + N*spacingX`, `y + N*spacingY` |
 | `Match` | S | `restartDelay` = 0 | Follows the match state; when everyone is out, a new round starts after the delay |
 | `Persistent` | S | - | Survives the world reset between rounds |
-| `Script` | S | `file`, `params` = {} | Python behaviour, see [Scripting](../guides/scripting.md) |
-| `Tilemap` | S | `rows`, `legend`, `tileSize`, `speed` | Scrolling level made of text rows, see [Tilemaps](../guides/tilemaps.md) |
+| `Script` | S | `file`, `params` = {} | Python behaviour, see [Scripting](scripting-api.md) |
+| `Tilemap` | S | `rows`, `legend`, `tileSize`, `speed` | Scrolling level made of text rows, see [Tilemaps](../guides/content/tilemaps.md) |
 | `Replicated` | S | `kind` | Sent to clients. `kind` selects the client prefab in the game's `kinds` table |
 
 `Player`, `PlayerIndex` and `PlayerValues` are added by the simulation for each player.
@@ -65,7 +65,7 @@ Common value formats:
 | `Sprite` | C | `texture`, `frame`, `scale` = 1 | Draws a part of a texture |
 | `SpriteAnimation` | C | `frame`, `frameCount`, `stepX`, `framesPerSecond`, `loop` = false | Moves the frame `stepX` pixels to the right `frameCount` times |
 | `TiltAnimation` | C | `frame`, `row` = 0, `flatColumn`, `maxTilt`, `framesPerSecond` | Picks a frame from the vertical speed (ship leaning up or down) |
-| `RectShape` | C | `width`, `height`, `color` | Filled rectangle (UI panels, bars, stars) |
+| `RectShape` | C | `width`, `height`, `color`, `outline`, `thickness` = 1 | Filled rectangle (UI panels, bars, stars). With `outline`, a border of that color is drawn |
 | `Text` | C | `font`, `size`, `color`, `content` = "", `offsetX` = 0, `offsetY` = 0 | Draws text |
 | `Parallax` | C | `speed`, `wrapWidth` | Scrolls to the left and wraps around. Needs a `RectShape` (its width is used) |
 | `Foreground` | C | - | Drawn above the world (HUD, menus) and not moved by the screen shake |
@@ -83,14 +83,14 @@ Common value formats:
 |---|---|---|---|
 | `Button` | C | `action`, `width`, `height`, `normal`, `hover`, `pressed`, `hoverSound`, `clickSound` | Clickable area. Colors are applied to the `RectShape`. `normalFrame`, `hoverFrame`, `pressedFrame` do the same for a `Sprite` |
 | `Focusable` | C | `order` | Can be selected with the keyboard or gamepad, in `order` |
-| `TextField` | C | `name`, `maxLength`, `width`, `height`, `masked` = false, `placeholder` | Text input. Its text is stored as UI value `field.<name>` |
+| `TextField` | C | `name`, `maxLength`, `width`, `height`, `masked` = false, `placeholder`, `submit` | Text input. Its text is stored as UI value `field.<name>`. `submit` is the UI action sent when Enter is pressed (R-Type chat: `send_chat`) |
 | `Choice` | C | `name`, `options` | Left/right selector. Its value is stored as `field.<name>` |
 | `VisibleWhen` | C | `key`, `value`, `unless` = none | Shown only while UI value `key` equals `value`, except while `unless` (`{key, value}`) also matches |
 | `Hidden` | C | - | Not drawn (set and removed by `Visibility`) |
 | `BoundText` | C | `format` | Text built from UI values: `"STAGE {world.stage}"` |
 | `ProgressBar` | C | `key`, `width`, `max` = 1, `vertical` = false | Resizes the `RectShape` to `value / max` |
 | `FadeWhen` | C | `key`, `value`, `seconds` = 0 | Fades the `RectShape` in over `seconds` while `key` equals `value`, and out otherwise |
-| `SettingSlider` | C | `setting`, then `min`, `max`, `step` or `options`, `direction` = 0 | With `direction` 0: left/right on the focused row changes the player setting `setting.<setting>` (numbers stop at the ends, options wrap). With `-1` or `1`: a clickable arrow button that lowers or raises it. See [Controls](../guides/controls.md#settings-screen) |
+| `SettingSlider` | C | `setting`, then `min`, `max`, `step` or `options`, `direction` = 0 | With `direction` 0: left/right on the focused row changes the player setting `setting.<setting>` (numbers stop at the ends, options wrap). With `-1` or `1`: a clickable arrow button that lowers or raises it. See [Controls](../guides/content/controls.md#settings-screen) |
 | `KeyBind` | C | `action`, `device` = keyboard, `prompt` = "..." | Enter or click, then the next key (or gamepad button with `"device": "gamepad"`) becomes the binding of `action`: `up`, `down`, `left`, `right`, `fire`, `action` |
 | `ListView` | C | `source`, `spacing`, `maxRows`, `parts` | Spawns one row per entry of the UI list `source` (rooms, members). Each row is made of `parts`: `{prefab, offsetX = 0, offsetY = 0}`, rows are `spacing` apart |
 

@@ -81,7 +81,7 @@ The same simulation and the same display code are combined in three ways:
 | Mode | Executable | Simulation runs in | Display runs in | Link |
 |---|---|---|---|---|
 | Server | `r-type_server` | the server process | - | - |
-| Online client | `r-type_client` | - | the client process | UDP, [protocol](../protocol.md) |
+| Online client | `r-type_client` | - | the client process | UDP, [protocol](../reference/protocol.md) |
 | Solo | `skyhop` | the same process | the same process | direct function calls |
 
 ```mermaid
@@ -104,7 +104,7 @@ The transport is interchangeable because both sides only exchange two things: **
 ## Runtime model (online)
 
 The server owns the truth. Clients send the buttons they hold, the server simulates the world at 60 ticks per
-second and sends a full snapshot of it 20 times per second. Clients draw what they receive, plus local cosmetic
+second and sends its state 20 times per second, as a delta against the last snapshot the client acknowledged. Clients draw what they receive, plus local cosmetic
 effects (parallax, animations, particles).
 
 ```mermaid

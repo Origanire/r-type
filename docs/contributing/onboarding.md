@@ -31,7 +31,7 @@ Ask a team member for:
 2. [Building](../getting-started/building.md): the first build downloads the dependencies (several minutes).
 3. [Running](../getting-started/running.md): start a server and two clients, play a stage; start Skyhop.
 
-If anything fails, check [Troubleshooting](../troubleshooting.md) first.
+If anything fails, check [Troubleshooting](../getting-started/troubleshooting.md) first.
 
 ### Read
 
@@ -61,9 +61,9 @@ Pick one of these depending on your role, it touches every layer without risk:
 
 | Role | First task |
 |---|---|
-| Content (JSON, Python) | [Add an enemy](../guides/add-an-enemy.md) and put it in a wave of stage 1 |
-| Engine (C++) | Add a client-only component and its system, for example a blinking text ([Add a component](../guides/add-a-component.md)) |
-| Network | Read the [RFC](../protocol.md) and decode a captured datagram by hand with Wireshark |
+| Content (JSON, Python) | [Add an enemy](../guides/content/add-an-enemy.md) and put it in a wave of stage 1 |
+| Engine (C++) | Add a client-only component and its system, for example a blinking text ([Add a component](../guides/engine/add-a-component.md)) |
+| Network | Read the [RFC](../reference/protocol.md) and decode a captured datagram by hand with Wireshark |
 
 Open a draft pull request early: reviews are the fastest way to learn the conventions.
 

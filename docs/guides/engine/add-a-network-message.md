@@ -77,5 +77,5 @@ Client messages start with the session token (`writeU32(m_token)`), and `isValid
 ## 5. Version and document
 
 1. Increase `Protocol::VERSION`: old clients are then refused cleanly.
-2. Add the message to the [RFC](../protocol.md): code table, payload table, validation rules.
+2. Add the message to the [RFC](../../reference/protocol.md): code table, payload table, validation rules.
 3. Test with a client and a server built from the same commit, and with an old client (it must get `REJECT(2)`).

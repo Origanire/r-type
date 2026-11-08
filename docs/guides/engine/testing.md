@@ -66,7 +66,15 @@ Link it with `engine_simulation`. This kind of program can check that:
 - a level is passable with a scripted sequence of inputs;
 - no script error appears on the error output.
 
+## Testing the network
+
+| Tool | What it checks |
+|---|---|
+| `scripts/protocol_probe.py <port> [loss]` | Speaks the wire format from Python; with a loss ratio, checks that reliable messages and delta snapshots survive dropped packets |
+| `scripts/load_test.py <port> <games>` | Starts many rooms at once and reports the simulation rate, snapshots per second and bandwidth |
+| `scripts/netem_client.cpp` + `scripts/netem_test.py` | Real `ClientConnection` under kernel-level delay, loss, duplication and reordering ([Network measurements](../../measurements/index.md)) |
+
 ## Testing the protocol
 
 `Codec::decode` must reject malformed data without crashing. Feed it truncated datagrams, wrong magic, wrong
-sizes, random bytes: it must return `std::nullopt` every time ([Protocol, section 8](../protocol.md)).
+sizes, random bytes: it must return `std::nullopt` every time ([Protocol, section 8](../../reference/protocol.md)).

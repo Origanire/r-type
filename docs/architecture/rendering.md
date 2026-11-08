@@ -12,7 +12,7 @@
 | `TextureManager`, `FontManager` | Load each file once and keep it |
 
 Systems only know `IRenderer`, so another graphics library can replace SFML by writing one new class
-(see [Replace a library](../guides/replace-a-library.md)).
+(see [Replace a library](../guides/engine/replace-a-library.md)).
 
 ### What gets drawn
 
@@ -45,5 +45,5 @@ Supported files are the ones SFML reads: `.wav`, `.ogg`, `.flac`, `.mp3`.
 ## Assets
 
 Asset paths in the game file are relative to the `assets` folder copied next to the executable
-(`assets/` for R-Type, `game2/assets/` for Skyhop). `AssetPath` finds it next to the executable, so the game can
-be started from any working directory. See [Asset pipeline](../guides/assets.md).
+(`game/assets/rtype/` for R-Type, `game2/assets/skyhop/` for Skyhop). `AssetPath` finds it next to the executable, so the game can
+be started from any working directory. See [Asset pipeline](../guides/content/assets.md).

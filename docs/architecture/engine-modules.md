@@ -59,7 +59,7 @@ written without a path: `#include "Health.hpp"`.
 | `ENGINE_BUILD_SERVER` | `ON` | Builds scripting, simulation and the server executables |
 
 **Run-time modularity**: systems can also live in plugins, shared libraries loaded and reloaded while the game
-runs ([Write a plugin](../guides/write-a-plugin.md)). The engine libraries are built as position-independent code
+runs ([Write a plugin](../guides/engine/write-a-plugin.md)). The engine libraries are built as position-independent code
 so that plugins can link them.
 
 A dedicated server machine can be built with `-DENGINE_BUILD_CLIENT=OFF`: it then needs neither SFML nor a

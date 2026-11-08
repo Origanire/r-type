@@ -1,4 +1,4 @@
-# Playing on a local network
+# Playing on a network
 
 ## 1. Start the server
 
@@ -19,6 +19,10 @@ If the line is missing (no network found), find the address yourself: `ipconfig`
 `ip addr` on Linux.
 
 ## 2. Start the clients
+
+A machine that only plays does not need the sources or a compiler: copy the whole `bin` folder of a build
+(`build/bin/` on Linux, `out\windows\bin\Release\` on Windows) with the executable, the libraries, `assets`,
+`data`, `plugins`, `python` and `scripts`. The client and the server must come from the same commit.
 
 On every player's machine, including the host if it plays:
 
@@ -42,8 +46,28 @@ The server receives UDP on its port. If clients stay on "CONNECTING...":
 ## 4. WSL
 
 A server started inside WSL 2 is behind a virtual network by default. Either run the Windows build of the
-server, or enable mirrored networking (`networkingMode=mirrored` in `%UserProfile%\.wslconfig`) so that WSL uses
-the Windows address.
+server, or enable mirrored networking so that WSL uses the Windows address:
+
+```ini
+# %UserProfile%\.wslconfig
+[wsl2]
+networkingMode=mirrored
+```
+
+Run `wsl --shutdown` after the change. In mirrored mode the Hyper-V firewall also filters WSL; allow the port
+from an administrator PowerShell:
+
+```powershell
+New-NetFirewallRule -DisplayName "R-Type UDP 4242" -Direction Inbound -Protocol UDP -LocalPort 4242 -Action Allow
+New-NetFirewallHyperVRule -Name RTypeUDP4242 -DisplayName "R-Type UDP 4242 (WSL)" -Direction Inbound `
+  -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol UDP -LocalPorts 4242
+```
+
+## 5. Outside a local network
+
+Use the local address printed by the server, never the public one given by "what is my IP" websites. When
+machines are not on the same network, or a school network isolates them, put them on a phone hotspot or on a
+virtual network such as Tailscale, and use the address it gives (`100.x.x.x`) with `-h`.
 
 ## Checks
 

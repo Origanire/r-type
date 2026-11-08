@@ -21,7 +21,7 @@ Changes are saved at once in `data/<game>_user_settings.json`, next to the execu
 ## Making a settings screen for a game
 
 The screen is an ordinary scene named `settings`, with the systems `KeyBind` and `SettingSlider` and the
-components of the same names ([Component reference](../reference/components.md)):
+components of the same names ([Component reference](../../reference/components.md)):
 
 ```json
 {"prefab": "ui_element", "components": {
@@ -87,4 +87,4 @@ Button numbers depend on the pad: if a button does not respond, try other number
 ## What the server receives
 
 Whatever the device, the client sends the same 6 buttons (up, down, left, right, fire, action) in `INPUT`
-messages ([Protocol](../protocol.md)). What `action` does is decided by the game's scripts.
+messages ([Protocol](../../reference/protocol.md)). What `action` does is decided by the game's scripts.

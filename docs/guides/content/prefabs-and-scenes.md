@@ -67,7 +67,7 @@ Client scenes are declared in `scenes` of the game file:
 |---|---|
 | `music` | Music key, played while the scene is active |
 | `escapeAction` | UI action sent when Escape (or gamepad Select) is pressed |
-| `systems` | Client systems, in order ([System reference](../reference/systems.md)) |
+| `systems` | Client systems, in order ([System reference](../../reference/systems.md)) |
 | `entities` | List of entries |
 
 Each entry of `entities`:

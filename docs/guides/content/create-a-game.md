@@ -35,14 +35,14 @@ engine_add_game(skyhop
 
 | Keyword | Builds |
 |---|---|
-| `LOCAL <exe>` | A solo executable, no server ([Solo mode](../architecture/solo-mode.md)) |
+| `LOCAL <exe>` | A solo executable, no server ([Solo mode](../../architecture/solo-mode.md)) |
 | `SERVER <exe>` and `CLIENT <exe>` | An online server and client, like R-Type |
 
 Use the three together for a game playable both ways.
 
 ## 3. Write the game file
 
-Start with the general keys ([Game file reference](../reference/game-file.md)):
+Start with the general keys ([Game file reference](../../reference/game-file.md)):
 
 ```json
 {
@@ -211,4 +211,4 @@ cmake --build build --parallel "$(nproc)"
 - [ ] Assets are free to use, and their license file is in the assets folder ([Assets](assets.md)).
 
 When something is missing, the engine stops at load time with a message naming the key, or prints a
-`[script]` error: see [Troubleshooting](../troubleshooting.md).
+`[script]` error: see [Troubleshooting](../../getting-started/troubleshooting.md).

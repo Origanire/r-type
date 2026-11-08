@@ -45,7 +45,7 @@ Python is slower than C++. Keep `on_update` short:
 `Collision` tests every pair of entities that have a `Collider` (O(n²)), then keeps the pairs whose layers can
 hit each other. With a few hundred colliders this costs well under a millisecond. Decor and effects should have
 no `Collider` at all: they then cost nothing. For thousands of colliders, a grid broad phase would be the next
-step ([Algorithms](../comparative-study/algorithms-and-data-structures.md)).
+step ([Algorithms](../../comparative-study/algorithms-and-data-structures.md)).
 
 ## Measuring
 

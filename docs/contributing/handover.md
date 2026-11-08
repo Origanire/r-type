@@ -49,6 +49,6 @@ If a member stops answering with work in progress:
 |---|---|
 | How to build and run | [Getting started](../getting-started/installation.md) |
 | Architecture choices | [Design decisions](../architecture/decisions.md) |
-| Protocol | [RFC](../protocol.md) |
-| How to add content | [Guides](../guides/create-a-game.md) |
-| Known problems | [Troubleshooting](../troubleshooting.md), issues |
+| Protocol | [RFC](../reference/protocol.md) |
+| How to add content | [Guides](../guides/content/create-a-game.md) |
+| Known problems | [Troubleshooting](../getting-started/troubleshooting.md), issues |

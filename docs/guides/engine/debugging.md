@@ -63,4 +63,4 @@ Useful breakpoints:
 ## Network
 
 Watch the traffic with Wireshark on the game port (`udp.port == 4242`). Every datagram starts with `45 4E 07`
-(magic and version 7), the fourth byte is the message type ([Protocol](../protocol.md)).
+(magic and version 7), the fourth byte is the message type ([Protocol](../../reference/protocol.md)).

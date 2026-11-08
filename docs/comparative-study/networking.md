@@ -33,13 +33,13 @@ acknowledges up to 33 and losing an acknowledgement is self-healing.
 
 | Metric | Value |
 |---|---|
-| Header overhead | 10 bytes per packet |
+| Header overhead | 10 bytes per packet (`ack`, `ackBits`, `reliableId`), on a 20-byte header |
 | Share of a real session's traffic | **7 %** measured, dominated by small packets |
 | Dedicated acknowledgement packets | **0** — they travel on inputs and snapshots |
 | Game events lost at 60 % packet loss | **0** |
 
 The 7 % figure is measured, not computed from the worst case: most packets are small, so a fixed
-10-byte header weighs more than a theoretical calculation on full snapshots suggests.
+10 extra header bytes weigh more than a theoretical calculation on full snapshots suggests.
 
 **Retransmission delay: `max(100 ms, rtt x 1.5)`.** The floor matters more than the formula. With
 a 30 ms floor we measured **4 useless retransmissions at 0 % loss**: on a LAN the round-trip time
@@ -231,4 +231,4 @@ twice. The criterion became the continuity of reliable identifiers.
 | Server-side lag compensation, rollback | Out of scope |
 | Generic compression (LZ4) | Deliberately deferred, see above |
 | Bit-level packing across byte boundaries | Deliberately deferred, see above |
-| Measurements under `netem` or `clumsy` | Linux `netem`: [real server and two production clients](../measurements/netem-2026-11-08/rapport.md), with bidirectional delay, loss, duplication, reordering and a rate limit. Windows `clumsy`: not run |
+| Measurements under `netem` or `clumsy` | Linux `netem`: [real server and two production clients](../measurements/netem-2026-11-08/report.md), with bidirectional delay, loss, duplication, reordering and a rate limit. Windows `clumsy`: not run |

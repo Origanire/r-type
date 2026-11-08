@@ -69,6 +69,16 @@ Declared in `rules`, chosen by the room creator, fixed for the whole game of tha
 
 The first label is the default. In solo mode every rule has its default.
 
+A rule can also change the size of the room with `maxPlayers`, one number per label. R-Type uses it for its
+game mode:
+
+```json
+{"name": "mode", "labels": ["COOP", "VERSUS"], "maxPlayers": [4, 2]}
+```
+
+A `VERSUS` room has two seats, a `COOP` room four. The lobby shows the options of the chosen mode only (the
+`rounds` rule only matters in versus), and `game/scripts/versus.py` runs the duel rounds until a champion.
+
 ## Adding a value
 
 1. Add it to the table in the game file.

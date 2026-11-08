@@ -1,7 +1,7 @@
 # Add an enemy
 
 No C++ and no recompilation: an enemy is a prefab (JSON) plus a behaviour script (Python).
-See the [scripting reference](scripting.md) for every available command.
+See the [scripting reference](../../reference/scripting-api.md) for every available command.
 
 ## 1. Write the behaviour
 

@@ -99,4 +99,4 @@ The console is available in the room and game scenes.
 | `cvars`, `get <cvar>`, `set <cvar> <value>` | client | Settings: `musicVolume`, `soundVolume`, `showMetrics` |
 | anything else | server | Sent as `CONSOLE_COMMAND`, run by the game's console script (room owner, cheats ON) |
 
-R-Type's server commands are listed in [Console and cheats](../guides/console.md).
+R-Type's server commands are listed in [Console and cheats](../guides/content/console.md).

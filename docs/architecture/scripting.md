@@ -97,4 +97,4 @@ A file that cannot be loaded (missing, syntax error) is reported the same way, w
 
 ## Full API
 
-Every function available to scripts is listed in the [Scripting reference](../guides/scripting.md).
+Every function available to scripts is listed in the [Scripting reference](../reference/scripting-api.md).

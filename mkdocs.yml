@@ -27,8 +27,9 @@ nav:
       - Installation: getting-started/installation.md
       - Building: getting-started/building.md
       - Running: getting-started/running.md
-      - Troubleshooting: troubleshooting.md
-      - FAQ: faq.md
+      - Playing on a network: getting-started/network-play.md
+      - Troubleshooting: getting-started/troubleshooting.md
+      - FAQ: getting-started/faq.md
   - Architecture:
       - Overview: architecture/overview.md
       - Engine modules: architecture/engine-modules.md
@@ -43,45 +44,34 @@ nav:
       - Rendering and audio: architecture/rendering.md
       - Design decisions: architecture/decisions.md
   - Create content:
-      - Create a game from scratch: guides/create-a-game.md
-      - Prefabs and scenes: guides/prefabs-and-scenes.md
-  - Network protocol: protocol.md
-  - Guides:
-      - Scripting reference: guides/scripting.md
-      - Add an enemy: guides/add-an-enemy.md
-      - Add a level or a boss: guides/add-a-level.md
-      - Tilemaps and terrain: guides/tilemaps.md
-      - UI and HUD: guides/ui-and-hud.md
-      - Values and rules: guides/values-and-rules.md
-      - Audio: guides/audio.md
-      - Console and cheats: guides/console.md
-      - Controls and gamepad: guides/controls.md
-      - Asset pipeline: guides/assets.md
+      - Create a game from scratch: guides/content/create-a-game.md
+      - Prefabs and scenes: guides/content/prefabs-and-scenes.md
+      - Add an enemy: guides/content/add-an-enemy.md
+      - Add a level or a boss: guides/content/add-a-level.md
+      - Tilemaps and terrain: guides/content/tilemaps.md
+      - UI and HUD: guides/content/ui-and-hud.md
+      - Values and rules: guides/content/values-and-rules.md
+      - Audio: guides/content/audio.md
+      - Console and cheats: guides/content/console.md
+      - Controls and gamepad: guides/content/controls.md
+      - Asset pipeline: guides/content/assets.md
   - Extend the engine:
-      - Add a component: guides/add-a-component.md
-      - Add a system: guides/add-a-system.md
-      - Add a network message: guides/add-a-network-message.md
-      - Write a plugin: guides/write-a-plugin.md
-      - Replace a library or port: guides/replace-a-library.md
-      - Debugging: guides/debugging.md
-      - Testing: guides/testing.md
-      - Performance: guides/performance.md
-      - Playing on a LAN: guides/network-play.md
+      - Add a component: guides/engine/add-a-component.md
+      - Add a system: guides/engine/add-a-system.md
+      - Add a network message: guides/engine/add-a-network-message.md
+      - Write a plugin: guides/engine/write-a-plugin.md
+      - Replace a library or port: guides/engine/replace-a-library.md
+      - Debugging: guides/engine/debugging.md
+      - Testing: guides/engine/testing.md
+      - Performance: guides/engine/performance.md
   - Reference:
-      - Scripting API: guides/scripting.md
+      - Network protocol (RFC): reference/protocol.md
+      - Scripting API: reference/scripting-api.md
       - Components: reference/components.md
       - Systems: reference/systems.md
       - Game and settings files: reference/game-file.md
       - Code map: reference/code-map.md
       - Glossary: reference/glossary.md
-  - Protocol (RFC): protocol.md
-  - Team:
-      - Onboarding: contributing/onboarding.md
-      - Coding conventions: contributing/conventions.md
-      - Git workflow: contributing/git-workflow.md
-      - Handover and team changes: contributing/handover.md
-      - Release process: contributing/release.md
-      - Security policy: contributing/security-policy.md
   - Comparative study:
       - Overview: comparative-study/index.md
       - Libraries and tools: comparative-study/libraries.md
@@ -89,5 +79,16 @@ nav:
       - Networking: comparative-study/networking.md
       - Storage: comparative-study/storage.md
       - Security: comparative-study/security.md
-  - Accessibility: accessibility.md
-  - Roadmap: roadmap.md
+  - Network measurements:
+      - Test bench: measurements/index.md
+      - netem results (2026-11-08): measurements/netem-2026-11-08/report.md
+  - Team:
+      - Onboarding: contributing/onboarding.md
+      - Coding conventions: contributing/conventions.md
+      - Git workflow: contributing/git-workflow.md
+      - Handover and team changes: contributing/handover.md
+      - Release process: contributing/release.md
+      - Security policy: contributing/security-policy.md
+  - Project:
+      - Accessibility: project/accessibility.md
+      - Roadmap: project/roadmap.md

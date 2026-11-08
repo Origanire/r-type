@@ -7,7 +7,7 @@
 | `CMAKE_TOOLCHAIN_FILE does not exist` | vcpkg is not where CMake looks. Clone it into `.vcpkg` at the repository root, or pass `-DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake`. Delete the build folder before configuring again |
 | The first configuration takes very long | Normal: vcpkg builds SFML, Python and the other dependencies once. Later builds reuse them |
 | `Could not find a package configuration file provided by "SFML"` | The toolchain file was not given at the first configuration. Delete the build folder and configure again with it |
-| Linux: errors about X11, OpenGL, udev or Xrandr | Install the development packages ([Installation](getting-started/installation.md)) |
+| Linux: errors about X11, OpenGL, udev or Xrandr | Install the development packages ([Installation](installation.md)) |
 | `No such file` for a source after pulling | Files were moved or renamed. Reconfigure: `cmake -S . -B build`, or delete the build folder |
 | Linking errors after switching branches | Stale objects. Delete the build folder and rebuild |
 | Windows: `MSB8020` or missing toolset | Install "Desktop development with C++" in the Visual Studio Installer |
@@ -16,7 +16,7 @@
 
 | Problem | Solution |
 |---|---|
-| The program exits with code 84 and one line | Read the line: it names the file and the key at fault ([Debugging, load errors](guides/debugging.md#load-errors)) |
+| The program exits with code 84 and one line | Read the line: it names the file and the key at fault ([Debugging, load errors](../guides/engine/debugging.md#load-errors)) |
 | `DataNode: cannot open .../data/...` | Data not copied next to the executable: rebuild (the build copies `data`, `scripts` and `assets`) |
 | `ScriptEngine: cannot load ...` | A script is missing or has a syntax error |
 | Python errors at start (`encodings`, `No module named`) | The `python/` folder next to the executable is missing: rebuild the `engine_python_runtime` target |
@@ -28,7 +28,7 @@
 
 | Problem | Solution |
 |---|---|
-| Client stays on "CONNECTING..." | Server not started, wrong `-h` or `-p`, or firewall ([Network play](guides/network-play.md)) |
+| Client stays on "CONNECTING..." | Server not started, wrong `-h` or `-p`, or firewall ([Network play](network-play.md)) |
 | "SERVER UNREACHABLE OR CONNECTION LOST" right away | Client and server from different versions: rebuild both |
 | "THE ROOM STOPPED ANSWERING" | The server stopped or the network dropped for more than 4 seconds |
 | Works on one PC, not between two | Firewall on the server PC, or Wi-Fi with client isolation |

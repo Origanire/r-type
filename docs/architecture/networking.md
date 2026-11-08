@@ -1,6 +1,6 @@
 # Networking
 
-How the network code is organised. The byte-level contract is the [protocol](../protocol.md).
+How the network code is organised. The byte-level contract is the [protocol](../reference/protocol.md).
 
 ## Four levels
 
@@ -62,7 +62,7 @@ The retransmission delay is `max(100 ms, smoothed round-trip time x 1.5)`. The r
 is derived from acknowledgements, so the server measures it per client without sending anything
 extra.
 
-See [the protocol](../protocol.md#4-reliability) for the exact rules.
+See [the protocol](../reference/protocol.md#4-reliability) for the exact rules.
 
 ## Snapshots and deltas
 

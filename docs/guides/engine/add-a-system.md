@@ -103,4 +103,4 @@ Add its name at the right place of `serverSystems` (simulation) or of a scene's 
 "serverSystems": ["PlayerControl", "Gravity", "Movement", "Collision", "Damage", "Script"]
 ```
 
-Then add a row to the [System reference](../reference/systems.md).
+Then add a row to the [System reference](../../reference/systems.md).

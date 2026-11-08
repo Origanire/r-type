@@ -7,7 +7,7 @@ should be able to write a new client, or a new server, from this page alone.
 
 | Property | Value |
 |---|---|
-| Transport | UDP over IPv4, numeric addresses only |
+| Transport | UDP over IPv4; the client resolves a host name to an address before connecting |
 | Default port | 4242 |
 | Byte order | Big-endian for every multi-byte field |
 | Header size | 20 bytes, identical on every packet |
@@ -157,6 +157,7 @@ a peer that stops acknowledging altogether is removed by the session timeout.
 | `SNAPSHOT`, `SNAPSHOT_DELTA`, `INPUT`, `HEARTBEAT` | Superseded by fresher data within 33 to 50 ms. Retransmitting stale state is the TCP behaviour this protocol avoids |
 | `ROOM_LIST`, `ROOM_UPDATE` | Resent periodically by the server, therefore self-healing |
 | `CONNECT`, `ACCEPT`, `REJECT` | Connection has its own retry logic (section 7) |
+| `CONSOLE_COMMAND`, `CONSOLE_TEXT` | Developer console only; the user retypes a lost command |
 | `DISCONNECT`, `SERVER_SHUTDOWN` | The sender stops immediately afterwards and would not be there to retransmit; the timeout covers the case |
 
 ## 5. Validation rules
@@ -241,7 +242,7 @@ tied to any identity beyond the lifetime of the session.
 
 | Field | Values |
 |---|---|
-| `buttons` bits | `0x01` up, `0x02` down, `0x04` left, `0x08` right, `0x10` fire, `0x20` action. Bits `0x40` and `0x80` are reserved and must be zero |
+| `buttons` bits | `0x01` up, `0x02` down, `0x04` left, `0x08` right, `0x10` fire, `0x20` action, `0x40` bomb. Bit `0x80` is reserved and must be zero |
 | `REJECT.reason` | `1` server full, `2` version mismatch |
 | `PLAYER_LEFT.reason` | `1` quit, `2` timeout |
 | `ROOM_REJECTED.reason` | `1` not found, `2` full, `3` wrong code, `4` room limit reached, `5` invalid name, `6` too many attempts, `7` not allowed |
@@ -400,6 +401,14 @@ message. Both messages are reliable: a chat line is never silently dropped.
 
 Chat is scoped to a room. There is no lobby-wide or server-wide chat.
 
+### Console
+
+`CONSOLE_COMMAND` carries one line typed in the developer console. Only the room owner may send it;
+any other sender gets a `CONSOLE_TEXT` refusal. When the game file names a `consoleRule` and that
+room rule is off, only the commands listed in `freeCommands` are accepted. A command sent before
+the game starts is queued and runs at the start. The server answers with `CONSOLE_TEXT`, shown in
+the console of the sender.
+
 ### Rooms
 
 ```
@@ -460,7 +469,8 @@ by the next one 33 ms later, whereas a lost "released" event would leave a key s
 
 ## 9. Worked example
 
-Real bytes captured on the wire, one player holding Fire and Right.
+Real bytes captured on the wire, one player holding Fire and Right. They were captured with protocol
+version 8: with the current version the third byte is `09`, every other byte is laid out the same way.
 
 ### `INPUT`, 25 bytes
 

@@ -13,7 +13,7 @@ A release is a state of `main` that is delivered: a defense, a demo, a submissio
     cmake --build build --parallel "$(nproc)"
     ```
 
-3. Run the [testing checklist](../guides/testing.md#before-every-merge): online R-Type with two clients, LAN
+3. Run the [testing checklist](../guides/engine/testing.md#before-every-merge): online R-Type with two clients, LAN
    play, Skyhop, lobby, gamepad.
 4. Check the documentation builds: `mkdocs build --strict`.
 5. Check the repository contains no build output, no binary and no unlicensed asset.
@@ -30,7 +30,7 @@ A release is a state of `main` that is delivered: a defense, a demo, a submissio
 | What | Where | When to change |
 |---|---|---|
 | Project version | `project(RType VERSION ...)` in `CMakeLists.txt`, `vcpkg.json` | At each release |
-| Protocol version | `Protocol::VERSION` | At each wire format change, see the [RFC](../protocol.md) |
+| Protocol version | `Protocol::VERSION` | At each wire format change, see the [RFC](../reference/protocol.md) |
 
 ## Delivering binaries
 

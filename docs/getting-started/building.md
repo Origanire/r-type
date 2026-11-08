@@ -88,4 +88,4 @@ rmdir /s /q out       # Windows
 ```
 
 Do it after moving files, switching to a very different branch, or changing the vcpkg location. Problems:
-[Troubleshooting](../troubleshooting.md#build).
+[Troubleshooting](troubleshooting.md#build).

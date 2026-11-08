@@ -25,7 +25,7 @@ room list, the owner presses **START GAME**.
 ./r-type_client -h 192.168.1.67         # on each player's machine
 ```
 
-Firewall and WSL notes: [Network play](../guides/network-play.md).
+Firewall and WSL notes: [Network play](network-play.md).
 
 ## Skyhop
 
@@ -58,7 +58,7 @@ Invalid arguments make the program exit with code 84.
 | Console | F1 | - |
 | Debug overlay | F3 | - |
 
-Keys, volumes and text size: [Controls](../guides/controls.md) and the
+Keys, volumes and text size: [Controls](../guides/content/controls.md) and the
 [Settings file reference](../reference/game-file.md#settings-file-reference).
 
 ## R-Type in short

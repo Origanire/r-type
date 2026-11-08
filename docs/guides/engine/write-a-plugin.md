@@ -16,7 +16,7 @@ uses it on the plane of its menu.
 | Smaller core | A system needed by one game lives in a plugin instead of the engine |
 
 This is the run-time level of modularity, on top of the compile-time options (`ENGINE_BUILD_CLIENT`,
-`ENGINE_BUILD_SERVER`) and the link-time libraries ([Engine modules](../architecture/engine-modules.md)).
+`ENGINE_BUILD_SERVER`) and the link-time libraries ([Engine modules](../../architecture/engine-modules.md)).
 
 ## 1. Write the system
 

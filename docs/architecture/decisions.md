@@ -85,16 +85,19 @@ than C++ (acceptable for a few hundred entities).
 
 **Why.** Identical physics on every machine, and a simulation that behaves the same for the same inputs.
 
-## 9. Binary UDP protocol with full snapshots
+## 9. Binary UDP protocol with snapshots and deltas
 
-**Decision.** One UDP datagram per message, a 10-byte header, full world snapshots 20 times per second.
+**Decision.** One UDP datagram per message, a 20-byte header carrying sequence and acknowledgements, world
+state 20 times per second as a delta against the last snapshot the client acknowledged, with a full snapshot
+as a keyframe. Messages that must not be lost (lobby actions, game events, chat) are resent until acknowledged.
 
-**Why.** TCP's retransmissions would delay fresh data behind stale data. Full snapshots make every loss
-harmless, and the 1200-byte limit avoids fragmentation.
+**Why.** TCP's retransmissions would delay fresh data behind stale data. A lost snapshot is replaced by the next
+one, and the 1200-byte limit avoids fragmentation. Deltas halve the bandwidth of a full snapshot.
 
-**Cost.** Bandwidth grows with the number of visible entities. The size check at start-up keeps it bounded.
+**Cost.** The server keeps a short snapshot history per client, and a client must apply a delta on the exact
+baseline it names.
 
-**Makes possible.** Delta compression later, on top of the same messages.
+**Makes possible.** More entities per packet, and play on slower links ([measurements](../measurements/index.md)).
 
 ## 10. Network code hidden behind interfaces
 
@@ -167,7 +170,6 @@ now plain data, smaller and safe to share between the engine and plugins.
 | Limit | Effect | Possible improvement |
 |---|---|---|
 | No client prediction | One round trip of input delay | Predict the local avatar, reconcile with snapshots |
-| Full snapshots | Bandwidth grows with entities | Delta snapshots against the last acknowledged one |
 | No encryption | Fine on a LAN, not on the Internet | DTLS, or a secure handshake |
 | 64 component types | Enough for both games | A larger mask type |
 | One Python interpreter | Scripts of all rooms share it | Sub-interpreters if isolation becomes needed |

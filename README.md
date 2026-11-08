@@ -15,10 +15,15 @@ The repository ships two games built on it:
 
 - Engine split into independent modules: ECS, physics, network, rendering, audio, input, scripting
 - Games defined by data: entities, components, systems, scenes and HUD in JSON, behaviours in Python
-- Authoritative server at 60 ticks per second, binary UDP protocol with sessions, rooms and validation
-- Lobby with public or code-protected rooms, room rules (difficulty, friendly fire, cheats), kicks
-- Three stages, waves, bosses, power-ups, the Force, charged shots, terrain
+- Authoritative server at 60 ticks per second, binary UDP protocol with sessions, validation,
+  reliable messages and delta snapshots, measured under delay, loss and reordering with Linux `netem`
+- Lobby with player names, public or code-protected rooms, room chat, room rules (mode, difficulty,
+  friendly fire, cheats), kicks
+- Co-op campaign: intro, three stages, waves, bosses, power-ups, the Force, charged shots, terrain,
+  ending and credits; difficulty scales with the number of players
+- Two-player versus mode in rounds
 - Solo mode: the same engine runs a game in memory, without network
+- Plugins: new engine systems loaded from shared libraries (`.so` / `.dll`) named in the game file
 - In-game developer console (F1), debug overlay (F3), pause menu, gamepad support
 - Accessibility settings: remappable controls, text scale, volumes, hold-to-fire toggle
 
@@ -74,6 +79,8 @@ Binaries are in `build/bin/` on Linux and `out\windows\bin\Release\` on Windows.
 
 On a local network, start the server on one machine: it prints the address to use, for example
 `-h 192.168.1.67 -p 4242`. Then start the clients on the other machines with that address.
+A machine that only plays needs the whole `bin` folder (executable, libraries, `assets`, `data`, `plugins`),
+not the sources. Firewall and WSL setup: [Playing on a network](docs/getting-started/network-play.md).
 
 | Action | Keyboard | Gamepad |
 |---|---|---|
@@ -99,12 +106,14 @@ mkdocs serve          # then open http://127.0.0.1:8000
 |---|---|
 | Understand the project | [Architecture overview](docs/architecture/overview.md) |
 | Join the team | [Onboarding](docs/contributing/onboarding.md) |
-| Create a new game | [Create a game from scratch](docs/guides/create-a-game.md) |
-| Add an enemy or a level | [Guides](docs/guides/add-an-enemy.md) |
-| Write a client for our server | [Network protocol (RFC)](docs/protocol.md) |
+| Create a new game | [Create a game from scratch](docs/guides/content/create-a-game.md) |
+| Add an enemy or a level | [Guides](docs/guides/content/add-an-enemy.md) |
+| Write a client for our server | [Network protocol (RFC)](docs/reference/protocol.md) |
+| See how the network behaves under loss and delay | [Network measurements](docs/measurements/index.md) |
 | Know why we chose our tools | [Comparative study](docs/comparative-study/index.md) |
-| Check accessibility | [Accessibility](docs/accessibility.md) |
-| Fix a problem | [Troubleshooting](docs/troubleshooting.md) |
+| Check accessibility | [Accessibility](docs/project/accessibility.md) |
+| Fix a problem | [Troubleshooting](docs/getting-started/troubleshooting.md) |
+| Browse every page | [Documentation home](docs/index.md) |
 
 ## License
 

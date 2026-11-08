@@ -94,4 +94,4 @@ Skyhop order (no weapons, gravity handled in its script):
 
 ## Adding a system
 
-See [Add a system](../guides/add-a-system.md).
+See [Add a system](../guides/engine/add-a-system.md).

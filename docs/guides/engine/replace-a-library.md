@@ -23,7 +23,7 @@ No system changes: they only call `IRenderer`.
 
 ## Example: another scripting language
 
-The scripts only see the API listed in [Scripting reference](scripting.md). A new language needs:
+The scripts only see the API listed in [Scripting reference](../../reference/scripting-api.md). A new language needs:
 
 1. an engine that loads a file and calls the hooks (`on_spawn`, `on_update`, `on_damage`, `on_death`,
    `on_contact`, `run`);

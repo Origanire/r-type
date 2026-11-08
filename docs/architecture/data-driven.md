@@ -64,11 +64,11 @@ The simulation exposes numbers to the client through three tables declared in th
 | `rules` | the room creator in the lobby | read by scripts: `world.rule("difficulty")` |
 
 A value may have `labels`: it is then sent as an index and shown as its label (`"phase": 2` is shown as
-`"boss"`). See [World values, player values and rules](../guides/values-and-rules.md).
+`"boss"`). See [World values, player values and rules](../guides/content/values-and-rules.md).
 
 ## What a game cannot do without C++
 
 The data model covers everything the existing components and systems can express. A behaviour that none of them
 provides is first written in Python. Only when a feature is generic and needed by several games is it added to
-the engine as a component or a system ([Add a component](../guides/add-a-component.md),
-[Add a system](../guides/add-a-system.md)).
+the engine as a component or a system ([Add a component](../guides/engine/add-a-component.md),
+[Add a system](../guides/engine/add-a-system.md)).

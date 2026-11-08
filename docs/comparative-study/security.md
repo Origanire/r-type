@@ -20,7 +20,7 @@
 | Oversized packets | Datagrams over 1200 bytes dropped; the writer refuses to exceed the limit | `UdpTransport`, `ByteWriter` |
 | Malformed packets | Magic, version, direction, payload size, exact length, field ranges, text characters, list sizes and consistency checked; any failure drops the packet | `Codec`, `isValid` of each message |
 | Struct layout attacks | Nothing is copied to or from the wire as raw memory | Every message |
-| Memory exhaustion | Receive and send queues capped at 256 datagrams, 16 clients, 16 rooms, entity limit per snapshot, text fields capped | `UdpTransport`, `NetworkSettings`, `TextRules` |
+| Memory exhaustion | Receive and send queues capped at 256 datagrams, client and room limits (192 and 48), entity limit per snapshot, text fields capped | `UdpTransport`, `NetworkSettings`, `TextRules` |
 | Connection flooding | 32 `CONNECT` per second at most; `ACCEPT` repeated at most every 200 ms per address | `GameServer` |
 | Spoofed messages | A message must come from the session's address and carry its random non-zero token | `GameServer` |
 | Replay and reordering | Sequence numbers for inputs and heartbeats, tick numbers for snapshots | `GameServer`, `ClientConnection` |

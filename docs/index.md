@@ -12,15 +12,16 @@ input, scripting, a binary UDP protocol with an authoritative server, and a solo
 
 | You want to... | Read |
 |---|---|
-| Build and play | [Installation](getting-started/installation.md), [Building](getting-started/building.md), [Running](getting-started/running.md) |
+| Build and play | [Installation](getting-started/installation.md), [Building](getting-started/building.md), [Running](getting-started/running.md), [Playing on a network](getting-started/network-play.md) |
 | Join the team | [Onboarding](contributing/onboarding.md) |
 | Understand the architecture | [Overview](architecture/overview.md), [Engine modules](architecture/engine-modules.md), [ECS](architecture/ecs.md) |
-| Make content without C++ | [Create a game](guides/create-a-game.md), [Add an enemy](guides/add-an-enemy.md), [Scripting reference](guides/scripting.md) |
+| Make content without C++ | [Create a game](guides/content/create-a-game.md), [Add an enemy](guides/content/add-an-enemy.md), [Scripting reference](reference/scripting-api.md) |
 | Look up a component, a system or a JSON key | [Components](reference/components.md), [Systems](reference/systems.md), [Game file](reference/game-file.md) |
-| Write a client for the server | [Network protocol (RFC)](protocol.md) |
-| Extend the engine | [Add a component](guides/add-a-component.md), [Add a system](guides/add-a-system.md), [Add a network message](guides/add-a-network-message.md) |
+| Write a client for the server | [Network protocol (RFC)](reference/protocol.md) |
+| See the network under delay and loss | [Network measurements](measurements/index.md) |
+| Extend the engine | [Add a component](guides/engine/add-a-component.md), [Add a system](guides/engine/add-a-system.md), [Add a network message](guides/engine/add-a-network-message.md) |
 | Know why it is built this way | [Design decisions](architecture/decisions.md), [Comparative study](comparative-study/index.md) |
-| Fix a problem | [Troubleshooting](troubleshooting.md), [Debugging](guides/debugging.md), [FAQ](faq.md) |
+| Fix a problem | [Troubleshooting](getting-started/troubleshooting.md), [Debugging](guides/engine/debugging.md), [FAQ](getting-started/faq.md) |
 
 ## Project at a glance
 

@@ -6,10 +6,10 @@
 |---|---|
 | Engine | Modules with private third-party dependencies, ECS with sparse arrays, data-driven prefabs, scenes and systems, standalone CMake with `engine_add_game`, generic launchers |
 | Scripting | Embedded Python with hooks, per-entity error isolation, full world and entity API, console scripts |
-| Network | Binary UDP protocol v7, sessions, heartbeats, timeouts, rooms with codes and rules, kicks, console messages, sounds |
+| Network | Binary UDP protocol v9, sessions, heartbeats, timeouts, reliable messages, delta snapshots, rooms with codes and rules, kicks, room chat, player names, console messages, sounds |
 | Client | Menus, lobby, room and game scenes in JSON, HUD bound to values, pause menu, F1 console, F3 metrics, loading screen, gamepad |
 | Solo mode | `LocalClient`, `LOCAL` games |
-| R-Type | Three themed stages (a warship corridor, a giant vessel hunting the players), three bosses, power-ups, the Force (front or back, free, super-charged shots), charged shot, level choice, difficulty, friendly fire and bonus rules |
+| R-Type | Three themed stages (a warship corridor, a giant vessel hunting the players), three bosses, power-ups, the Force (front or back, free, super-charged shots), charged shot, level choice, difficulty scaled by player count, friendly fire and bonus rules, intro, ending and credits, two-player versus mode |
 | Second game | Skyhop, solo, Kenney CC0 assets |
 | Platforms | Linux, Windows, LAN play |
 | Documentation | Architecture, references, guides, RFC, comparative study, accessibility, team processes |
@@ -19,13 +19,16 @@
 
 ## Next
 
-| Track | Topics |
-|---|---|
-| Advanced architecture | Standalone engine project, second sample game, audio and UI modules, resource management, developer console, metrics |
-| Advanced gameplay | Enemy variety, bosses, the Force, power-ups, levels, data-driven content in JSON, content creation guides |
-| Advanced networking | Done: reliable messages, delta snapshots, data packing, multi-instance load, Linux `netem` measurements. Remaining: interpolation, client prediction |
+| Item | Track | Why |
+|---|---|---|
+| Entity interpolation and client-side prediction | Network | Hide the round-trip delay on the local ship |
+| Player identities, persistent sessions, reconnection | Network | Rejoin a game after a crash |
+| Global scoreboard | Network | Keep scores across games |
+| Measurements under `clumsy` on Windows | Network | Same evidence as the Linux `netem` run |
+| Colorblind palettes, option to disable shake and flashes | Accessibility | See [Accessibility](accessibility.md) |
+| Automated tests of the simulation and the codec | Architecture | See [Testing](../guides/engine/testing.md) |
 
-Each feature is tracked as a GitHub issue and developed on its own branch.
+Each item becomes a GitHub issue and is developed on its own branch ([Git workflow](../contributing/git-workflow.md)).
 
 ## Part 2 — Advanced networking track
 
@@ -36,7 +39,7 @@ Each feature is tracked as a GitHub issue and developed on its own branch.
 | Round-trip time measured per client, server side | Done |
 | Delta snapshots against an acknowledged baseline | Done |
 | Compact entity encoding, field masks, `int8` position deltas | Done |
-| Protocol reference rewritten for version 8 | Done |
+| Protocol reference rewritten (now version 9) | Done |
 | Headless protocol probe with simulated loss (`scripts/protocol_probe.py`) | Done |
 | Load generator and scaling measurements (`scripts/load_test.py`) | Done |
 | Room and client limits raised to the protocol ceiling (48 / 192) | Done |
@@ -44,5 +47,5 @@ Each feature is tracked as a GitHub issue and developed on its own branch.
 | Player identities, persistent sessions, reconnection | To do |
 | Global scoreboard | To do |
 | Server administration console | To do |
-| Measurements under `netem` and `clumsy` | Linux `netem`: [measured with two production clients](measurements/netem-2026-11-08/rapport.md). Windows `clumsy`: not run |
-| Entity interpolation, client prediction with reconciliation | Out of the chosen scope, analysed in the [comparative study](comparative-study/networking.md) |
+| Measurements under `netem` and `clumsy` | Linux `netem`: [measured with two production clients](../measurements/netem-2026-11-08/report.md). Windows `clumsy`: not run |
+| Entity interpolation, client prediction with reconciliation | Out of the chosen scope, analysed in the [comparative study](../comparative-study/networking.md) |

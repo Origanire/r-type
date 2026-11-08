@@ -291,6 +291,12 @@ add_library(engine_network
     network/messages/game/src/PlaySoundMessage.cpp
     network/messages/console/src/ConsoleCommandMessage.cpp
     network/messages/console/src/ConsoleTextMessage.cpp
+    network/messages/lobby/src/ChatMessage.cpp
+    network/messages/lobby/src/ChatBroadcastMessage.cpp
+    network/messages/game/src/EntityChange.cpp
+    network/messages/game/src/SnapshotDeltaMessage.cpp
+    network/protocol/src/SnapshotDiff.cpp
+    network/protocol/src/SnapshotHistory.cpp
     network/protocol/src/TextRules.cpp
     network/messages/lobby/src/RoomInfo.cpp
     network/server/src/GameRoom.cpp

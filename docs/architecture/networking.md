@@ -1,79 +1,99 @@
 # Networking
 
-Networking is split in two engine modules:
+How the network code is organised. The byte-level contract is the [protocol](../protocol.md).
 
-| Module | Knows about | Main classes |
+## Four levels
+
+```mermaid
+flowchart TB
+    Session["Sessions, rooms, gameplay<br/>GameServer, ClientConnection (engine_network)"]
+    Reliable["Acknowledgements and retransmission<br/>ReliableSender, ReliableReceiver (engine_network)"]
+    Codec["Messages and validation<br/>Codec, Packet (engine_network)"]
+    Bytes["Big-endian encoding<br/>ByteWriter, ByteReader (engine_net)"]
+    Transport["Datagrams<br/>UdpTransport, Asio (engine_net)"]
+    Session --> Reliable --> Codec --> Bytes
+    Session --> Transport
+```
+
+| Level | Knows | Does not know |
 |---|---|---|
-| `engine_net` | Bytes and datagrams only | `UdpTransport`, `Endpoint`, `Datagram`, `ByteWriter`, `ByteReader` |
-| `engine_network` | The game protocol | `Packet`, `Codec`, the messages, `NetworkSettings`, `GameServer`, `ClientConnection` |
+| `UdpTransport` | Endpoints and byte buffers | Message types |
+| `ByteWriter` / `ByteReader` | Integers in network byte order, size limits | What the integers mean |
+| `Codec` | Every message type and its validation rules | Sessions, timing |
+| `ReliableSender` / `ReliableReceiver` | Which packets arrived, what to resend | What a message means |
+| `GameServer` / `ClientConnection` | Tokens, rooms, timers, gameplay | Sockets |
 
-The wire format itself is specified in the [Network protocol (RFC)](../protocol.md).
+The engine knows nothing about R-Type: message types and sizes are generic, and the number of
+world and player values comes from the game's JSON configuration.
 
 ## Transport
 
 `UdpTransport` wraps an IPv4 UDP socket (Asio, hidden in `net/internal`). A background thread receives
 datagrams and puts them in a queue; the main thread takes them with `poll()`.
 
-| Limit | Value | When exceeded |
-|---|---|---|
-| Datagram size | 1200 bytes | Larger datagrams are dropped |
-| Received queue | 256 datagrams | New datagrams are dropped until the main thread polls |
-| Pending sends | 256 datagrams | New sends are dropped |
+- `send(peer, bytes)` queues an asynchronous send and returns immediately.
+- `poll()` returns every datagram received since the previous call, without waiting.
+- Datagrams larger than 1200 bytes are dropped; at most 256 received datagrams and 256 pending
+  sends are kept, after which datagrams are discarded rather than growing the queue.
+- An exception on the I/O thread is stored and rethrown on the main thread at the next call.
 
-Dropping is the right reaction for a real-time game: a later snapshot or input replaces the lost one.
+Asio is a private dependency of `engine_net`, hidden behind a private implementation class, so
+no game file includes it.
 
-`UdpTransport::primaryLocalAddress()` finds the LAN address of the machine (it asks the system which interface
-would route to a public address, without sending anything). The server prints it at start so players know what
-to type after `-h`.
+## Reliability
 
-## Messages and packets
-
-Each message is a class in `network/messages/<category>/` with three functions:
-
-```cpp
-bool isValid(const NetworkSettings &settings) const;   // field limits
-void write(net::ByteWriter &writer) const;             // payload encoding
-static XMessage read(net::ByteReader &reader);         // payload decoding
-```
-
-`Packet` holds the header fields and one message in a `std::variant`. `Packet::visit(visitor)` applies a
-visitor to the message it holds. Three visitors (`network/protocol/include/PacketVisitors.hpp`) replace long
-`switch` statements:
-
-| Visitor | Used by | Job |
-|---|---|---|
-| `MessageValidator` | `Codec::isValid` | Calls `isValid` of the message |
-| `MessageWriter` | `Codec::encode` | Calls `write` of the message |
-| `TokenReader` | `GameServer` | Returns the session token of a client message, if it has one |
-
-`Codec` turns a `Packet` into bytes and back, and drops anything malformed (see section 8 of the RFC).
-Adding a message means: one class, one code in `MessageType`, one line in `Codec::readBody`, and one entry in the
-variant of `Packet`. See [Add a network message](../guides/add-a-network-message.md).
-
-## Settings
-
-`NetworkSettings::fromGame` reads the `network` block of the game file, plus the sizes of `worldValues`,
-`playerValues`, `rules` and `eventSounds`. Server and clients therefore agree on every list size without sending
-it. At start, it checks that the largest possible snapshot fits in 1200 bytes and refuses to start otherwise.
-
-## Client connection
-
-`ClientConnection` (`network/client/`) is everything a client needs on the network side:
-
-- sends `CONNECT` every `connectRetryIntervalMs` until `ACCEPT`, and gives up after `connectAttempts`;
-- sends `HEARTBEAT` every `heartbeatIntervalMs` and measures the ping from `HEARTBEAT_ACK`;
-- sends `INPUT` every `inputIntervalMs` while in game;
-- keeps only the **newest** snapshot (older or reordered snapshots are dropped by tick number);
-- queues every other event for the driver (`takeEvents()`);
-- counts received and sent bytes for the debug overlay.
-
-## Reliability strategy
+UDP may lose, duplicate, reorder or delay datagrams. The protocol does not retransmit
+everything: it retransmits only what cannot be reconstructed from later traffic.
 
 | Data | Strategy |
 |---|---|
-| World state | Full snapshot 20 times per second: a lost snapshot is corrected by the next one |
-| Inputs | Full button state 30 times per second: a lost input is corrected by the next one. Released after 500 ms of silence |
-| Connection | `CONNECT` retried every second |
-| Liveness | Heartbeats both ways, 5 s timeout |
-| One-off events (death, sound) | Sent once. A lost one only loses a cosmetic effect, the next snapshot stays correct |
-| Rooms | `ROOM_UPDATE` every second, the client leaves a room silent for 4 s |
+| Player input | Full button state ~30 times per second; a lost packet is replaced by the next |
+| World state | Snapshot 20 times per second; a lost snapshot is replaced by the next |
+| Game events | Acknowledged and retransmitted until confirmed |
+| Lobby actions | Acknowledged and retransmitted until confirmed |
+| Session liveness | Heartbeat every second, 5 s timeout on both sides |
+
+Every packet header carries `ack` and `ackBits`, so acknowledgements travel on traffic that is
+sent anyway and never cost a dedicated packet. A reliable message keeps a stable `reliableId`
+across its retransmissions, which lets the receiver discard a late original after its
+replacement has been applied.
+
+The retransmission delay is `max(100 ms, smoothed round-trip time x 1.5)`. The round-trip time
+is derived from acknowledgements, so the server measures it per client without sending anything
+extra.
+
+See [the protocol](../protocol.md#4-reliability) for the exact rules.
+
+## Snapshots and deltas
+
+The simulation always produces a complete snapshot. The server encodes it as a difference
+against the most recent snapshot **that the client has acknowledged**, and the client rebuilds a
+complete snapshot before handing it to the renderer. Neither the simulation nor the client view
+code is aware that deltas exist.
+
+A full snapshot is sent when there is no acknowledged baseline, when the baseline is more than
+one second of ticks old, or every five seconds as a keyframe, which bounds the lifetime of any
+undetected desynchronisation.
+
+## Measurements
+
+Measured with `scripts/protocol_probe.py`, two players, light scene of about 14 entities.
+
+| Message | Size | Rate |
+|---|---|---|
+| `INPUT` | 25 bytes | ~30/s per client |
+| `HEARTBEAT` | 28 bytes | 1/s per client |
+| `SNAPSHOT` (full) | 102 + 8 x entities bytes | keyframe only |
+| `SNAPSHOT_DELTA` | 105 bytes on average, 33 minimum | 20/s per client |
+
+| Snapshot encoding | Average size | Ratio |
+|---|---|---|
+| Full snapshot, every time | 223 bytes | baseline |
+| Delta, world and player changes only | 130 bytes | x1.7 |
+| Delta with compact entity changes | **105 bytes** | **x2.1** |
+
+About 16 kbit/s downstream per client in a light scene, against 34 kbit/s before the delta work.
+
+Reliability verified with simulated loss: at 60 % packet loss a client receives exactly the same
+set of game events as a lossless reference client. The `build` and `apply` round trip was
+verified on 1218 consecutive snapshots with no mismatch.

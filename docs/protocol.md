@@ -1,552 +1,574 @@
-# Network protocol (RFC)
+# Network protocol
 
-```
-Status:   Implemented
-Version:  7
-Transport: UDP, one message per datagram
-Source of truth: engine/network/
-```
-
-This document specifies the binary protocol spoken between the game server (`r-type_server`) and its clients
-(`r-type_client`). It is written so that a developer can implement a **new compatible client or server from this
-document alone**, without reading the C++ sources.
-
-The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpreted as described in RFC 2119.
-
----
+Version **9** of the R-Type wire protocol. This document is the complete reference: a developer
+should be able to write a new client, or a new server, from this page alone.
 
 ## 1. Overview
 
-- The server is **authoritative**: it runs the whole simulation. Clients only send button states and lobby
-  requests, and draw what the server describes.
-- Every message is **one UDP datagram** of at most **1200 bytes** (header included), small enough to avoid IP
-  fragmentation on usual networks.
-- All multi-byte integers are **big-endian** (network byte order).
-- There is no retransmission: game state is resent continuously (snapshots), so a lost datagram is simply
-  replaced by the next one.
-- A session is identified by a random 32-bit **token** given by the server. Every client message after
-  `CONNECT` carries it.
+| Property | Value |
+|---|---|
+| Transport | UDP over IPv4, numeric addresses only |
+| Default port | 4242 |
+| Byte order | Big-endian for every multi-byte field |
+| Header size | 20 bytes, identical on every packet |
+| Maximum datagram | 1200 bytes, header included |
+| Protocol version | 9 (`Protocol::VERSION`) |
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    C->>S: CONNECT (retried every second, 5 attempts)
-    S-->>C: ACCEPT (token, client id)
-    loop every second
-        C->>S: HEARTBEAT (token, timestamp)
-        S-->>C: HEARTBEAT_ACK (timestamp)
-    end
-    C->>S: LIST_ROOMS / CREATE_ROOM / JOIN_ROOM
-    S-->>C: ROOM_LIST / ROOM_JOINED / ROOM_REJECTED
-    S-->>C: ROOM_UPDATE (every second while in a room)
-    C->>S: START_GAME (room owner only)
-    S-->>C: GAME_STARTED
-    loop game running (60 ticks per second)
-        C->>S: INPUT (token, buttons) every 33 ms
-        S-->>C: SNAPSHOT every 3 ticks
-        S-->>C: ENTITY_DESTROYED / PLAYER_KILLED / PLAYER_LEFT / PLAY_SOUND when they happen
-    end
-    C->>S: DISCONNECT
+One datagram carries exactly **one message**. There is no stream, no framing and no fragmentation:
+a message that would not fit in 1200 bytes is never produced.
+
+All in-game traffic uses UDP. No TCP connection is opened at any point. Delivery guarantees, where
+they are required, are provided by the acknowledgement layer described in section 4.
+
+### Layers
+
+```
+  application   CONNECT, INPUT, SNAPSHOT, ENTITY_DESTROYED, ...   section 6
+  reliability   ack, ackBits, reliableId, retransmission          section 4
+  framing       magic, version, type, sequence, payload size      section 3
+  transport     UDP / IPv4
 ```
 
----
+### Source map
 
-## 2. Data types
+| Responsibility | File |
+|---|---|
+| Message types, constants, reliability policy | `engine/network/include/Protocol.hpp` |
+| Header encoding, decoding and validation | `engine/network/src/Codec.cpp` |
+| Big-endian primitives | `engine/net/src/ByteWriter.cpp`, `engine/net/src/ByteReader.cpp` |
+| Acknowledgement window | `engine/network/src/ReliableReceiver.cpp` |
+| Retransmission and round-trip estimation | `engine/network/src/ReliableSender.cpp` |
+| Snapshot delta encoding | `engine/network/src/SnapshotDiff.cpp` |
+| Server sessions and rooms | `engine/network/src/GameServer.cpp` |
+| Client connection | `engine/network/src/ClientConnection.cpp` |
 
-| Type | Size | Encoding |
+## 2. Primitive types
+
+| Notation | Size | Encoding |
 |---|---|---|
-| `u8` | 1 | unsigned integer |
-| `u16` | 2 | unsigned integer, big-endian |
-| `i16` | 2 | two's complement signed integer, big-endian |
-| `u32` | 4 | unsigned integer, big-endian |
-| `string` | 1 + n | `u8` length `n` (0 to 255), then `n` bytes. No terminator. |
-| `bool` | 1 | `0` = false, `1` = true |
-| `list<T>` | 1 + ... | `u8` element count, then the elements one after the other |
+| `u8` | 1 | unsigned |
+| `u16` | 2 | unsigned, big-endian |
+| `u32` | 4 | unsigned, big-endian |
+| `i8` | 1 | signed, two's complement |
+| `i16` | 2 | signed, two's complement, big-endian |
+| `string` | 1 + n | `u8` length, then that many bytes; printable ASCII (0x20..0x7E) only; 255 bytes maximum |
 
-**Text rules.** Every `string` field MUST only contain printable ASCII characters (`0x20` to `0x7E`).
-Each field has its own length limits, given in the message tables below.
+Structures are written field by field. There is no compiler padding and no alignment requirement:
+a receiver must never map a datagram onto a struct.
 
-**Coordinates.** Entity positions are `i16` values in **world units** (pixels of a 1920 x 1080 world for R-Type).
-The origin is the top-left corner, `x` grows to the right and `y` grows downward.
+## 3. Packet header
 
----
+Every datagram begins with these 20 bytes.
 
-## 3. Packet format
-
-Every datagram starts with a fixed **10-byte header**, followed by the payload of the message.
-
-```
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-------------------------------+---------------+---------------+
-|          magic (u16)          | version (u8)  |   type (u8)   |
-+-------------------------------+---------------+---------------+
-|                        sequence (u32)                         |
-+-------------------------------+-------------------------------+
-|      payload size (u16)       |      payload ...              |
-+-------------------------------+-------------------------------+
-```
-
-| Offset | Field | Type | Description |
+| Offset | Size | Field | Description |
 |---|---|---|---|
-| 0 | `magic` | `u16` | Always `0x454E` (ASCII `EN`, for "engine"). |
-| 2 | `version` | `u8` | Protocol version. This document describes version **7**. |
-| 3 | `type` | `u8` | Message type (section 4). Bit `0x80` set means "sent by the server". |
-| 4 | `sequence` | `u32` | Sender's counter, incremented for every datagram it sends. Wraps around. |
-| 8 | `payload size` | `u16` | Number of bytes after the header. MUST equal `datagram size - 10`. |
+| 0 | u16 | `magic` | Always `0x454E`, the ASCII letters `EN`. Any other value: drop the datagram. |
+| 2 | u8 | `version` | Protocol version, `9`. |
+| 3 | u8 | `type` | Message type. Bit 7 set means server → client. |
+| 4 | u32 | `sequence` | Packet counter of the sender, starting at 1 and increased by 1 for every packet sent. |
+| 8 | u32 | `ack` | Most recent `sequence` received from the peer, or `0` when nothing has been received yet. |
+| 12 | u32 | `ackBits` | Receipt status of the 32 packets before `ack`. Bit `i` refers to packet `ack - 1 - i`. |
+| 16 | u16 | `reliableId` | Identity of the message across its retransmissions, or `0` for an unreliable message. |
+| 18 | u16 | `payloadSize` | Number of bytes after the header. |
+
+### The direction bit
+
+Bit 7 of `type` encodes the direction: `0x01`..`0x7F` are client → server, `0x81`..`0xFF` are
+server → client. A receiver must reject any packet whose direction does not match its own role.
+This prevents a client from injecting messages that only a server may produce.
 
 ### Sequence numbers
 
-Each side keeps its own counter. A receiver compares sequences with wrap-around arithmetic:
-`candidate` is newer than `previous` if `(candidate - previous) mod 2^32` is between `1` and `2^31 - 1`.
-
-The server keeps the last accepted sequence **separately** for `INPUT` and for `HEARTBEAT` messages, and drops
-any older or duplicated one. Other client messages are not ordered.
-
----
-
-## 4. Message types
-
-Codes `0x01` to `0x7F` are sent by clients, codes `0x81` to `0xFF` by the server.
-
-| Code | Name | Direction | Purpose |
-|---|---|---|---|
-| `0x01` | `CONNECT` | C -> S | Ask for a session |
-| `0x02` | `INPUT` | C -> S | Current state of the buttons |
-| `0x03` | `HEARTBEAT` | C -> S | Keep-alive and ping measurement |
-| `0x04` | `DISCONNECT` | C -> S | Leave the server |
-| `0x05` | `LIST_ROOMS` | C -> S | Ask for the room list |
-| `0x06` | `CREATE_ROOM` | C -> S | Create a room and become its owner |
-| `0x07` | `JOIN_ROOM` | C -> S | Join an existing room |
-| `0x08` | `LEAVE_ROOM` | C -> S | Leave the current room |
-| `0x09` | `START_GAME` | C -> S | Start the game of the room (owner) |
-| `0x0A` | `KICK_PLAYER` | C -> S | Remove a player from the room (owner) |
-| `0x0B` | `DELETE_ROOM` | C -> S | Close the room (owner) |
-| `0x0C` | `CONSOLE_COMMAND` | C -> S | Developer console command (owner) |
-| `0x81` | `ACCEPT` | S -> C | Session created |
-| `0x82` | `REJECT` | S -> C | Session refused |
-| `0x83` | `SNAPSHOT` | S -> C | Full state of the game |
-| `0x84` | `HEARTBEAT_ACK` | S -> C | Answer to `HEARTBEAT` |
-| `0x85` | `ENTITY_DESTROYED` | S -> C | An entity was removed |
-| `0x86` | `PLAYER_JOINED` | S -> C | Reserved, not emitted by the current server |
-| `0x87` | `PLAYER_KILLED` | S -> C | A player's avatar died |
-| `0x88` | `PLAYER_LEFT` | S -> C | A player left a running game (quit or crash) |
-| `0x89` | `SERVER_SHUTDOWN` | S -> C | The server is stopping |
-| `0x8A` | `ROOM_LIST` | S -> C | List of rooms |
-| `0x8B` | `ROOM_JOINED` | S -> C | You are in a room |
-| `0x8C` | `ROOM_REJECTED` | S -> C | A room request failed |
-| `0x8D` | `ROOM_UPDATE` | S -> C | Seats of the room |
-| `0x8E` | `GAME_STARTED` | S -> C | The room's game has started |
-| `0x8F` | `KICKED` | S -> C | You were removed from the room |
-| `0x90` | `ROOM_CLOSED` | S -> C | The room no longer exists |
-| `0x91` | `PLAY_SOUND` | S -> C | Play a game sound |
-| `0x92` | `CONSOLE_TEXT` | S -> C | Text for the developer console |
+Each side keeps its own independent counter, and acknowledges the counter of the other side. The
+two numbering spaces are never mixed.
 
-Any other code is invalid and the datagram MUST be dropped.
-
----
+Sequence numbers wrap around at 2^32. Comparison is modular: `candidate` is newer than `previous`
+when `(candidate - previous) mod 2^32` lies in `1 .. 2^31 - 1`. A distance of exactly 2^31 is not
+considered newer.
 
-## 5. Message payloads
+Because sequences start at **1**, the value `0` in the `ack` field unambiguously means "I have
+received nothing from you yet".
 
-The tables list the payload fields in order, right after the header.
+## 4. Reliability
 
-### 5.1 Client to server
+UDP may lose, duplicate, reorder or delay datagrams. This protocol does not retransmit everything:
+it retransmits only what cannot be reconstructed from later traffic.
 
-#### `CONNECT` (0x01)
+### Acknowledgements
 
-Empty payload. The header `version` tells the server which protocol the client speaks.
+Acknowledgements are never sent in a dedicated packet. They travel in the header of packets that
+are sent anyway — inputs at 30 Hz from the client, snapshots at 20 Hz from the server.
 
-#### `INPUT` (0x02)
+A receiver maintains the highest `sequence` it has received and a 32-bit history of the packets
+before it:
 
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Session token from `ACCEPT` |
-| `buttons` | `u8` | Bit field, see below |
+```
+   ack     = 43
+   ackBits = 0b...00001101
+                     ││││
+                     │││└─ bit 0 -> packet 42 : received
+                     ││└── bit 1 -> packet 41 : missing
+                     │└─── bit 2 -> packet 40 : received
+                     └──── bit 3 -> packet 39 : received
+```
 
-| Bit | Mask | Button |
-|---|---|---|
-| 0 | `0x01` | Up |
-| 1 | `0x02` | Down |
-| 2 | `0x04` | Left |
-| 3 | `0x08` | Right |
-| 4 | `0x10` | Fire |
-| 5 | `0x20` | Action (game-defined: R-Type uses it for the Force) |
-| 6-7 | `0xC0` | Reserved, MUST be 0 |
-
-`INPUT` is a **state**, not an event: the client sends its whole button state every 33 ms while a game runs.
-If the server receives no `INPUT` from a player for 500 ms, it releases all of that player's buttons.
+One packet therefore acknowledges up to 33 packets. Losing an acknowledgement is harmless: the
+next one repeats the same information.
 
-#### `HEARTBEAT` (0x03)
+A packet must be recorded in the acknowledgement window as soon as it is received, independently
+of whether its payload is processed. Acknowledging and processing are two distinct operations.
 
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Session token |
-| `timestamp` | `u32` | Any client value, sent back unchanged in `HEARTBEAT_ACK` (the client uses milliseconds to compute its ping) |
-
-#### `DISCONNECT` (0x04)
-
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Session token |
+### Reliable messages
 
-#### `LIST_ROOMS` (0x05), `LEAVE_ROOM` (0x08), `START_GAME` (0x09), `DELETE_ROOM` (0x0B)
-
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Session token |
+A sender keeps a copy of every reliable message it sends, together with the `sequence` of the
+packet that carried it. When that sequence is acknowledged, the copy is dropped. When it is not
+acknowledged within the retransmission delay, the message is sent again — **in a new packet, with
+a new `sequence`, and with the same `reliableId`**.
 
-#### `CREATE_ROOM` (0x06)
+Sequence numbers must stay strictly increasing, so a retransmission is never a byte-for-byte copy
+of the original packet. The `reliableId` is what lets the receiver recognise a message it has
+already processed: it keeps the last 256 identifiers seen and silently drops duplicates.
 
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Session token |
-| `name` | `string` | 1 to `roomNameMaxLength` (16) characters |
-| `code` | `string` | 0 to `roomCodeMaxLength` (8) characters. Empty means "public room" |
-| `rules` | `list<u8>` | One value per rule declared by the game. R-Type has 3: difficulty, friendly fire, cheats |
+Two deduplication levels coexist: `sequence` discards duplicate *packets*, `reliableId` discards
+duplicate *messages*.
 
-The number of `rules` MUST equal the number of rules of the game. Each value is an index into that rule's labels
-(for R-Type difficulty: `0` = NORMAL, `1` = HARD, `2` = EASY).
+### Retransmission delay
 
-#### `JOIN_ROOM` (0x07)
+The delay is `max(100 ms, smoothed round-trip time x 1.5)`. The round-trip time is measured from
+acknowledgements — the sender knows when it sent each pending message — and smoothed with a
+weighted average keeping 7/8 of the previous estimate.
 
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Session token |
-| `roomId` | `u16` | Id from `ROOM_LIST` |
-| `code` | `string` | 0 to 8 characters, the room code if the room is locked |
+The 100 ms floor matters: on a local network the round-trip time is about 1 ms, but a peer only
+acknowledges when it sends something, which may be up to 33 ms later. A delay shorter than the
+peer's sending cadence causes retransmissions of packets that were never lost.
 
-#### `KICK_PLAYER` (0x0A)
+A sender keeps at most 64 unacknowledged messages per peer. Beyond that, the oldest is dropped;
+a peer that stops acknowledging altogether is removed by the session timeout.
 
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Session token |
-| `slot` | `u8` | Seat to free, lower than `maxPlayers` |
+### Which messages are reliable
 
-#### `CONSOLE_COMMAND` (0x0C)
-
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Session token |
-| `text` | `string` | 1 to 200 characters, the command line typed in the console |
-
-### 5.2 Server to client
-
-#### `ACCEPT` (0x81)
-
-| Field | Type | Description |
-|---|---|---|
-| `token` | `u32` | Random non-zero session token |
-| `clientId` | `u8` | Index of the client on the server, lower than `maxClients` |
-
-#### `REJECT` (0x82)
-
-| Field | Type | Description |
-|---|---|---|
-| `reason` | `u8` | `1` = server full, `2` = protocol version mismatch |
-
-`REJECT` is always sent with the **server's** version in the header, and its format will never change.
-A client MUST accept it whatever the version is, so that it can report the mismatch.
-
-#### `SNAPSHOT` (0x83)
-
-The complete visible state of the game, sent every `snapshotEveryTicks` ticks (3, so 20 times per second).
-
-| Field | Type | Description |
-|---|---|---|
-| `tick` | `u32` | Simulation tick number |
-| `gameState` | `u8` | `0` = waiting, `1` = playing, `2` = over |
-| `worldValues` | `list<u16>` | One value per world value declared by the game (section 6) |
-| `players` | `list<PlayerStatus>` | Exactly `maxPlayers` entries, one per seat |
-| `entities` | `list<EntityState>` | 0 to `maxEntities` visible entities |
-
-**`PlayerStatus`**
-
-| Field | Type | Description |
-|---|---|---|
-| `state` | `u8` | `0` = empty seat, `1` = alive, `2` = dead (waiting to respawn or out) |
-| `lives` | `u8` | Remaining lives |
-| `health` | `u8` | Health of the avatar in percent, 0 to 100 |
-| `score` | `u32` | Score |
-| `avatarId` | `u16` | Network id of the player's entity in `entities`, `0` if none |
-| `values` | `list<u16>` | One value per player value declared by the game (R-Type: weapon, force, charge) |
-
-Rules: an empty seat has every field at 0. A dead player has `avatarId = 0`. An alive player has
-`lives > 0` and an `avatarId` that appears in `entities`, and two players never share an avatar.
-
-**`EntityState`** (8 bytes)
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | `u16` | Network id, never 0, unique in the snapshot |
-| `kind` | `u8` | What to draw. The meaning comes from the game's `kinds` table (R-Type: `1` = ship, `2` = missile, ...) |
-| `x` | `i16` | Position, world units |
-| `y` | `i16` | Position, world units |
-| `visual` | `u8` | Bit `0x80`: the entity was just hit (flash it). Bits `0x7F`: rotation, in steps of 360/128 degrees |
-
-The client MUST treat a snapshot as the full truth: entities present in the previous snapshot but absent from
-the new one are no longer visible.
-
-#### `HEARTBEAT_ACK` (0x84)
-
-| Field | Type | Description |
-|---|---|---|
-| `timestamp` | `u32` | The value received in `HEARTBEAT` |
-
-#### `ENTITY_DESTROYED` (0x85)
-
-| Field | Type | Description |
-|---|---|---|
-| `entityId` | `u16` | Network id of the destroyed entity, never 0 |
-
-Sent when an entity dies, so that the client can play its death effect (explosion) immediately.
-
-#### `PLAYER_KILLED` (0x87)
-
-| Field | Type | Description |
-|---|---|---|
-| `slot` | `u8` | Seat of the player whose avatar died |
-
-#### `PLAYER_LEFT` (0x88)
-
-| Field | Type | Description |
-|---|---|---|
-| `slot` | `u8` | Seat of the player who left |
-| `reason` | `u8` | `1` = quit (left the room or disconnected), `2` = timeout (crashed or lost the network) |
-
-Sent to the remaining members of a room whose game is running, when a player leaves it. A client that crashes
-stops sending heartbeats: after `sessionTimeoutMs` (5 s) the server drops it and sends `PLAYER_LEFT` with reason
-`2`. The game goes on for the others. When the owner leaves, the room closes and `ROOM_CLOSED` is sent instead.
-
-#### `PLAYER_JOINED` (0x86)
-
-Reserved, with a `u8 slot`. The current server does not send it: new seats are reported by `ROOM_UPDATE`.
-
-#### `SERVER_SHUTDOWN` (0x89), `GAME_STARTED` (0x8E), `KICKED` (0x8F), `ROOM_CLOSED` (0x90)
-
-Empty payload.
-
-#### `ROOM_LIST` (0x8A)
-
-| Field | Type | Description |
-|---|---|---|
-| `rooms` | `list<RoomInfo>` | 0 to `maxRooms` (16) rooms |
-
-**`RoomInfo`**
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | `u16` | Room id, never 0 |
-| `name` | `string` | 1 to 16 characters |
-| `players` | `u8` | Seated players |
-| `capacity` | `u8` | Number of seats |
-| `flags` | `u8` | `0x01` = locked by a code, `0x02` = game in progress |
-
-#### `ROOM_JOINED` (0x8B)
-
-| Field | Type | Description |
-|---|---|---|
-| `roomId` | `u16` | Id of the room |
-| `name` | `string` | Name of the room |
-| `slot` | `u8` | Your seat in the room |
-
-#### `ROOM_REJECTED` (0x8C)
-
-| Field | Type | Description |
-|---|---|---|
-| `reason` | `u8` | See the table below |
-
-| Value | Meaning |
+| Reliable | Reason |
 |---|---|
-| `1` | Room not found |
-| `2` | Room full |
-| `3` | Wrong code |
-| `4` | The server already has the maximum number of rooms |
-| `5` | Invalid room name |
-| `6` | Too many wrong codes (5): join requests are refused for this session |
-| `7` | Not allowed: only the owner can do that |
+| `CREATE_ROOM`, `JOIN_ROOM`, `LEAVE_ROOM`, `START_GAME`, `KICK_PLAYER`, `DELETE_ROOM`, `CHAT` | A lost lobby action leaves the player stuck with no feedback |
+| `ENTITY_DESTROYED`, `PLAYER_JOINED`, `PLAYER_KILLED`, `PLAYER_LEFT`, `PLAY_SOUND`, `GAME_STARTED`, `ROOM_JOINED`, `ROOM_REJECTED`, `ROOM_CLOSED`, `KICKED`, `CHAT_MESSAGE` | A lost event is lost forever; nothing later restates it |
 
-#### `ROOM_UPDATE` (0x8D)
+| Unreliable | Reason |
+|---|---|
+| `SNAPSHOT`, `SNAPSHOT_DELTA`, `INPUT`, `HEARTBEAT` | Superseded by fresher data within 33 to 50 ms. Retransmitting stale state is the TCP behaviour this protocol avoids |
+| `ROOM_LIST`, `ROOM_UPDATE` | Resent periodically by the server, therefore self-healing |
+| `CONNECT`, `ACCEPT`, `REJECT` | Connection has its own retry logic (section 7) |
+| `DISCONNECT`, `SERVER_SHUTDOWN` | The sender stops immediately afterwards and would not be there to retransmit; the timeout covers the case |
 
-| Field | Type | Description |
+## 5. Validation rules
+
+A receiver must drop a datagram, without answering and without disconnecting, when any of the
+following holds. None of these may crash the program, allocate unbounded memory, or disconnect a
+third party.
+
+| Condition | Checked against |
+|---|---|
+| Fewer than 20 bytes, or more than 1200 | datagram length |
+| `magic` is not `0x454E` | header |
+| Direction bit does not match the receiver's role | `type` |
+| `type` is not a known message type | section 6 |
+| `version` differs from 9, except for `CONNECT` and `REJECT` | header |
+| `payloadSize` differs from the actual number of bytes after the header | header |
+| The payload ends before a declared field, or leaves unread bytes | body |
+| A declared count exceeds its configured maximum | body |
+| A string contains a byte outside 0x20..0x7E, or exceeds its maximum length | body |
+| Semantic checks of the message fail (see each message) | body |
+
+`CONNECT` and `REJECT` are exempt from the version check so that a mismatched client can be told
+why it is being refused, rather than being ignored.
+
+Beyond the per-packet checks, a server must also apply:
+
+- a token check: every message that carries a session token is ignored unless the token matches
+  the session registered for the source address and port;
+- a rate limit on `CONNECT`: at most 32 requests per second across all sources, and at most one
+  `ACCEPT` per 200 ms per client;
+- a rate limit on `CHAT`: one message per session every 500 ms, silently discarding the rest.
+
+Display names are not authenticated. Two players may choose the same name, and a name is not
+tied to any identity beyond the lifetime of the session.
+
+## 6. Message catalogue
+
+### Client to server
+
+| Type | Name | Payload |
 |---|---|---|
-| `ownerSlot` | `u8` | Seat of the owner, MUST be an occupied seat |
-| `occupied` | `list<bool>` | Exactly `maxPlayers` entries, `1` when the seat is taken |
+| `0x01` | `CONNECT` | `name:string`, the player's display name, may be empty |
+| `0x02` | `INPUT` | `token:u32`, `buttons:u8` |
+| `0x03` | `HEARTBEAT` | `token:u32`, `timestamp:u32` |
+| `0x04` | `DISCONNECT` | `token:u32` |
+| `0x05` | `LIST_ROOMS` | `token:u32` |
+| `0x06` | `CREATE_ROOM` | `token:u32`, `name:string`, `code:string`, `ruleCount:u8`, `rules:u8[ruleCount]` |
+| `0x07` | `JOIN_ROOM` | `token:u32`, `roomId:u16`, `code:string` |
+| `0x08` | `LEAVE_ROOM` | `token:u32` |
+| `0x09` | `START_GAME` | `token:u32` |
+| `0x0A` | `KICK_PLAYER` | `token:u32`, `slot:u8` |
+| `0x0B` | `DELETE_ROOM` | `token:u32` |
+| `0x0C` | `CONSOLE_COMMAND` | `token:u32`, `text:string` |
+| `0x0D` | `CHAT` | `token:u32`, `text:string` |
 
-Sent to every member when the seats change, and every second as a keep-alive of the room.
-A client that receives no `ROOM_UPDATE` for 4 seconds while in a room SHOULD consider the room lost.
+### Server to client
 
-#### `PLAY_SOUND` (0x91)
-
-| Field | Type | Description |
+| Type | Name | Payload |
 |---|---|---|
-| `sound` | `u8` | Index in the game's `eventSounds` list (R-Type: `0` = warning, `1` = power-up, `2` = boss death) |
+| `0x81` | `ACCEPT` | `token:u32`, `playerId:u8` |
+| `0x82` | `REJECT` | `reason:u8` |
+| `0x83` | `SNAPSHOT` | see 6.2 |
+| `0x84` | `HEARTBEAT_ACK` | `timestamp:u32`, echoed unchanged |
+| `0x85` | `ENTITY_DESTROYED` | `entityId:u16` |
+| `0x86` | `PLAYER_JOINED` | `playerId:u8` |
+| `0x87` | `PLAYER_KILLED` | `playerId:u8` |
+| `0x88` | `PLAYER_LEFT` | `playerId:u8`, `reason:u8` |
+| `0x89` | `SERVER_SHUTDOWN` | empty |
+| `0x8A` | `ROOM_LIST` | `roomCount:u8`, then `roomCount` room entries (6.1) |
+| `0x8B` | `ROOM_JOINED` | `roomId:u16`, `name:string`, `slot:u8` |
+| `0x8C` | `ROOM_REJECTED` | `reason:u8` |
+| `0x8D` | `ROOM_UPDATE` | `ownerSlot:u8`, `slotCount:u8`, then per slot `occupied:u8` (0 or 1) and `name:string` |
+| `0x8E` | `GAME_STARTED` | empty |
+| `0x8F` | `KICKED` | empty |
+| `0x90` | `ROOM_CLOSED` | empty |
+| `0x91` | `PLAY_SOUND` | `sound:u8` |
+| `0x92` | `CONSOLE_TEXT` | `text:string` |
+| `0x93` | `SNAPSHOT_DELTA` | see 6.3 |
+| `0x94` | `CHAT_MESSAGE` | `slot:u8`, `text:string` |
 
-#### `CONSOLE_TEXT` (0x92)
+### Constants
 
-| Field | Type | Description |
+| Field | Values |
+|---|---|
+| `buttons` bits | `0x01` up, `0x02` down, `0x04` left, `0x08` right, `0x10` fire, `0x20` action. Bits `0x40` and `0x80` are reserved and must be zero |
+| `REJECT.reason` | `1` server full, `2` version mismatch |
+| `PLAYER_LEFT.reason` | `1` quit, `2` timeout |
+| `ROOM_REJECTED.reason` | `1` not found, `2` full, `3` wrong code, `4` room limit reached, `5` invalid name, `6` too many attempts, `7` not allowed |
+| Player slot state | `0` empty, `1` alive, `2` dead |
+| Game state | `0` waiting, `1` playing, `2` game over |
+
+### 6.1 Room entry
+
+Used inside `ROOM_LIST`.
+
+| Field | Type | Notes |
 |---|---|---|
-| `text` | `string` | 0 to 200 characters to print in the console |
+| `id` | u16 | Room identifier, non-zero |
+| `name` | string | |
+| `players` | u8 | Occupied slots |
+| `capacity` | u8 | Total slots |
+| `flags` | u8 | `0x01` password protected, `0x02` game in progress |
 
----
+### 6.2 `SNAPSHOT`
 
-## 6. Game-defined tables
+A complete, self-sufficient picture of the world.
 
-The protocol is generic: some fields only make sense with the game's data file (`<game>_game.json`), which
-**both sides MUST share**. A third-party client needs these tables:
+```
+tick          u32    simulation step
+gameState     u8     0 waiting, 1 playing, 2 game over
+valueCount    u8     then valueCount x u16, the world values
+playerCount   u8     then playerCount player slots
+entityCount   u8     then entityCount entities
+```
 
-| JSON key | Used by | Meaning |
-|---|---|---|
-| `network.maxPlayers` | `SNAPSHOT`, `ROOM_UPDATE`, `KICK_PLAYER` | Number of seats |
-| `network.maxEntities` | `SNAPSHOT` | Maximum number of entities in one snapshot |
-| `worldValues` | `SNAPSHOT.worldValues` | Ordered names of the world values. A value with `labels` is an index into them |
-| `playerValues` | `PlayerStatus.values` | Ordered names of the per-player values |
-| `rules` | `CREATE_ROOM.rules` | Ordered room rules and their labels |
-| `eventSounds` | `PLAY_SOUND.sound` | Ordered names of the sounds the server can trigger |
-| `kinds` | `EntityState.kind` | Kind number to client prefab name |
+Player slot, 10 bytes plus its values:
 
-R-Type world values, in order: `stage`, `phase` (labels: intro, running, boss, clear, victory, defeat),
-`progress`, `bossHealth`, `shake`, `skip`.
+```
+state      u8
+lives      u8
+health     u8     0..100
+score      u32
+avatarId   u16    entity id of this player's ship, 0 when not alive
+valueCount u8     then valueCount x u16, the per-player values
+```
 
-The server checks at start-up that `maxPlayers` and `maxEntities` produce a snapshot that fits in 1200 bytes,
-and refuses to start otherwise.
+Entity, 8 bytes:
 
----
+```
+id       u16    non-zero, unique within the snapshot
+kind     u8     game-defined entity type
+x        i16    world coordinates, in pixels
+y        i16
+visual   u8     bit 7: hit flash; bits 0..6: rotation, 128 steps over 360 degrees
+```
 
-## 7. Session lifecycle and timing
+Semantic rules: `valueCount` and `playerCount` must match the values configured for the game;
+entity identifiers must be unique and non-zero; a slot in state `alive` must have a non-zero
+`avatarId` that appears in the entity list, at least one life, and health at most 100; a slot in
+state `empty` must have all fields zero.
 
-All values below come from the `network` block of `rtype_game.json`.
+The number and meaning of the world and player values are game-defined and are not part of the
+protocol. The reference game uses five world values (`stage`, `phase`, `progress`, `bossHealth`,
+`shake`) and three player values (`weapon`, `force`, `charge`).
 
-| Setting | R-Type value | Effect |
-|---|---|---|
-| `defaultPort` | 4242 | UDP port of the server |
-| `tickRate` (top level) | 60 | Simulation ticks per second |
-| `snapshotEveryTicks` | 3 | One `SNAPSHOT` every 3 ticks (20 per second) |
-| `inputIntervalMs` | 33 | The client sends `INPUT` every 33 ms in game |
-| `inputReleaseDelayMs` | 500 | Buttons are released if no `INPUT` arrives for 500 ms |
-| `heartbeatIntervalMs` | 1000 | The client sends `HEARTBEAT` every second |
-| `sessionTimeoutMs` | 5000 | The server drops a client silent for 5 seconds |
-| `connectRetryIntervalMs` | 1000 | `CONNECT` is resent every second until `ACCEPT` |
-| `connectAttempts` | 5 | The client gives up after 5 `CONNECT` |
-| `maxClients` | 16 | Connected clients at the same time |
-| `maxRooms` | 16 | Rooms at the same time |
-| `maxJoinAttempts` | 5 | Wrong codes allowed per session |
+### 6.3 `SNAPSHOT_DELTA`
 
-### Connection
+The same world state, expressed as the difference from a previously acknowledged `SNAPSHOT`.
 
-1. The client sends `CONNECT` with its protocol version.
-2. If the version differs, the server answers `REJECT(2)`. If all `maxClients` slots are used, `REJECT(1)`.
-3. Otherwise the server creates a session for the client's address and port and answers `ACCEPT(token, id)`.
-   A repeated `CONNECT` from the same address within 200 ms is ignored, after that the same session is
-   accepted again (lost `ACCEPT`).
-4. The session is **confirmed** when the first valid message carrying the token arrives.
+```
+tick           u32
+baselineTick   u32    tick of the snapshot this delta applies to, never 0
+gameState      u8
+worldCount     u8     then worldCount entries of { index:u8, value:u16 }
+playerCount    u8     then playerCount entries of { slot:u8, player slot as in 6.2 }
+entityCount    u8     then entityCount entity changes (below)
+removedCount   u8     then removedCount x u16, identifiers that no longer exist
+```
+
+Anything not mentioned keeps the value it had in the baseline.
+
+Entity change:
+
+```
+id      u16
+fields  u8    which fields follow
+              0x01 dx present        i8, add to the baseline x
+              0x02 dy present        i8, add to the baseline y
+              0x04 position present  i16 x then i16 y, absolute
+              0x08 kind present      u8
+              0x10 visual present    u8
+```
+
+`0x04` is mutually exclusive with `0x01` and `0x02`. Fields are written in the order `dx`, `dy`,
+`position`, `kind`, `visual`. A change whose identifier is absent from the baseline describes a
+new entity and must carry `0x04`; one that carries neither `0x04` nor a known baseline entity is
+discarded.
+
+Bits outside `0x1F` are reserved and make the message invalid.
+
+### Applying a delta
+
+1. Look up the snapshot whose tick equals `baselineTick`. If it is unknown, **discard the whole
+   message** and wait for a full `SNAPSHOT`; never apply a delta to the wrong baseline.
+2. Copy the baseline.
+3. Overwrite the world values and player slots the delta lists.
+4. Remove the entities in the removal list.
+5. For each entity change, resolve it against the baseline entity of the same identifier and
+   replace it; entities the delta does not mention are kept unchanged.
+6. The result is a complete snapshot, equivalent to the `SNAPSHOT` the server would have sent.
+
+A client must keep the last 32 snapshots it has reconstructed, indexed by tick, so that it can
+serve as a baseline.
+
+### When the server sends a full snapshot
+
+| Condition | Rationale |
+|---|---|
+| No acknowledged snapshot yet | New client, or client that just entered a room |
+| The acknowledged baseline is more than one second of ticks old | The server no longer knows what the client holds |
+| The last full snapshot was sent more than five seconds ago | Periodic keyframe, bounding any undetected desynchronisation |
+
+A server must never build a delta against a snapshot that has not been acknowledged. The property
+that makes this safe is inductive: a delta is always built on the confirmed baseline, so a client
+that acknowledges the packet carrying it necessarily held that baseline and could apply it.
+
+## 7. Session lifecycle
+
+### Connecting
+
+```
+client                                   server
+  | ---- CONNECT ----------------------> |  creates a session, allocates a token
+  | <--- ACCEPT (token, playerId) ------ |
+  |                                      |
+  | ---- CONNECT (lost) ---------------X |
+  |      retry after 1000 ms, 5 times    |
+```
+
+`CONNECT` carries no token, only the player's display name, which the server stores on the
+session and republishes to the other members of a room through `ROOM_UPDATE`. An empty name is
+accepted; clients then display a fallback such as `P1`. The server answers `ACCEPT` with a random
+32-bit token that the client must repeat in every subsequent message, and the slot index it was
+given. The token identifies the
+session; a message whose token does not match the session registered for the source address is
+ignored.
+
+A client that receives no answer after 5 attempts, one second apart, gives up. The server answers
+`REJECT` with reason `1` when every slot is taken, and reason `2` when the version does not match.
+
+Repeating `CONNECT` from an address that already has a session re-sends the `ACCEPT`, at most once
+every 200 ms.
+
+### Chat
+
+A client in a room may send `CHAT`. The server validates the text, applies the rate limit, and
+broadcasts `CHAT_MESSAGE` to every member of that room, including the sender, with the sender's
+slot. The message carries the slot rather than the name, because clients already learn the name
+of every slot from `ROOM_UPDATE`; repeating it in each line would cost up to 13 bytes per
+message. Both messages are reliable: a chat line is never silently dropped.
+
+Chat is scoped to a room. There is no lobby-wide or server-wide chat.
 
 ### Rooms
 
-- A client is in at most one room. `CREATE_ROOM` or `JOIN_ROOM` while already in a room just answers
-  `ROOM_JOINED` again.
-- The creator is the **owner** (seat 0). Only the owner may `START_GAME`, `KICK_PLAYER`, `DELETE_ROOM` and use
-  `CONSOLE_COMMAND`. Otherwise the server answers `ROOM_REJECTED(7)`.
-- If the owner leaves, the room is closed and every member receives `ROOM_CLOSED`.
-- A player may join a room whose game is already running: they receive `ROOM_JOINED` then `GAME_STARTED`.
+```
+client                                   server
+  | ---- LIST_ROOMS -------------------> |
+  | <--- ROOM_LIST --------------------- |
+  | ---- CREATE_ROOM or JOIN_ROOM -----> |
+  | <--- ROOM_JOINED or ROOM_REJECTED -- |
+  | <--- ROOM_UPDATE (every second) ---- |
+  | ---- START_GAME -------------------> |  owner only
+  | <--- GAME_STARTED ------------------ |
+  | <--- SNAPSHOT / SNAPSHOT_DELTA ----- |  20 per second
+```
 
-### Console
+The client that creates a room owns it: only the owner may `START_GAME`, `KICK_PLAYER` or
+`DELETE_ROOM`. Any other sender receives `ROOM_REJECTED` with reason `7`.
 
-`CONSOLE_COMMAND` is executed by the game's console script on the server. The server answers with
-`CONSOLE_TEXT`. Commands are refused when the sender is not the owner, or when the game's `consoleRule` room
-rule (R-Type: `cheats`) is OFF. Commands sent before the game starts are queued and run at start.
+Leaving as the owner closes the room: every member receives `ROOM_CLOSED`. A kicked player
+receives `KICKED`.
 
-### Leaving
+A room may be password protected; `JOIN_ROOM` then has to carry the matching code. Only wrong-code
+attempts are counted, and after five of them the session is refused with reason `6` for the rest
+of its lifetime; the counter is never reset.
 
-A client leaves with `DISCONNECT`, or by staying silent for `sessionTimeoutMs` (crash, network loss). In both
-cases the other players of a running game receive `PLAYER_LEFT`. When the server stops, it sends
-`SERVER_SHUTDOWN` to every confirmed client.
+`CREATE_ROOM` and `JOIN_ROOM` sent by a client that is already in a room are not errors: the
+server answers `ROOM_JOINED` again for the room it is in. A client that retries because it missed
+the first answer therefore receives two `ROOM_JOINED`, with two different `reliableId` values.
+Both are legitimate and must be handled.
 
----
+### Disconnecting
 
-## 8. Validation and error handling
+A client sends `DISCONNECT` once. A client that stops sending is removed after 5 seconds of
+silence, and the other members of its room receive `PLAYER_LEFT` with reason `2`. The server
+sends `SERVER_SHUTDOWN` to every confirmed client before stopping.
 
-A receiver MUST silently drop a datagram, without answering, when any of these is true:
+Both sides must survive the disappearance of a peer at any point, including in the middle of a
+message exchange.
 
-| Check | Example |
+## 8. Timing
+
+These values are read from the game configuration; the table gives the reference game's settings.
+
+| Parameter | Value | Who |
+|---|---|---|
+| Simulation rate | 60 ticks per second | server |
+| Snapshot rate | every 3 ticks, so 20 per second | server |
+| Input rate | every 33 ms | client |
+| Input release | buttons are cleared after 500 ms without an input | server |
+| Heartbeat | every 1000 ms | client |
+| Connect retry | every 1000 ms, 5 attempts | client |
+| Session timeout | 5000 ms of silence | both |
+| Room update | every 1000 ms | server |
+| Retransmission | `max(100 ms, rtt x 1.5)` | both |
+| Keyframe | at most 5 s between full snapshots | server |
+
+Inputs carry the **state** of the buttons, not press and release events: a lost input is corrected
+by the next one 33 ms later, whereas a lost "released" event would leave a key stuck.
+
+## 9. Worked example
+
+Real bytes captured on the wire, one player holding Fire and Right.
+
+### `INPUT`, 25 bytes
+
+```
+45 4e 08 02 00 00 00 18 00 00 00 16 00 1f ff ff 00 00 00 05 a5 ca ca a6 18
+```
+
+| Bytes | Field | Value |
+|---|---|---|
+| `45 4e` | magic | `EN` |
+| `08` | version | 8 |
+| `02` | type | `INPUT`, client to server |
+| `00 00 00 18` | sequence | 24 |
+| `00 00 00 16` | ack | 22 |
+| `00 1f ff ff` | ackBits | packets 1 to 21 all received |
+| `00 00` | reliableId | unreliable |
+| `00 05` | payloadSize | 5 |
+| `a5 ca ca a6` | token | |
+| `18` | buttons | `0b00011000` = fire + right |
+
+### `ENTITY_DESTROYED`, 22 bytes
+
+```
+45 4e 08 85 00 00 00 59 00 00 00 6d ff ff ff ff 00 03 00 02 00 10
+```
+
+`type` is `0x85`, server to client. `ackBits` is `ff ff ff ff`: the previous 32 packets all
+arrived. `reliableId` is 3, so the sender keeps a copy until this packet is acknowledged. The
+payload is the single identifier 16.
+
+### `SNAPSHOT`, 118 bytes
+
+```
+45 4e 08 83 00 00 00 19 00 00 00 19 00 bf ff ff 00 00 00 62
+00 00 00 03 01 05 00 01 00 00 00 00 00 00 00 00
+04 01 01 64 00 00 00 00 00 01 03 00 00 00 00 00 00 ...
+02 00 01 01 00 d2 00 c8 00 00 02 02 01 44 00 dc 00
+```
+
+| Bytes | Meaning |
 |---|---|
-| Size lower than 10 or greater than 1200 bytes | Truncated datagram |
-| `magic` is not `0x454E` | Packet of another application |
-| Direction bit does not match the receiver | A server message sent to the server |
-| `payload size` differs from the real payload length | Corrupted or truncated payload |
-| `version` differs, except for `CONNECT` and `REJECT` | Old client |
-| Unknown `type` | Code `0x40` |
-| The payload is shorter or longer than its message needs | Extra bytes |
-| A field breaks its message rules (section 5) | Token 0, reserved buttons set, text with control characters, wrong list size |
-| The token does not match the sender's session | Spoofed or stale message |
-| A sequenced message (`INPUT`, `HEARTBEAT`) is not newer than the last one | Duplicate or reordered datagram |
+| `00 00 00 03` | tick 3 |
+| `01` | playing |
+| `05` then `00 01 00 00 00 00 00 00 00 00` | 5 world values: stage 1, the rest zero |
+| `04` | 4 player slots |
+| `01 01 64 00 00 00 00 00 01 03 00 00 00 00 00 01` | slot 0: alive, 1 life, 100 health, score 0, avatar entity 1, values 0/0/1 |
+| three slots of zeroes | slots 1 to 3 are empty |
+| `02` | 2 entities |
+| `00 01 01 00 d2 00 c8 00` | entity 1, kind 1, at (210, 200) |
+| `00 02 02 01 44 00 dc 00` | entity 2, kind 2, at (324, 220) — the missile just fired |
 
-**Rate limit.** The server handles at most 32 `CONNECT` per second in total. Extra ones are dropped.
+### The same frame as a `SNAPSHOT_DELTA`
 
----
-
-## 9. Example datagrams
-
-Byte values are hexadecimal.
-
-**`CONNECT`**, sequence 0:
+Between tick 30 and tick 33 the ship advances 30 pixels and three missiles advance 75 each; the
+world values are unchanged and only slot 0 changes, in one of its values.
 
 ```
-45 4E 07 01  00 00 00 00  00 00
-magic ver type  sequence   size=0
+00 00 00 21   tick 33
+00 00 00 1e   baselineTick 30
+01            playing
+00            no world value changed            (10 bytes saved)
+01 00 <16>    one slot changed: slot 0          (48 bytes saved)
+04            four entity changes
+   00 01 01 1e      entity 1, dx only, +30
+   00 02 01 4b      entity 2, dx only, +75
+   00 03 01 4b      entity 3, dx only, +75
+   00 04 01 4b      entity 4, dx only, +75      (16 bytes saved)
+00            nothing removed
 ```
 
-**`INPUT`** with token `0x12345678`, Up + Fire pressed (`0x11`), sequence 42:
+134 bytes become 69. Each entity costs 4 bytes instead of 8: the kind and the visual are omitted
+because they did not change, and `+75` fits in one signed byte while `1074` needs two.
 
-```
-45 4E 07 02  00 00 00 2A  00 05  12 34 56 78  11
-```
+## 10. Writing a client
 
-**`ACCEPT`** with token `0x12345678`, client id 3, server sequence 0:
+A minimal client has to:
 
-```
-45 4E 07 81  00 00 00 00  00 05  12 34 56 78  03
-```
+1. Send `CONNECT` until an `ACCEPT` arrives, then store the token and repeat it in every message.
+2. Maintain a sequence counter starting at 1, and fill `ack` and `ackBits` from the packets
+   received so far. **Without this the server will retransmit endlessly.**
+3. Send `HEARTBEAT` at least every 1000 ms, including while idle in menus. A client silent for
+   5 seconds is dropped, and if it owns a room the room is closed.
+4. Send `INPUT` about 30 times per second while in a game.
+5. Accept packets of unknown type without crashing, and validate every length before reading.
+6. Keep the last 32 reconstructed snapshots by tick, so that deltas can be applied.
+7. Track the `reliableId` values already processed, and ignore repeats.
 
-**`PLAY_SOUND`** "boss death" (index 2):
+A client that ignores `SNAPSHOT_DELTA` entirely still works, at reduced quality: it will only
+update on the full snapshots sent at most five seconds apart.
 
-```
-45 4E 07 91  00 00 00 10  00 01  02
-```
-
----
-
-## 10. Writing a new client
-
-A minimal client that can join a game and display it:
-
-1. Open a UDP socket and send `CONNECT` every second until you get `ACCEPT` (keep the token).
-2. Send `HEARTBEAT` every second, or the server drops you after 5 seconds.
-3. Send `LIST_ROOMS`, then `JOIN_ROOM` (or `CREATE_ROOM` and `START_GAME`).
-4. After `GAME_STARTED`, send `INPUT` every 33 ms with your buttons.
-5. On each `SNAPSHOT`, replace your list of entities by the received one and draw each entity according to its
-   `kind`, at `(x, y)`.
-6. Send `DISCONNECT` when you quit.
-
-Everything else (sounds, console, kicks) is optional.
-
----
+`scripts/protocol_probe.py` is a working headless client of about 300 lines, used to test this
+protocol. It implements points 1 to 5 above and can deliberately drop a fraction of the packets
+it receives, which makes it a readable reference when something does not behave as documented.
 
 ## 11. Security considerations
 
-- The token is random and bound to the sender's address and port: a third party must both guess the token and
-  spoof the address to inject messages.
-- Every field is checked against strict limits before use, and decoding never reads past the datagram.
-- The server never trusts client positions: clients only send buttons.
-- The protocol has **no encryption and no authentication of the server**. It is designed for LAN and
-  trusted-network play. See [Security](comparative-study/security.md) for the discussion.
+| Risk | Mitigation |
+|---|---|
+| Malformed or truncated datagram | Every length and count is validated before use; a failing packet is dropped silently |
+| Memory exhaustion | Datagrams capped at 1200 bytes, receive queues at 256 entries, pending reliable messages at 64 per peer |
+| Session hijacking | A 32-bit random token bound to the source address and port is required on every message |
+| Connection flooding | At most 32 `CONNECT` per second, and one `ACCEPT` per client per 200 ms |
+| Chat flooding | One chat message per session every 500 ms; text validated for length and printable characters |
+| Endless retransmission to a peer that never acknowledges | Bounded by 64 pending messages per peer and by the 5 s session timeout |
+| Cheating | The server is authoritative: positions, collisions, lives and scores are computed server-side and clients only submit button states |
+| Amplification | No message produces an answer larger than its request, except `LIST_ROOMS`, which is only served to an established session |
 
----
-
-## 12. Evolution
-
-Any change of a payload or of the header MUST increase `Protocol::VERSION`
-(`engine/network/protocol/include/Protocol.hpp`) and update this document. Old clients are then refused with
-`REJECT(2)`, which is the only message guaranteed to stay readable.
-
-Only version 7 is supported: any other version is refused with `REJECT(2)`.
+The protocol is not encrypted and not authenticated beyond the session token. Tokens are
+predictable only to the extent that the server's random generator is; traffic can be observed and
+replayed by anyone on the path. This is acceptable for a LAN game and would not be for an exposed
+service.

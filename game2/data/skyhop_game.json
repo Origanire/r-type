@@ -24,7 +24,10 @@
     "maxRooms": 16,
     "roomNameMaxLength": 16,
     "roomCodeMaxLength": 8,
-    "maxJoinAttempts": 5
+    "maxJoinAttempts": 5,
+    "chatMaxLength": 64,
+    "chatIntervalMs": 500,
+    "playerNameMaxLength": 12
   },
   "files": {
     "serverPrefabs": "skyhop_server_prefabs.json",

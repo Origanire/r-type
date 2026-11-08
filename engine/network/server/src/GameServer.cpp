@@ -1,6 +1,7 @@
 #include "GameServer.hpp"
 
 #include "PacketVisitors.hpp"
+#include "SnapshotDiff.hpp"
 
 #include <iostream>
 #include <utility>
@@ -71,6 +72,7 @@ void GameServer::receive(const net::Datagram &datagram, Time now)
     ClientSession &session = *m_clients[*client];
     session.receiver().receive(packet->sequence());
     session.sender().acknowledge(packet->ack(), packet->ackBits(), now);
+    session.snapshots().acknowledge(packet->ack(), packet->ackBits());
     if (packet->reliableId() != 0) {
         if (session.receiver().isDuplicate(packet->reliableId())) {
             session.markSeen(now);
@@ -103,6 +105,8 @@ void GameServer::handleConnect(const net::Datagram &datagram, const Packet &pack
         }
         m_clients[*client].emplace(datagram.sender(), newToken(), now);
     }
+    if (!packet.as<ConnectMessage>().name().empty())
+        m_clients[*client]->setName(packet.as<ConnectMessage>().name());
     m_clients[*client]->receiver().receive(packet.sequence());
     if (known && now - m_clients[*client]->lastAccept() < ACCEPT_REPEAT_DELAY)
         return;
@@ -143,6 +147,8 @@ void GameServer::handleSessionPacket(std::size_t client, const Packet &packet, T
         handleDeleteRoom(client);
     else if (packet.holds<ConsoleCommandMessage>())
         handleConsole(client, packet.as<ConsoleCommandMessage>());
+    else if (packet.holds<ChatMessage>())
+        handleChat(client, packet.as<ChatMessage>(), now);
 }
 
 void GameServer::handleDisconnect(std::size_t client, const Packet &packet)
@@ -204,8 +210,11 @@ void GameServer::tickRoom(GameRoom &room, float dt, Time now)
     room.session().update(dt);
     for (const Packet &event : room.session().takeEvents())
         broadcastRoom(room, event);
-    if (room.session().tick() % m_settings.snapshotEveryTicks() == 0)
-        broadcastRoom(room, Packet(room.session().snapshot()));
+    if (room.session().tick() % m_settings.snapshotEveryTicks() == 0) {
+        const SnapshotMessage snapshot = room.session().snapshot();
+        for (std::size_t client : room.clients())
+            sendSnapshot(client, snapshot);
+    }
     if (room.session().finished())
         returnToRoom(room);
 }
@@ -214,16 +223,18 @@ void GameServer::returnToRoom(GameRoom &room)
 {
     room.setPlaying(false);
     room.resetSession(m_factory.createSession(room.rules()));
-    for (std::size_t client : room.clients())
+    for (std::size_t client : room.clients()) {
+        m_clients[client]->snapshots().forget();
         sendRoomJoined(client, room);
+    }
     sendRoomUpdate(room);
     std::cout << "Room " << room.id() << " finished its game" << std::endl;
 }
 
-void GameServer::sendTo(std::size_t client, Packet packet)
+std::uint32_t GameServer::sendTo(std::size_t client, Packet packet)
 {
     if (!m_clients[client])
-        return;
+        return 0;
     ClientSession &session = *m_clients[client];
     if (packet.reliableId() == 0 && Protocol::isReliable(packet.type()))
         packet.setReliableId(session.sender().nextReliableId());
@@ -233,6 +244,27 @@ void GameServer::sendTo(std::size_t client, Packet packet)
     if (packet.reliableId() != 0)
         session.sender().track(packet.sequence(), packet, std::chrono::steady_clock::now());
     m_transport.send(session.peer(), m_codec.encode(packet));
+    return packet.sequence();
+}
+
+void GameServer::sendSnapshot(std::size_t client, const SnapshotMessage &snapshot)
+{
+    SnapshotHistory &history = m_clients[client]->snapshots();
+    const SnapshotMessage *base = history.baseline();
+    const std::uint32_t staleAfter = FULL_SNAPSHOT_SECONDS * static_cast<std::uint32_t>(m_settings.tickRate());
+    const bool fresh = base != nullptr && Codec::isNewer(snapshot.tick(), base->tick())
+        && snapshot.tick() - base->tick() < staleAfter;
+    const std::optional<std::uint32_t> lastFull = history.lastFull();
+    const std::uint32_t keyframeAfter = KEYFRAME_SECONDS * static_cast<std::uint32_t>(m_settings.tickRate());
+    const bool overdue = !lastFull || snapshot.tick() - *lastFull >= keyframeAfter;
+    const bool differential = fresh && base->tick() != 0 && !overdue;
+    if (!differential)
+        history.markFull(snapshot.tick());
+    const std::uint32_t sequence = differential
+        ? sendTo(client, Packet(SnapshotDiff::build(*base, snapshot)))
+        : sendTo(client, Packet(snapshot));
+    if (sequence != 0)
+        history.remember(sequence, snapshot);
 }
 
 void GameServer::send(const net::Endpoint &peer, Packet packet)

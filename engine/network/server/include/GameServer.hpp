@@ -27,6 +27,8 @@ public:
     static constexpr std::chrono::seconds CONNECT_RATE_WINDOW{1};
     static constexpr std::chrono::milliseconds ACCEPT_REPEAT_DELAY{200};
     static constexpr std::chrono::seconds ROOM_UPDATE_INTERVAL{1};
+    static constexpr std::uint32_t FULL_SNAPSHOT_SECONDS = 1;
+    static constexpr std::uint32_t KEYFRAME_SECONDS = 5;
 
     GameServer(std::uint16_t port, const NetworkSettings &settings, ISessionFactory &factory);
 
@@ -49,6 +51,7 @@ private:
     void handleKick(std::size_t client, const KickPlayerMessage &request);
     void handleConsole(std::size_t client, const ConsoleCommandMessage &request);
     void handleDeleteRoom(std::size_t client);
+    void handleChat(std::size_t client, const ChatMessage &request, Time now);
     void confirm(std::size_t client);
     void remove(std::size_t client, std::uint8_t reason);
 
@@ -65,7 +68,8 @@ private:
     void sendRoomJoined(std::size_t client, GameRoom &room);
     void sendRoomUpdate(GameRoom &room);
     void broadcastRoom(GameRoom &room, const Packet &packet);
-    void sendTo(std::size_t client, Packet packet);
+    std::uint32_t sendTo(std::size_t client, Packet packet);
+    void sendSnapshot(std::size_t client, const SnapshotMessage &snapshot);
     void send(const net::Endpoint &peer, Packet packet);
     void reject(const net::Endpoint &peer, std::uint8_t reason);
     std::optional<std::size_t> findClient(const net::Endpoint &peer) const;

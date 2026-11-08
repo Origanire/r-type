@@ -112,10 +112,26 @@ void GameServer::handleDeleteRoom(std::size_t client)
     closeRoom(room->id());
 }
 
+void GameServer::handleChat(std::size_t client, const ChatMessage &request, Time now)
+{
+    GameRoom *room = roomOf(client);
+    if (!room)
+        return;
+    ClientSession &session = *m_clients[client];
+    if (now - session.lastChat() < m_settings.chatInterval())
+        return;
+    const auto slot = room->slotOf(client);
+    if (!slot)
+        return;
+    session.markChat(now);
+    broadcastRoom(*room, Packet(ChatBroadcastMessage(static_cast<std::uint8_t>(*slot), request.text())));
+}
+
 void GameServer::seatClient(std::size_t client, GameRoom &room, std::size_t slot)
 {
     room.seat(slot, client);
     m_clients[client]->enterRoom(room.id());
+    m_clients[client]->snapshots().forget();
     if (room.playing()) {
         room.session().addPlayer(slot);
         sendRoomJoined(client, room);
@@ -130,6 +146,7 @@ void GameServer::leaveRoom(std::size_t client, std::uint8_t reason)
 {
     GameRoom *room = roomOf(client);
     m_clients[client]->leaveRoom();
+    m_clients[client]->snapshots().forget();
     if (!room)
         return;
     const auto slot = room->slotOf(client);
@@ -213,7 +230,13 @@ void GameServer::sendRoomJoined(std::size_t client, GameRoom &room)
 
 void GameServer::sendRoomUpdate(GameRoom &room)
 {
-    broadcastRoom(room, Packet(RoomUpdateMessage(static_cast<std::uint8_t>(room.owner()), room.occupiedSlots())));
+    std::vector<std::string> names;
+    for (std::size_t slot = 0; slot < room.capacity(); ++slot) {
+        const auto client = room.clientAt(slot);
+        names.push_back(client && m_clients[*client] ? m_clients[*client]->name() : std::string());
+    }
+    broadcastRoom(room,
+        Packet(RoomUpdateMessage(static_cast<std::uint8_t>(room.owner()), room.occupiedSlots(), std::move(names))));
 }
 
 void GameServer::broadcastRoom(GameRoom &room, const Packet &packet)

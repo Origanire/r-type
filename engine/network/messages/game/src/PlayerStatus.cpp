@@ -55,6 +55,12 @@ std::size_t PlayerStatus::sizeFor(std::size_t values)
     return SIZE + values * VALUE_SIZE;
 }
 
+bool PlayerStatus::operator==(const PlayerStatus &other) const
+{
+    return m_state == other.m_state && m_lives == other.m_lives && m_health == other.m_health
+        && m_score == other.m_score && m_avatarId == other.m_avatarId && m_values == other.m_values;
+}
+
 void PlayerStatus::write(engine::net::ByteWriter &writer) const
 {
     writer.writeU8(m_state);

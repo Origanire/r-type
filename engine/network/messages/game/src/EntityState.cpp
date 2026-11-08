@@ -32,6 +32,12 @@ std::uint8_t EntityState::visual() const
     return m_visual;
 }
 
+bool EntityState::operator==(const EntityState &other) const
+{
+    return m_id == other.m_id && m_kind == other.m_kind && m_x == other.m_x && m_y == other.m_y
+        && m_visual == other.m_visual;
+}
+
 void EntityState::write(engine::net::ByteWriter &writer) const
 {
     writer.writeU16(m_id);

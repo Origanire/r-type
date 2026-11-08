@@ -21,6 +21,8 @@ public:
     std::int16_t y() const;
     std::uint8_t visual() const;
 
+    bool operator==(const EntityState &other) const;
+
     void write(engine::net::ByteWriter &writer) const;
     static EntityState read(engine::net::ByteReader &reader);
 

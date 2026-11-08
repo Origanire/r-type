@@ -27,6 +27,8 @@ public:
     const std::vector<std::uint16_t> &values() const;
     static std::size_t sizeFor(std::size_t values);
 
+    bool operator==(const PlayerStatus &other) const;
+
     void write(engine::net::ByteWriter &writer) const;
     static PlayerStatus read(engine::net::ByteReader &reader);
 

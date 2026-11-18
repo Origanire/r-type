@@ -466,4 +466,9 @@ function(engine_add_plugin name)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_link_options(${name} PRIVATE -Wl,--exclude-libs,ALL)
     endif()
+    if(APPLE)
+        # DynamicLibrary looks for "<name>.so"; macOS libc++ only matches
+        # typeid() across the plugin boundary when RTTI is not hidden.
+        set_target_properties(${name} PROPERTIES SUFFIX ".so" CXX_VISIBILITY_PRESET default)
+    endif()
 endfunction()

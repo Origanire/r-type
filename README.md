@@ -3,6 +3,8 @@
 A networked multiplayer shoot'em up written in C++20 on top of our own data-driven game engine.
 Up to four players join an authoritative server, fight Bydos through three stages and their bosses.
 
+Epitech project (G-ING-500), built by a team of four with Milo Bousquet as tech lead.
+
 The engine is generic: games are described with JSON files and Python scripts, without any C++.
 The repository ships two games built on it:
 
